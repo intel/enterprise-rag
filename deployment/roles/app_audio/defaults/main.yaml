@@ -1,0 +1,27 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_audio Role Defaults
+# =============================================================================
+
+# --- Deployment target ---
+audio_namespace: "audio"
+
+# --- Models ---
+audio_asr_model: "openai/whisper-small"
+audio_tts_model: "microsoft/speecht5_tts"
+
+# --- Helm ---
+audio_helm_release_name: "audio"
+audio_helm_chart_directory: "{{ deployment_dir }}/components/audio"
+audio_helm_default_values_file: "{{ deployment_dir }}/components/audio/values.yaml"
+
+# --- Cross-role shared defaults - Owned by other roles; declared here so this role is standalone-runnable. ---
+apisix_oidc_client_id: "EnterpriseRAG-oidc-backend"  # app_apisix
+keycloak_namespace: "keycloak"     # core/keycloak
+erag_keycloak_realm: "EnterpriseRAG"     # app_keycloak_config
+ui_domain_name: "solutions.ai"         # app_ui
+ui_keycloak_realm: "EnterpriseRAG"      # app_ui
+rag_tmp_dir: "{{ tmp_dir }}/rag"        # app_pre_install (derived from tmp_dir)

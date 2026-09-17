@@ -1,0 +1,7 @@
+FROM docsum-base:latest
+
+COPY compliance /compliance
+
+# CMD from base Dockerfile
+WORKDIR /home/user/comps/docsum
+CMD ["python", "erag_docsum_microservice.py"]

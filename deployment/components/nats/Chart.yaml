@@ -1,0 +1,11 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: v2
+name: nats
+description: NATS JetStream server backing the fingerprint config projection
+type: application
+version: 0.1.0
+appVersion: "2.10"
+annotations:
+  app.kubernetes.io/part-of: ERAG

@@ -1,0 +1,24 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# Text Splitter step - Chunk text into manageable segments #}
+step:
+  name: TextSplitter
+  dependency: Hard
+  data: $response
+  internalService:
+    serviceName: text-splitter-svc
+    config:
+      endpoint: /v1/text_splitter
+      CHUNK_SIZE: "3584"
+      CHUNK_OVERLAP: "512"
+resources:
+  text-splitter-usvc:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 1
+        memory: 1Gi
+      limits:
+        cpu: 4
+        memory: 2Gi

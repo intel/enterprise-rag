@@ -1,0 +1,42 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# Shared LLM step - answer/summary/translation generation via external endpoint. #}
+{# LLM_MODEL_SERVER / LLM_MODEL_SERVER_ENDPOINT / LLM_MODEL_NAME are NOT set here: #}
+{# app_pipeline/templates/values.yaml.j2 already puts them in the llm-usvc-config  #}
+{# ConfigMap, which the deployment consumes via envFrom.                           #}
+{# Per-pipeline deltas come from endpoints.llm in pipeline.yaml:                    #}
+{#   disable_streaming - emit LLM_DISABLE_STREAMING when defined (translation)      #}
+{#   downstream        - mark the step isDownstreamService, so the router skips it   #}
+{#                       and another step resolves it by service name (docsum's      #}
+{#                       DOCSUM_LLM_USVC_ENDPOINT: llm-svc)                          #}
+{#   resources         - REQUIRED recommended chart resources for llm-usvc, with    #}
+{#                       keys: replicas, requests, limits. Unlike other steps whose  #}
+{#                       resources are hardcoded in the step file, the shared llm    #}
+{#                       step is sized per pipeline, so this block MUST be present   #}
+{#                       under endpoints.llm in every pipeline.yaml using this step. #}
+{% set _ = endpoints.llm.resources | required("endpoints.llm.resources missing in pipeline.yaml - the shared llm step requires endpoints.llm.resources with keys {replicas, requests, limits}") %}
+step:
+  name: Llm
+{% if not endpoints.llm.downstream | default(false) %}
+  data: $response
+{% endif %}
+  dependency: Hard
+  internalService:
+    serviceName: llm-svc
+    config:
+      endpoint: /v1/chat/completions
+      paramsKey: llm
+      paramsKind: llm
+{% if endpoints.llm.disable_streaming is defined %}
+      LLM_DISABLE_STREAMING: "{{ endpoints.llm.disable_streaming }}"
+{% endif %}
+{% if endpoints.llm.downstream | default(false) %}
+    isDownstreamService: true
+{% endif %}
+resources:
+  llm-usvc:
+    replicas: {{ endpoints.llm.resources.replicas }}
+    resources:
+      requests: {{ endpoints.llm.resources.requests | tojson }}
+      limits: {{ endpoints.llm.resources.limits | tojson }}

@@ -1,0 +1,77 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_pipeline Role Defaults
+# =============================================================================
+# Owns the GMC (GenAI Microservices Connector) Helm chart + the chatqna / docsum /
+# translation pipeline CRs.
+
+# --- Single-pipeline selection ---
+# User picks ONE pipeline type; models are served by KServe (solutions-poc.inference).
+#   chatqna | docsum | translation
+pipeline_type: "chatqna"
+pipeline_variant: "base"
+
+# --- router-service readiness gate (before applying the APISIX route) ---
+pipeline_router_wait_retries: 30
+pipeline_router_wait_delay: 10
+
+# --- GMC Helm chart ---
+gmc_namespace: "system"
+gmc_helm_version: "{{ helm_version }}"
+gmc_helm_chart_name: "gmc"
+gmc_helm_chart_version: "1.1.0"
+gmc_helm_release_name: "gmc"
+gmc_helm_chart_directory: "{{ deployment_dir }}/components/gmc/"
+gmc_helm_default_values_file: "{{ deployment_dir }}/components/gmc/values.yaml"
+
+# --- Models + language ---
+llm_model_name: "casperhansen/llama-3-8b-instruct-awq"
+embedding_model_name: "nomic-ai/nomic-embed-text-v1"
+reranking_model_name: "BAAI/bge-reranker-base"
+solution_language: "auto"                  # app_fingerprint — "auto" detects from model name
+
+# --- Inference endpoints (computed dynamically by app_inference_models role) ---
+inference_namespace: "llm-inference"
+llm_endpoint: ""
+embedding_endpoint: ""
+reranking_endpoint: ""
+# Model context length in tokens; empty when the model server does not report it.
+llm_max_model_len: ""
+
+# --- Fingerprint config source (controller Postgres->KV bridge + router KV read) ---
+nats_auth_secret_name: "nats-auth"
+# Plaintext scheme: transport encryption is left to the Istio ambient mesh, and
+# clients still authenticate with the NKey seed from the nats-auth secret.
+nats_url: "nats://nats-svc.{{ nats_namespace }}.svc:4222"
+fingerprint_service_url: "http://fingerprint-svc.{{ fingerprint_namespace }}.svc:6012"
+fingerprint_postgres_host: "fingerprint-postgresql.{{ fingerprint_namespace }}.svc"
+fingerprint_postgres_port: 5432
+fingerprint_postgres_database: "system_fingerprint"
+fingerprint_postgres_user: "fingerprint"
+fingerprint_postgres_secret_name: "fingerprint-postgresql-secret"
+fingerprint_postgres_secret_key: "password"
+
+# --- Cross-role shared defaults - Owned by other roles; declared here so this role is standalone-runnable. ---
+apisix_enabled: true            # app_apisix — gates route apply + router wait
+apisix_oidc_client_id: "EnterpriseRAG-oidc-backend"  # app_apisix
+audio_enabled: false            # app_audio
+audio_namespace: "audio"        # app_audio
+chat_history_enabled: false        # app_chat_history
+fingerprint_namespace: "fingerprint"  # app_fingerprint
+nats_namespace: "nats"             # app_nats
+keycloak_namespace: "keycloak"     # core/keycloak
+erag_keycloak_realm: "EnterpriseRAG"     # app_keycloak_config
+edp_late_chunking_enabled: false             # app_edp
+vector_databases_enabled: false                    # app_vector_databases
+ui_domain_name: "solutions.ai"         # app_ui
+ui_keycloak_realm: "EnterpriseRAG"      # app_ui
+vector_databases_vector_store: "redis-cluster"     # app_vector_databases
+vector_databases_vector_datatype: "FLOAT32"        # app_vector_databases
+vector_databases_vector_dims: 768                  # app_vector_databases
+istio_enabled: false                               # global
+observability_enabled: true                        # global
+edp_rbac_enabled: false                            # app_edp
+rag_log_dir: "{{ log_dir }}/rag"                   # app_pre_install

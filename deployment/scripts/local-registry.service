@@ -1,0 +1,38 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+#
+# Dev-only local container registry for Intel AI for Enterprise RAG.
+# Installed and enabled by 'update_images.sh --setup-registry' when the host
+# container runtime is nerdctl (containerd has no daemon to keep containers
+# running across restarts, so systemd owns the lifecycle instead).
+#
+# Placeholders (@NERDCTL@, @NAMESPACE@, @DATA_DIR@, @LISTEN_ADDR@) are
+# substituted by update_images.sh at install time; do not run this file directly.
+#
+# The registry runs in a dedicated containerd namespace (not k8s.io) so kubelet
+# image garbage collection can never evict it, and stores its data on a host
+# path so pushed images survive container recreation, cluster teardown, and
+# reboots. It is removed only by 'update_images.sh --teardown-registry'.
+#
+# @LISTEN_ADDR@ is the address registry:2 binds (via REGISTRY_HTTP_ADDR). It is
+# 127.0.0.1:<port> for the default localhost registry (single-node, not exposed
+# on the network) and 0.0.0.0:<port> when a routable --registry <host>:<port>
+# is given so other cluster nodes can reach it (multi-node).
+
+[Unit]
+Description=Local container registry for Intel AI for Enterprise RAG (dev-only)
+Requires=containerd.service
+After=containerd.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Clear any stale container left by a previous run before starting.
+ExecStartPre=-@NERDCTL@ --namespace @NAMESPACE@ rm -f local-registry
+ExecStart=@NERDCTL@ --namespace @NAMESPACE@ run --rm --pull=never --net=host --name local-registry -e REGISTRY_HTTP_ADDR=@LISTEN_ADDR@ -v @DATA_DIR@:/var/lib/registry registry:2
+ExecStop=@NERDCTL@ --namespace @NAMESPACE@ stop local-registry
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

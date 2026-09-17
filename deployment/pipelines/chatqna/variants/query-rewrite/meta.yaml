@@ -1,0 +1,9 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Query Rewrite Variant Metadata
+# Enhances user queries before embedding and retrieval
+
+# Must run before embedding: it rewrites the query that then gets embedded.
+insert_before: embedding
+description: "Query rewrite for improved retrieval accuracy"

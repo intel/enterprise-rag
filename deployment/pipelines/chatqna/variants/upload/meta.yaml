@@ -1,0 +1,22 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Upload Variant Metadata
+# Embedding-only graph for high-throughput document ingestion
+#
+# Selected by pipeline_variant: "upload"
+
+# `replaces` covers the whole base flow INCLUDING `embedding`, even though the
+# variant re-emits an Embedding step: it declares its own embedding-usvc
+# resources, and the composer rejects a resources key claimed by two active
+# steps.
+
+replaces:
+  - embedding
+  - retriever
+  - reranking
+  - prompt-template
+  - llm-guard-input
+  - llm
+
+description: "Embedding-only pipeline for bulk document upload and ingestion"

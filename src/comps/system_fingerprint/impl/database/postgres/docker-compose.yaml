@@ -1,0 +1,38 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+services:
+  postgres:
+    image: postgres:16.4
+    container_name: system-fingerprint-postgres
+    ports:
+      - ${SYSTEM_FINGERPRINT_POSTGRES_PORT}:5432
+    environment:
+      http_proxy: ${http_proxy}
+      https_proxy: ${https_proxy}
+      no_proxy: ${no_proxy}
+      POSTGRES_DB: ${SYSTEM_FINGERPRINT_DATABASE_NAME}
+      POSTGRES_USER: ${SYSTEM_FINGERPRINT_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${SYSTEM_FINGERPRINT_POSTGRES_PASSWORD}
+
+  system_fingerprint_usvc:
+    build:
+      context: ../../../../../
+      dockerfile: ./comps/system_fingerprint/impl/microservice/Dockerfile
+    container_name: system-fingerprint-microservice
+    env_file: ../../microservice/.env
+    ipc: host
+    runtime: runc
+    network_mode: host
+    environment:
+      http_proxy: ${http_proxy}
+      https_proxy: ${https_proxy}
+      no_proxy: ${no_proxy}
+      SYSTEM_FINGERPRINT_POSTGRES_HOST: ${SYSTEM_FINGERPRINT_POSTGRES_HOST}
+      SYSTEM_FINGERPRINT_POSTGRES_PORT: ${SYSTEM_FINGERPRINT_POSTGRES_PORT}
+      SYSTEM_FINGERPRINT_DATABASE_NAME: ${SYSTEM_FINGERPRINT_DATABASE_NAME}
+      SYSTEM_FINGERPRINT_POSTGRES_USER: ${SYSTEM_FINGERPRINT_POSTGRES_USER}
+      SYSTEM_FINGERPRINT_POSTGRES_PASSWORD: ${SYSTEM_FINGERPRINT_POSTGRES_PASSWORD}
+    restart: unless-stopped
+    depends_on:
+      - postgres

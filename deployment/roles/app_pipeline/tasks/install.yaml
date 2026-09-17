@@ -1,0 +1,407 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# =============================================================================
+# Pipeline Installation
+# =============================================================================
+
+# =============================================================================
+# Validation: pipeline_type and pipeline_variant
+# =============================================================================
+
+# A pipeline type is a directory that carries a pipeline.yaml. Thin flavours
+# (config.yaml only, e.g. audioqna, pl_chatqna) and _shared/ are directories under
+# pipelines/ but are not pipeline types - they point pipeline_type at a modular one.
+- name: "app_pipeline | Discover available pipeline types"
+  ansible.builtin.find:
+    paths: "{{ pipelines_dir }}"
+    patterns: "pipeline.yaml"
+    recurse: true
+    depth: 2
+  register: available_pipeline_metadata
+
+- name: "app_pipeline | Extract pipeline type names"
+  ansible.builtin.set_fact:
+    available_pipeline_types: "{{ available_pipeline_metadata.files | map(attribute='path') | map('dirname') | map('basename') | sort | list }}"
+
+- name: "app_pipeline | Validate pipeline_type"
+  ansible.builtin.fail:
+    msg: |
+      Invalid pipeline_type: '{{ pipeline_type }}'
+
+      Available pipeline types (directories in {{ pipelines_dir }} with a pipeline.yaml):
+      {{ available_pipeline_types | to_nice_yaml }}
+      Note: not every directory under pipelines/ is a pipeline type. Thin flavours
+      carry only a config.yaml and set pipeline_type to one of the types above; they
+      are selectable with 'init application --flavour <name>', not via pipeline_type.
+
+      Please set pipeline_type in config.erag.yaml to one of the available types.
+  when: pipeline_type not in available_pipeline_types
+
+- name: "app_pipeline | Discover available variants for pipeline_type"
+  ansible.builtin.find:
+    paths: "{{ pipelines_dir }}/{{ pipeline_type }}/variants"
+    file_type: directory
+    recurse: no
+  register: available_variant_dirs
+
+- name: "app_pipeline | Extract variant names"
+  ansible.builtin.set_fact:
+    available_variants: "{{ (available_variant_dirs.files | default([]) | map(attribute='path') | map('basename') | list) + ['base'] }}"
+
+- name: "app_pipeline | Validate pipeline_variant"
+  ansible.builtin.fail:
+    msg: |
+      Invalid pipeline_variant: '{{ pipeline_variant }}'
+
+      Available variants for pipeline '{{ pipeline_type }}':
+      {{ available_variants | to_nice_yaml }}
+
+      Please set pipeline_variant in config.yaml to:
+        - 'base' for the base pipeline without variants, OR
+        - one of the available variant names listed above
+  when: pipeline_variant not in available_variants
+
+- name: "app_pipeline | Validate variant metadata if not base"
+  when: pipeline_variant != 'base'
+  block:
+    - name: "app_pipeline | Check variant metadata exists"
+      ansible.builtin.stat:
+        path: "{{ pipelines_dir }}/{{ pipeline_type }}/variants/{{ pipeline_variant }}/meta.yaml"
+      register: variant_metadata_check
+
+    - name: "app_pipeline | Fail if variant metadata missing"
+      ansible.builtin.fail:
+        msg: |
+          Variant metadata not found for variant '{{ pipeline_variant }}'
+
+          Expected file: {{ pipelines_dir }}/{{ pipeline_type }}/variants/{{ pipeline_variant }}/meta.yaml
+
+          The variant directory exists but is missing required metadata.
+      when: not variant_metadata_check.stat.exists
+
+# =============================================================================
+# Load pipeline metadata and prepare template variables
+# =============================================================================
+
+- name: "app_pipeline | Load modular pipeline metadata"
+  ansible.builtin.include_vars:
+    file: "{{ pipelines_dir }}/{{ pipeline_type }}/pipeline.yaml"
+    name: pipeline_meta
+
+- name: "app_pipeline | Set pipeline namespace from metadata"
+  ansible.builtin.set_fact:
+    pipeline_namespace: "{{ pipeline_meta.namespace }}"
+
+# Single source of truth for the aggregated-resources overlay path. Referenced by the
+# composer (resources_output) and later by the Helm values_files list; defining it once
+# prevents drift that would silently feed Helm an empty overlay.
+- name: "app_pipeline | Set aggregated resources overlay path"
+  ansible.builtin.set_fact:
+    helm_resources_path: "{{ rag_log_dir }}/{{ gmc_helm_chart_name }}-resources-{{ pipeline_type }}.yaml"
+
+# The composer writes resources_output into rag_log_dir before the later namespace/helm
+# tasks run, so ensure the directory exists here - the standalone (--only) path does not
+# go through app_pre_install's mkdir.
+- name: "app_pipeline | Ensure rag log directory exists"
+  ansible.builtin.file:
+    path: "{{ rag_log_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "app_pipeline | Prepare template variables for composer"
+  ansible.builtin.set_fact:
+    composer_template_vars:
+      endpoints: "{{ pipeline_meta.endpoints }}"
+      pipeline_type: "{{ pipeline_type }}"
+      pipeline_variant: "{{ pipeline_variant }}"
+      resources_output: "{{ helm_resources_path }}"
+
+- name: "app_pipeline | Convert pipeline_variant to enabled_variants_csv"
+  ansible.builtin.set_fact:
+    enabled_variants_csv: "{{ '' if pipeline_variant == 'base' else pipeline_variant }}"
+
+- name: "app_pipeline | Debug pipeline configuration"
+  ansible.builtin.debug:
+    msg: |
+      Modular pipeline configuration:
+        type: {{ pipeline_type }}
+        variant: {{ pipeline_variant }}
+        namespace: {{ pipeline_namespace }}
+        pipelines_dir: {{ pipelines_dir }}
+        enabled_variants_csv: "{{ enabled_variants_csv }}"
+        endpoints: {{ composer_template_vars.endpoints }}
+
+# =============================================================================
+# Compose GMConnector CRD
+# =============================================================================
+- name: "app_pipeline | Compose GMConnector from modular pipeline"
+  ansible.builtin.command:
+    argv:
+      - "{{ deployment_dir }}/scripts/compose_pipeline.py"
+      - "{{ pipelines_dir }}/{{ pipeline_type }}"
+      - "{{ enabled_variants_csv }}"
+      - "{{ composer_template_vars | to_json }}"
+  register: gmconnector_yaml
+  changed_when: false
+  failed_when: gmconnector_yaml.rc != 0
+
+- name: "app_pipeline | Write composed GMConnector to rag log directory"
+  ansible.builtin.copy:
+    content: "{{ gmconnector_yaml.stdout }}"
+    dest: "{{ rag_log_dir }}/gmconnector-{{ pipeline_type }}.yaml"
+    mode: '0644'
+
+- name: "app_pipeline | Get ANSIBLE_LOG_PATH for CRD output"
+  ansible.builtin.set_fact:
+    ansible_log_dir: "{{ lookup('env', 'ANSIBLE_LOG_PATH') | dirname }}"
+  when:
+    - lookup('env', 'ANSIBLE_LOG_PATH') | length > 0
+    - lookup('env', 'ANSIBLE_LOG_PATH') | regex_search('^/')
+
+- name: "app_pipeline | Write composed GMConnector to Ansible log directory for auditing"
+  ansible.builtin.copy:
+    content: "{{ gmconnector_yaml.stdout }}"
+    dest: "{{ ansible_log_dir }}/gmconnector-{{ pipeline_type }}-{{ ansible_date_time.iso8601_basic_short }}.yaml"
+    mode: '0644'
+  when:
+    - ansible_log_dir is defined
+    - ansible_log_dir | length > 0
+    - ansible_log_dir != '.'
+
+- name: "app_pipeline | Log GMConnector output location"
+  ansible.builtin.debug:
+    msg: |
+      Composed GMConnector CRD written to:
+        - Rag log: {{ rag_log_dir }}/gmconnector-{{ pipeline_type }}.yaml
+        {% if ansible_log_dir is defined and ansible_log_dir | length > 0 %}
+        - Audit log: {{ ansible_log_dir }}/gmconnector-{{ pipeline_type }}-{{ ansible_date_time.iso8601_basic_short }}.yaml
+        {% else %}
+        - Audit log: ANSIBLE_LOG_PATH not set, skipping audit log
+        {% endif %}
+
+# =============================================================================
+# Create namespaces and install GMC operator
+# =============================================================================
+
+- name: "app_pipeline | Ensure pipeline namespace exists"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ pipeline_namespace }}"
+
+- name: "app_pipeline | Label pipeline namespace - Istio"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ pipeline_namespace }}"
+        labels:
+          istio.io/dataplane-mode: "ambient"
+          erag-istio-protected: "true"
+  when: istio_enabled | default(false) | bool
+
+- name: "app_pipeline | Label pipeline namespace - PSS"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ pipeline_namespace }}"
+        labels:
+          pod-security.kubernetes.io/enforce: "restricted"
+          pod-security.kubernetes.io/audit: "restricted"
+          pod-security.kubernetes.io/warn: "restricted"
+  when: enforce_pss | default(false) | bool
+
+- name: "app_pipeline | Ensure GMC namespace exists"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ gmc_namespace }}"
+
+- name: "app_pipeline | Label GMC namespace - Istio"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ gmc_namespace }}"
+        labels:
+          istio.io/dataplane-mode: "ambient"
+          erag-istio-protected: "true"
+  when: istio_enabled | default(false) | bool
+
+# Host-network apiserver (no mesh identity) can't reach the GMC controller's
+# admission webhook under STRICT; open only its port, rest stays STRICT.
+- name: "app_pipeline | Allow apiserver to reach GMC webhook (port-level mTLS)"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: security.istio.io/v1
+      kind: PeerAuthentication
+      metadata:
+        name: allow-webhook
+        namespace: "{{ gmc_namespace }}"
+      spec:
+        selector:
+          matchLabels:
+            control-plane: gmc-controller
+        mtls:
+          mode: STRICT
+        portLevelMtls: "{{ {'9443': {'mode': 'PERMISSIVE'}} }}"
+  when: istio_enabled | default(false) | bool
+
+- name: "app_pipeline | Label GMC namespace - PSS"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ gmc_namespace }}"
+        labels:
+          pod-security.kubernetes.io/enforce: "restricted"
+          pod-security.kubernetes.io/audit: "restricted"
+          pod-security.kubernetes.io/warn: "restricted"
+  when: enforce_pss | default(false) | bool
+
+- name: "app_pipeline | Set helm override paths"
+  ansible.builtin.set_fact:
+    helm_override_values_path: "{{ rag_log_dir }}/{{ gmc_helm_chart_name }}-override-values.yaml"
+
+- name: "app_pipeline | Generate override values file from template"
+  ansible.builtin.template:
+    src: "values.yaml.j2"
+    dest: "{{ helm_override_values_path }}"
+    mode: '0644'
+
+- name: "app_pipeline | Build values_files list for Helm"
+  ansible.builtin.set_fact:
+    values_files: >
+      {{
+        [gmc_helm_default_values_file] +
+        [helm_resources_path] +
+        [helm_override_values_path]
+      }}
+
+- name: "app_pipeline | Install or upgrade GMC Helm chart (operator)"
+  kubernetes.core.helm:
+    name: "{{ gmc_helm_release_name }}"
+    chart_ref: "{{ gmc_helm_chart_directory }}"
+    namespace: "{{ gmc_namespace }}"
+    values_files: "{{ values_files }}"
+    state: present
+    create_namespace: true
+    timeout: "{{ helm_timeout }}"
+    wait: true
+  register: gmc_helm_install_result
+  until: gmc_helm_install_result is succeeded
+  retries: 5
+  delay: 15
+
+# =============================================================================
+# Apply GMConnector and wait for readiness
+# =============================================================================
+
+- name: "app_pipeline | Apply composed GMConnector to cluster"
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ rag_log_dir }}/gmconnector-{{ pipeline_type }}.yaml"
+  register: pipeline_apply_result
+  until: pipeline_apply_result is succeeded
+  retries: 5
+  delay: 10
+
+# router-service is created by gmc-controller reconciling the CR above, so it does
+# not exist yet when this role reaches here. Wait for it to be Available before
+# applying the APISIX route, otherwise the ingress-controller translates the route
+# against a missing backend ("service not found") and defers it a full resync cycle.
+- name: "app_pipeline | Wait for router-service to be Available"
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    namespace: "{{ pipeline_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/name=gmc-router"
+  register: pipeline_router_info
+  until: >
+    pipeline_router_info.resources | length > 0 and
+    (pipeline_router_info.resources[0].status.conditions | default([])
+      | selectattr('type', 'eq', 'Available')
+      | selectattr('status', 'eq', 'True') | list | length > 0)
+  retries: "{{ pipeline_router_wait_retries }}"
+  delay: "{{ pipeline_router_wait_delay }}"
+  when: apisix_enabled | default(true) | bool
+
+- name: "app_pipeline | Apply APISIX routes for the pipeline"
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'apisix-routes.yaml.j2') | from_yaml_all | list }}"
+  when: apisix_enabled | default(true) | bool
+
+# ServiceMonitors/PodMonitors ship as documents inside the GMC step manifests
+# and are applied by the controller with an owner-ref, so Kubernetes garbage-
+# collects them with the GMConnector. No Ansible task manages them.
+
+# Earlier releases applied these monitors into the monitoring namespace from
+# manifests_common/monitoring/*.yaml.j2, without an owner reference or a Helm
+# release, so nothing removes them on upgrade and they would scrape the pipeline
+# alongside the controller-applied ones - double-counting every series. Delete
+# them once; absent objects are a no-op, so this is safe on a fresh install.
+- name: "app_pipeline | Remove monitors from releases that applied them by hand"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: monitoring.coreos.com/v1
+    kind: "{{ item.kind }}"
+    name: "{{ item.name }}"
+    namespace: "{{ observability_namespace | default('monitoring') }}"
+  loop:
+    - { kind: ServiceMonitor, name: embedding-svc }
+    - { kind: ServiceMonitor, name: llm-svc }
+    - { kind: ServiceMonitor, name: input-scan-svc }
+    - { kind: ServiceMonitor, name: output-scan-svc }
+    - { kind: ServiceMonitor, name: prmpt-tmpl-svc }
+    - { kind: ServiceMonitor, name: query-rewrite-svc }
+    - { kind: ServiceMonitor, name: reranking-svc }
+    - { kind: ServiceMonitor, name: retriever-svc }
+    - { kind: ServiceMonitor, name: text-compression-svc }
+    - { kind: ServiceMonitor, name: text-extractor-svc }
+    - { kind: ServiceMonitor, name: text-splitter-svc }
+    - { kind: PodMonitor, name: router-service }
+  # A cluster without prometheus-operator has no such kind; that is not an error.
+  failed_when: false
+
+- name: "app_pipeline | Wait for GMConnector to be ready"
+  kubernetes.core.k8s_info:
+    api_version: gmc.erag.intel.com/v1alpha3
+    kind: GMConnector
+    name: "{{ pipeline_type }}"
+    namespace: "{{ pipeline_namespace }}"
+  register: gmconnector_status
+  until: >
+    gmconnector_status.resources | length > 0 and
+    gmconnector_status.resources[0].status.status is defined
+  retries: 30
+  delay: 10
+
+- name: "app_pipeline | Display GMConnector status"
+  ansible.builtin.debug:
+    msg: "GMConnector {{ pipeline_type }} status: {{ gmconnector_status.resources[0].status.status }}"
+
+- name: "app_pipeline | Deploy audio add-on"
+  ansible.builtin.include_role:
+    name: app_audio
+  when:
+    - audio_enabled | default(false) | bool
+    - pipeline_type == 'chatqna'

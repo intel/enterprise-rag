@@ -1,0 +1,92 @@
+---
+- name: "app_edp | Uninstall SeaweedFS Helm release"
+  kubernetes.core.helm:
+    name: "seaweedfs"
+    namespace: "{{ seaweedfs.namespace | default('seaweedfs') }}"
+    state: absent
+
+- name: "app_edp | Delete SeaweedFS namespace"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Namespace
+    name: "{{ seaweedfs.namespace | default('seaweedfs') }}"
+
+- name: "app_edp | Uninstall SeaweedFS Helm release"
+  kubernetes.core.helm:
+    name: "seaweedfs"
+    namespace: "{{ edp_seaweedfs_namespace }}"
+    state: absent
+
+- name: "app_edp | Delete SeaweedFS namespace"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Namespace
+    name: "{{ edp_seaweedfs_namespace }}"
+
+- name: "app_edp | Remove the ONTAP S3 reverse proxy"
+  ansible.builtin.include_tasks:
+    file: ontap_s3_teardown.yaml
+
+- name: "app_edp | Uninstall EDP Helm release"
+  kubernetes.core.helm:
+    name: "{{ edp_helm_release_name }}"
+    namespace: "{{ edp_namespace }}"
+    state: absent
+    wait: true
+    wait_timeout: "300s"
+  when: edp_enabled | default(false)
+
+- name: "app_edp | Delete EDP namespace"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Namespace
+    name: "{{ edp_namespace }}"
+  when: edp_enabled | default(false)
+
+# --- Clean up Keycloak get-secret Job artifacts (created during install) ---
+
+- name: "app_edp | Delete keycloak-get-secret Job"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: batch/v1
+    kind: Job
+    name: "keycloak-get-secret-{{ edp_client_id | lower | regex_replace('[^a-z0-9]', '-') }}"
+    namespace: "{{ keycloak_namespace }}"
+    delete_options:
+      propagationPolicy: Background
+  failed_when: false
+
+- name: "app_edp | Delete keycloak-get-secret ConfigMap"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    name: keycloak-get-secret-script
+    namespace: "{{ keycloak_namespace }}"
+  failed_when: false
+
+- name: "app_edp | Delete keycloak-minio-secret"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Secret
+    name: keycloak-minio-secret
+    namespace: "{{ edp_namespace }}"
+  failed_when: false
+
+- name: "app_edp | Delete cross-namespace RBAC for get-secret"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: "{{ item.api }}"
+    kind: "{{ item.kind }}"
+    name: "{{ item.name }}"
+    namespace: "{{ edp_namespace }}"
+  loop:
+    - { api: rbac.authorization.k8s.io/v1, kind: Role, name: keycloak-get-secret }
+    - { api: rbac.authorization.k8s.io/v1, kind: RoleBinding, name: keycloak-get-secret }
+  loop_control:
+    label: "{{ item.kind }}/{{ item.name }}"
+  failed_when: false

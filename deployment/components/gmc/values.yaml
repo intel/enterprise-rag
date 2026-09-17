@@ -1,0 +1,305 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Default values for gmc.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# This chart deploys two workloads, each with its own block below:
+#
+#   gmc:    the controller (operator) that reconciles GMConnector resources.
+#           Rendered by templates/deployment.yaml as a normal Helm Deployment.
+#   router: the pipeline entrypoint every request passes through. The controller
+#           renders it from gmc-router.yaml.tpl, so these values reach it through
+#           the gmc-config ConfigMap rather than a Helm Deployment of its own.
+#
+# Per-microservice settings live under `images:` further down; the two blocks
+# here are only for the workloads this chart owns.
+
+gmc:
+  replicaCount: 1
+  resources:
+    limits:
+      memory: 256Mi
+    requests:
+      cpu: 500m
+      memory: 64Mi
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: gmc
+    initialDelaySeconds: 30
+    periodSeconds: 20
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: gmc
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  podAnnotations: {}
+  podLabels:
+    control-plane: gmc-controller
+
+# The router is stateless, so replicas can be raised once its health probes gate
+# rollout.
+router:
+  # Fixed replica count, used only when the HPA is disabled.
+  replicaCount: 1
+  resources:
+    limits:
+      memory: 256Mi
+    requests:
+      cpu: 500m
+      memory: 64Mi
+  pdb:
+    enabled: true
+    minAvailable: 1
+  hpa:
+    # When enabled the HPA owns the replica count and the Deployment omits it.
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 80
+    # behavior: {}  # optional; overrides the default scale up/down policies
+
+proxy:
+  http_proxy: ""
+  https_proxy: ""
+  no_proxy: ""
+
+tokens:
+  hug_token: ""
+
+namespace: chatqna
+
+# NATS JetStream endpoint. The controller publishes the fingerprint config
+# projection into the KV bucket; the router reads it. Both authenticate to the
+# server with an NKey seed mounted from the nats-auth secret. The URL is
+# plaintext nats://, so the connection is not encrypted; set a tls:// URL and
+# configure server certificates to encrypt it.
+nats:
+  url: "nats://nats-svc.nats.svc:4222"
+  auth:
+    existingSecret: "nats-auth"
+    userSeedKey: "user.nk"
+
+# Fingerprint backing store. The controller runs the Postgres->KV bridge, so it
+# connects directly to the fingerprint Postgres and calls the fingerprint
+# service to seed default parameter rows.
+fingerprint:
+  url: "http://fingerprint-svc.fingerprint.svc:6012"
+  postgres:
+    host: "fingerprint-postgresql.fingerprint.svc"
+    port: 5432
+    database: "system_fingerprint"
+    username: "fingerprint"
+    existingSecret: "fingerprint-postgresql-secret"
+    secretKey: "password"
+    # prefer falls back to plaintext if the server declines TLS and does not
+    # verify the server; the in-repo postgresql chart serves no TLS. Use
+    # verify-full against a server configured for it.
+    sslmode: "prefer"
+
+# Common tag & repository for all images. Override if needed for specific images.
+common_tag: &tag "latest"
+common_registry: &repo "docker.io/intel"
+
+# Catalog names (models.yaml -> name): what KServe serves the model as, and what
+# vLLM accepts in the request "model" field.
+embedding_model_name: &embedding_model_name "nomic-embed"
+
+reranking_model_name: &reranking_model_name "bge-reranker"
+
+ner_model_name: &ner_model_name "tanaos/tanaos-NER-v1"
+
+# imagePullSecrets:
+#   - name: regcred
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# podSecurityContext and securityContext are shared: every microservice manifest
+# in manifests_common/ renders them too, so they stay chart-wide rather than
+# moving under gmc: or router:.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 3000
+  fsGroup: 2000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+
+balloons:
+  enabled: false
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+service:
+  type: ClusterIP
+
+pvc:
+  modelNer:
+    name: model-volume-ner
+    accessMode: ReadWriteOnce
+    storage: 1Gi
+
+images:
+  gmcManager:
+    image: "enterprise-rag-gmcmanager"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+  gmcRouter:
+    image: "enterprise-rag-gmcrouter"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+  text-extractor-usvc:
+    image: "enterprise-rag-text-extractor"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+  text-compression-usvc:
+    image: "enterprise-rag-text-compression"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+  text-splitter-usvc:
+    image: "enterprise-rag-text-splitter"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+    envs:
+      EMBEDDING_SERVICE_ENDPOINT: "http://embedding-usvc:6000/v1/embeddings"
+  embedding-usvc:
+    image: "enterprise-rag-embedding"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+    envs:
+      EMBEDDING_MODEL_NAME: *embedding_model_name
+      EMBEDDING_TIMEOUT_SECONDS: "120"
+      ERAG_LOGGER_LEVEL: "INFO"
+  reranking-usvc:
+    image: "enterprise-rag-reranking"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+    envs:
+      RERANKING_MODEL_NAME: *reranking_model_name
+      RERANKING_LATE_CHUNKING_ENABLED: "False"
+  prompt-template-usvc:
+    image: "enterprise-rag-prompt_template"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+  late-chunking-usvc:
+    image: "enterprise-rag-late_chunking"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+    envs:
+      EMBEDDING_MODEL_NAME: *embedding_model_name
+      EMBEDDING_ENDPOINT: "http://embedding-usvc:6000/v1/embeddings"
+  retriever-usvc:
+    image: "enterprise-rag-retriever"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+    envs:
+      EMBEDDING_MODEL_NAME: *embedding_model_name
+  ovms_ner:
+    image: "enterprise-rag-ovms_ner"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+    envs:
+      NER_MODEL_NAME: *ner_model_name
+      NER_WEIGHT_FORMAT: "int8"
+      OVMS_INTERNAL_PORT: "9000"
+      GATEWAY_PORT: "9001"
+  ingestion-usvc:
+    image: "enterprise-rag-ingestion"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+  llm-usvc:
+    image: "enterprise-rag-llm"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+  in-guard-usvc:
+    image: "enterprise-rag-in-guard"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+  out-guard-usvc:
+    image: "enterprise-rag-out-guard"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+  ui-usvc:
+    image: "enterprise-rag-chatqna-conversation-ui"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+  langdtct-usvc:
+    image: "enterprise-rag-language-detection"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+  docsum-usvc:
+    image: "enterprise-rag-docsum"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+  query-rewrite-usvc:
+    image: "enterprise-rag-query-rewrite"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+  init-container:
+    image: "enterprise-rag-init-container"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+
+monitoring:
+  enabled: true
+  # Namespace Grafana's sidecar watches for dashboard ConfigMaps.
+  dashboardNamespace: monitoring

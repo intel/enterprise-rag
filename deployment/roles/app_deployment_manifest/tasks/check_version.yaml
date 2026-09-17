@@ -1,0 +1,228 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: "deployment_manifest | Load version metadata"
+  ansible.builtin.include_vars:
+    file: "{{ deployment_dir }}/version.yaml"
+  when: solution_version is not defined
+
+- name: "deployment_manifest | Check for existing deployment manifest"
+  kubernetes.core.k8s_info:
+    kind: ConfigMap
+    namespace: "{{ manifest_namespace }}"
+    label_selectors:
+      - "{{ manifest_label_selector }}"
+  register: existing_manifests
+  failed_when: false
+
+- name: "deployment_manifest | Parse existing deployment manifest"
+  ansible.builtin.set_fact:
+    existing_deployment: "{{ ((existing_manifests.resources | default([]))[0].data['manifest.yaml'] | from_yaml) if (existing_manifests.resources | default([]) | length) > 0 else {} }}"
+    manifest_exists: "{{ (existing_manifests.resources | default([]) | length) > 0 }}"
+
+- name: "deployment_manifest | Fresh install detected"
+  ansible.builtin.debug:
+    msg: >-
+      No deployment manifest found — fresh install ({{ solution_version }}).
+      This run establishes the version baseline, so a later change of
+      solution_version can be recognised and gated.
+  when: not manifest_exists
+
+- name: "deployment_manifest | Force install mode active"
+  ansible.builtin.debug:
+    msg: "Force install mode — bypassing version checks (target: {{ solution_version }})"
+  when: force_install_mode | default(false) | bool
+
+- name: "deployment_manifest | Check deployment status"
+  ansible.builtin.set_fact:
+    is_in_progress: "{{ existing_deployment.deployment.status | default('complete') == manifest_status_in_progress }}"
+    is_deleting: "{{ existing_deployment.deployment.status | default('') == manifest_status_deleting }}"
+  when: manifest_exists
+
+- name: "deployment_manifest | Block install over active uninstall"
+  ansible.builtin.fail:
+    msg: |
+      Deployment is being uninstalled ({{ existing_deployment.deployment.version }}).
+      Wait for uninstall to complete or use force_install_mode=true.
+  when:
+    - manifest_exists
+    - is_deleting | default(false) | bool
+    - not (force_install_mode | default(false) | bool)
+
+- name: "deployment_manifest | Warn about installing over active uninstall (force mode)"
+  ansible.builtin.debug:
+    msg: "WARNING: Installing over active uninstall of {{ existing_deployment.deployment.version }} (force mode)"
+  when:
+    - manifest_exists
+    - is_deleting | default(false) | bool
+    - force_install_mode | default(false) | bool
+
+- name: "deployment_manifest | Check in-progress target version"
+  ansible.builtin.set_fact:
+    target_version_match: "{{ existing_deployment.deployment.targetVersion | default('') == solution_version }}"
+    has_target_version: "{{ existing_deployment.deployment.targetVersion is not none and existing_deployment.deployment.targetVersion != '' }}"
+  when: is_in_progress | default(false) | bool
+
+- name: "deployment_manifest | Resuming incomplete deployment"
+  ansible.builtin.debug:
+    msg: "Resuming: {{ existing_deployment.deployment.version | default('unknown') }} -> {{ existing_deployment.deployment.targetVersion | default('unknown') }}"
+  when:
+    - is_in_progress | default(false) | bool
+    - target_version_match | default(false) | bool
+
+- name: "deployment_manifest | Block incomplete deployment with version mismatch"
+  ansible.builtin.fail:
+    msg: |
+      Incomplete deployment of different version:
+        In-progress target: {{ existing_deployment.deployment.targetVersion | default('unknown') }}
+        Attempting to install: {{ solution_version }}
+      Use force_install_mode=true to override.
+  when:
+    - is_in_progress | default(false) | bool
+    - has_target_version | default(false) | bool
+    - not (target_version_match | default(false) | bool)
+    - not (force_install_mode | default(false) | bool)
+
+- name: "deployment_manifest | Compare deployed vs installing version"
+  ansible.builtin.script:
+    cmd: "{{ role_path }}/files/compare_versions.py"
+    executable: python3
+  environment:
+    DEPLOYED_VERSION: "{{ existing_deployment.deployment.version }}"
+    INSTALLING_VERSION: "{{ solution_version }}"
+  register: version_comparison
+  changed_when: false
+  when:
+    - manifest_exists
+    - not (is_in_progress | default(false) | bool)
+
+- name: "deployment_manifest | Parse version comparison"
+  ansible.builtin.set_fact:
+    install_mode: "{{ (version_comparison.stdout | from_json).mode }}"
+    deployed_ver: "{{ (version_comparison.stdout | from_json).deployed_version }}"
+    installing_ver: "{{ (version_comparison.stdout | from_json).installing_version }}"
+  when: manifest_exists and not (is_in_progress | default(false) | bool)
+
+- name: "deployment_manifest | Display detected mode"
+  ansible.builtin.debug:
+    msg: "Mode: {{ install_mode | upper }} ({{ deployed_ver }} -> {{ installing_ver }})"
+  when:
+    - manifest_exists
+    - install_mode is defined
+
+- name: "deployment_manifest | Set upgrade mode flag"
+  ansible.builtin.set_fact:
+    is_upgrade_mode: "{{ install_mode in ['major_upgrade', 'minor_upgrade', 'patch_upgrade'] }}"
+  when:
+    - manifest_exists
+    - install_mode is defined
+
+# An upgrade reached through the install action skips every gate that makes an
+# upgrade safe, because they all hang off the upgrade action. Refuse and name the
+# action that does run them, rather than promoting install to upgrade behind the
+# operator's back: a job labelled install would then silently require backup,
+# migration and data-consistency approvals its command line never mentioned.
+# Placed ahead of the constraint check, so the answer is the operator's actual
+# mistake rather than a constraint they did not choose to violate.
+- name: "deployment_manifest | Block implicit upgrade through install"
+  ansible.builtin.fail:
+    msg: |-
+      env/{{ env_name | default('?') }} runs {{ deployed_ver }} and install would put {{ installing_ver }} in its place.
+      That is an upgrade. The pre-upgrade gates — backup freshness, config-state
+      comparison, the pre/post data snapshots and the upgrade report — run only under
+      the upgrade action, so installing over it would skip every one of them.
+      Either upgrade it     ./es_auto_installer.sh upgrade erag --env {{ env_name | default('<env>') }}
+      or force the install  ./es_auto_installer.sh install erag --env {{ env_name | default('<env>') }} -- -e force_install_mode=true
+      Forcing is for documented recovery only: no gates run and no report is written.
+  when:
+    - component_action | default('install') == 'install'
+    - manifest_exists
+    - is_upgrade_mode | default(false) | bool
+    - not (force_install_mode | default(false) | bool)
+
+- name: "deployment_manifest | Warn about implicit upgrade through install (force mode)"
+  ansible.builtin.debug:
+    msg: "WARNING: Installing {{ installing_ver }} over {{ deployed_ver }} without the upgrade gates (force mode)"
+  when:
+    - component_action | default('install') == 'install'
+    - manifest_exists
+    - is_upgrade_mode | default(false) | bool
+    - force_install_mode | default(false) | bool
+
+- name: "deployment_manifest | Check upgrade constraint"
+  when:
+    - manifest_exists
+    - is_upgrade_mode | default(false) | bool
+  block:
+    - name: "deployment_manifest | Load upgrade_base_version"
+      ansible.builtin.set_fact:
+        upgrade_base_version_required: "{{ upgrade_base_version | default('') }}"
+
+    - name: "deployment_manifest | No upgrade constraint configured"
+      ansible.builtin.debug:
+        msg: "No upgrade_base_version constraint — allowing upgrade from any version"
+      when: upgrade_base_version_required | length == 0
+
+    - name: "deployment_manifest | Block unsupported upgrade"
+      ansible.builtin.fail:
+        msg: |
+          Upgrade not supported: {{ deployed_ver }} -> {{ installing_ver }}
+          Version {{ installing_ver }} does not support upgrades.
+          Backup, clean install, and restore instead.
+      when:
+        - upgrade_base_version_required | length > 0
+        - upgrade_base_version_required == 'unsupported'
+        - not (force_install_mode | default(false) | bool)
+
+    - name: "deployment_manifest | Verify upgrade constraint"
+      when:
+        - upgrade_base_version_required | length > 0
+        - upgrade_base_version_required != 'unsupported'
+      block:
+        - name: "deployment_manifest | Check deployed version against upgrade constraint"
+          ansible.builtin.script:
+            cmd: "{{ role_path }}/files/compare_versions.py"
+            executable: python3
+          environment:
+            SOURCE_VERSION: "{{ deployed_ver }}"
+            TARGET_VERSION: "{{ installing_ver }}"
+            UPGRADE_CONSTRAINT: "{{ upgrade_base_version_required }}"
+          register: constraint_check_result
+          changed_when: false
+          failed_when: false
+
+        - name: "deployment_manifest | Parse constraint check"
+          ansible.builtin.set_fact:
+            upgrade_constraint_check: "{{ constraint_check_result.stdout | from_json }}"
+
+        - name: "deployment_manifest | Block upgrade on constraint violation"
+          ansible.builtin.fail:
+            msg: |
+              Unsupported upgrade path: {{ deployed_ver }} -> {{ installing_ver }}
+              Constraint: {{ upgrade_base_version_required }}
+              {{ upgrade_constraint_check.reason }}
+          when: not (upgrade_constraint_check.allowed | default(false))
+
+        - name: "deployment_manifest | Constraint check passed"
+          ansible.builtin.debug:
+            msg: "Constraint check: {{ deployed_ver }} satisfies {{ upgrade_base_version_required }} -> {{ installing_ver }}"
+
+- name: "deployment_manifest | Block downgrade"
+  ansible.builtin.fail:
+    msg: |
+      Downgrade blocked: {{ deployed_ver }} -> {{ installing_ver }}
+      Use force_install_mode=true to bypass, or clean install + restore from backup.
+  when:
+    - manifest_exists
+    - install_mode is defined
+    - install_mode == "downgrade"
+    - not (force_install_mode | default(false) | bool)
+
+- name: "deployment_manifest | Warn about forced downgrade"
+  ansible.builtin.debug:
+    msg: "WARNING: Downgrade {{ deployed_ver }} -> {{ installing_ver }} (force mode — may cause data loss)"
+  when:
+    - manifest_exists
+    - install_mode is defined
+    - install_mode == "downgrade"
+    - force_install_mode | default(false) | bool

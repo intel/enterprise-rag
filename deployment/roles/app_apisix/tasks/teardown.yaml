@@ -1,0 +1,35 @@
+---
+- name: "app_apisix | Uninstall Helm chart"
+  kubernetes.core.helm:
+    name: "{{ apisix_helm_release_name }}"
+    namespace: "{{ apisix_namespace }}"
+    state: absent
+    wait: true
+    wait_timeout: "{{ helm_timeout }}"
+
+- name: "app_apisix | Find APISIX CRDs"
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+  register: _apisix_crds
+  failed_when: false
+
+- name: "app_apisix | Delete APISIX CRDs"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: "{{ item.metadata.name }}"
+  loop: "{{ _apisix_crds.resources | default([]) | selectattr('metadata.name', 'match', '.*\\.apisix\\.apache\\.org$') | list }}"
+  loop_control:
+    label: "{{ item.metadata.name }}"
+  failed_when: false
+
+- name: "app_apisix | Delete namespace"
+  kubernetes.core.k8s:
+    state: absent
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ apisix_namespace }}"

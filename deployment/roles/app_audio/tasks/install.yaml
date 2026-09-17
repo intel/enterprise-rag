@@ -1,0 +1,67 @@
+---
+- name: "app_audio | Set override_values.yaml path"
+  ansible.builtin.set_fact:
+    audio_helm_override_values_path: >-
+      {{ rag_tmp_dir }}/{{ audio_helm_release_name }}-override-values.yaml
+
+- name: "app_audio | Ensure namespace exists"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ audio_namespace }}"
+
+- name: "app_audio | Label namespace — Istio"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ audio_namespace }}"
+        labels:
+          istio.io/dataplane-mode: "ambient"
+          erag-istio-protected: "true"
+  when: istio_enabled | default(false) | bool
+
+- name: "app_audio | Label namespace — PSS"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ audio_namespace }}"
+        labels:
+          pod-security.kubernetes.io/enforce: "restricted"
+          pod-security.kubernetes.io/audit: "restricted"
+          pod-security.kubernetes.io/warn: "restricted"
+  when: enforce_pss | default(false) | bool
+
+- name: "app_audio | Generate override values file from template"
+  ansible.builtin.template:
+    src: "values.yaml.j2"
+    dest: "{{ audio_helm_override_values_path }}"
+    mode: '0644'
+
+- name: "app_audio | Set fact for Helm values files"
+  ansible.builtin.set_fact:
+    values_files: >
+      {{
+        [audio_helm_default_values_file] +
+        [audio_helm_override_values_path]
+      }}
+
+- name: "app_audio | Install Audio Helm chart"
+  kubernetes.core.helm:
+    name: "{{ audio_helm_release_name }}"
+    chart_ref: "{{ audio_helm_chart_directory }}"
+    release_namespace: "{{ audio_namespace }}"
+    create_namespace: true
+    wait: true
+    timeout: "{{ helm_timeout }}"
+    values_files: "{{ values_files }}"
+  retries: 5
+  delay: 15

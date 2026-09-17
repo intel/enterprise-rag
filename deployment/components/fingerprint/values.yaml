@@ -1,0 +1,118 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+replicaCount: 1
+
+nameOverride: "fingerprint"
+fullnameOverride: "fingerprint-svc"
+
+image:
+  fingerprint:
+    name: "enterprise-rag-system-fingerprint"
+    repository: "docker.io/intel"
+    tag: "latest"
+    pullPolicy: Always
+
+service:
+  targetPort: http
+  port: 6012
+  name: http
+
+# PostgreSQL backing store (deployed as a chart dependency).
+postgresql:
+  enabled: true
+  fullnameOverride: "fingerprint-postgresql"
+  image:
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+  auth:
+    username: "fingerprint"
+    database: "system_fingerprint"
+    existingSecret: "fingerprint-postgresql-secret"
+    secretKey: "password"
+  persistence:
+    enabled: true
+    size: "4Gi"
+
+proxy:
+  http_proxy: ""
+  https_proxy: ""
+  no_proxy: ""
+
+systemFingerprint:
+  templateLanguage: "en"
+  pipeline: "chatqna"
+
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "250m"
+  limits:
+    memory: "512Mi"
+    cpu: 1
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 3000
+  fsGroup: 2000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+
+podAnnotations: {}
+imagePullSecrets: []
+
+global:
+  parentChartDefined: true
+
+# APISIX routes for system-fingerprint. Common values injected by app_apisix.
+apisix:
+  endpoints:
+    - name: fingerprint-config
+      enabled: true
+      namespace: fingerprint
+      path: /v1/system_fingerprint/config
+      backend_service: fingerprint-svc
+      service_port: 6012
+      service_path: /v1/system_fingerprint/config
+      rate_limit_count: 30
+      permissions:
+        - admin#admin-access
+        - maintainer#maintainer-access
+    - name: fingerprint-change
+      enabled: true
+      namespace: fingerprint
+      path: /v1/system_fingerprint/change_arguments
+      backend_service: fingerprint-svc
+      service_port: 6012
+      service_path: /v1/system_fingerprint/change_arguments
+      rate_limit_count: 30
+      permissions:
+        - admin#admin-access
+    - name: fingerprint-kinds
+      enabled: true
+      namespace: fingerprint
+      path: /v1/system_fingerprint/kinds
+      backend_service: fingerprint-svc
+      service_port: 6012
+      service_path: /v1/system_fingerprint/kinds
+      rate_limit_count: 30
+      permissions:
+        - admin#admin-access
+        - maintainer#maintainer-access
+
+# ServiceMonitor for Prometheus (discovered by core observability stack)
+monitoring:
+  enabled: true

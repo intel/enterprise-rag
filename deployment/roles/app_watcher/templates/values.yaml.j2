@@ -1,0 +1,24 @@
+{#
+Copyright (C) 2024-2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+#}
+
+{% if tag is defined %}
+images:
+  init-container:
+    repository: "{{ registry }}"
+    image: "enterprise-rag-init-container"
+    tag: "{{ tag }}"
+{% endif %}
+
+{# Refresh targets are discovered at runtime from the ambient namespace label, so
+   no namespace list is templated here. #}
+rag_watcher:
+  data:
+    ambient_label: "{{ watcher_ambient_label }}"
+    gate_namespaces: "{{ watcher_gate_namespaces | join(' ') }}"
+    istio_namespace: "{{ istio_namespace }}"
+    ca_namespace: "{{ istio_csr_namespace }}"
+    mesh_ready_timeout: "{{ watcher_mesh_ready_timeout }}"
+  config:
+    schedule: "{{ watcher_schedule }}"

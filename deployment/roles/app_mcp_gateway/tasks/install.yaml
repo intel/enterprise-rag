@@ -1,0 +1,158 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "app_mcp_gateway | Assert EDP is enabled"
+  ansible.builtin.assert:
+    that: edp_enabled | default(false) | bool
+    fail_msg: >-
+      MCP gateway requires EDP. Every MCP tool (retrieve_context, ingest_url,
+      ingest_file, list_buckets, check_ingestion_status) is EDP-backed, so with
+      edp_enabled=false no tools are registered and the gateway is non-functional.
+      Set edp_enabled: true or disable the MCP gateway.
+    quiet: true
+
+- name: "app_mcp_gateway | Set override_values.yaml path"
+  ansible.builtin.set_fact:
+    mcp_helm_override_values_path: >-
+      {{ rag_tmp_dir }}/{{ mcp_helm_release_name }}-override-values.yaml
+
+- name: "app_mcp_gateway | Ensure namespace exists"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ mcp_namespace }}"
+
+- name: "app_mcp_gateway | Label namespace (Istio)"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ mcp_namespace }}"
+        labels:
+          istio.io/dataplane-mode: "ambient"
+          erag-istio-protected: "true"
+  when: istio_enabled | default(false) | bool
+
+- name: "app_mcp_gateway | Label namespace (PSS)"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ mcp_namespace }}"
+        labels:
+          pod-security.kubernetes.io/enforce: "restricted"
+          pod-security.kubernetes.io/audit: "restricted"
+          pod-security.kubernetes.io/warn: "restricted"
+  when: enforce_pss | default(false) | bool
+
+- name: "app_mcp_gateway | Look up the gateway data-plane Service"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Service
+    namespace: "{{ envoy_gateway_namespace }}"
+    label_selectors:
+      - "gateway.envoyproxy.io/owning-gateway-name={{ gateway_name }}"
+      - "gateway.envoyproxy.io/owning-gateway-namespace={{ gateway_namespace }}"
+  register: _mcp_edge_svc
+
+- name: "app_mcp_gateway | Assert the gateway data-plane Service was found"
+  ansible.builtin.assert:
+    that: _mcp_edge_svc.resources | default([]) | length > 0
+    fail_msg: >-
+      No Envoy Gateway data-plane Service in '{{ envoy_gateway_namespace }}' for Gateway
+      '{{ gateway_namespace }}/{{ gateway_name }}'. The MCP gateway pod needs its address
+      in hostAliases to reach the presigned S3 upload URL, which EDP always issues on the
+      external hostname.
+    quiet: true
+
+- name: "app_mcp_gateway | Set the gateway data-plane address"
+  ansible.builtin.set_fact:
+    mcp_edge_ip: "{{ _mcp_edge_svc.resources[0].spec.clusterIP }}"
+
+- name: "app_mcp_gateway | Read the gateway TLS certificate"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: "{{ gateway_tls_secret_name }}"
+    namespace: "{{ gateway_namespace }}"
+  register: _mcp_gateway_tls
+  when: gateway_tls_mode != 'none'
+
+- name: "app_mcp_gateway | Assert the gateway TLS certificate exists"
+  ansible.builtin.assert:
+    that:
+      - _mcp_gateway_tls.resources | default([]) | length > 0
+      - "'ca.crt' in _mcp_gateway_tls.resources[0].data or 'tls.crt' in _mcp_gateway_tls.resources[0].data"
+    fail_msg: >-
+      Secret '{{ gateway_namespace }}/{{ gateway_tls_secret_name }}' has neither ca.crt
+      nor tls.crt. Without one the pod cannot verify the edge certificate on the
+      presigned S3 upload.
+    quiet: true
+  when: gateway_tls_mode != 'none'
+
+- name: "app_mcp_gateway | Copy the issuing CA as the outbound CA bundle"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ mcp_ca_secret_name }}"
+        namespace: "{{ mcp_namespace }}"
+      type: Opaque
+      data:
+        tls.crt: >-
+          {{ _mcp_gateway_tls.resources[0].data['ca.crt']
+             | default(_mcp_gateway_tls.resources[0].data['tls.crt'], true) }}
+  when: gateway_tls_mode != 'none'
+
+- name: "app_mcp_gateway | Ensure the temp directory exists"
+  ansible.builtin.file:
+    path: "{{ rag_tmp_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "app_mcp_gateway | Generate override values file from template"
+  ansible.builtin.template:
+    src: "values.yaml.j2"
+    dest: "{{ mcp_helm_override_values_path }}"
+    mode: '0644'
+
+- name: "app_mcp_gateway | Set values_files list"
+  ansible.builtin.set_fact:
+    values_files: >
+      {{
+        [mcp_helm_default_values_file] +
+        [mcp_helm_override_values_path]
+      }}
+
+- name: "app_mcp_gateway | Install or Upgrade Helm chart"
+  kubernetes.core.helm:
+    name: "{{ mcp_helm_release_name }}"
+    chart_ref: "{{ mcp_helm_chart_directory }}"
+    release_namespace: "{{ mcp_namespace }}"
+    values_files: "{{ values_files }}"
+    state: present
+    create_namespace: true
+    wait: true
+    timeout: "{{ helm_timeout }}"
+  register: mcp_helm_result
+  until: mcp_helm_result is succeeded
+  retries: 5
+  delay: 15
+
+# A Ready pod and an Accepted route do not mean an agent can call the gateway: the edge
+# validates the token against a cached JWKS that can lag the realm keys just after an
+# install. Gate the install on a real token being accepted so the failure surfaces here
+# and not in the first agent request.
+- name: "app_mcp_gateway | Verify edge authentication end to end"
+  ansible.builtin.include_tasks: verify_edge_auth.yaml
+  when: gateway_tls_mode != 'none'

@@ -1,0 +1,29 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# Reranking step - Relevance scoring via external endpoint                  #}
+{#                                                                           #}
+{# RERANKING_SERVICE_ENDPOINT / RERANKING_MODEL_SERVER come from the         #}
+{# reranking-usvc-config ConfigMap, rendered by                              #}
+{# app_pipeline/templates/values.yaml.j2 behind a `reranking_endpoint` guard  #}
+{# - see steps/embedding.yaml.j2 for the full rationale.                     #}
+step:
+  name: Reranking
+  data: $response
+  dependency: Hard
+  internalService:
+    serviceName: reranking-svc
+    config:
+      endpoint: /v1/reranking
+      paramsKey: reranker
+      paramsKind: reranker
+resources:
+  reranking-usvc:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 4
+        memory: 2Gi

@@ -1,0 +1,105 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Default values for the nats chart.
+
+nameOverride: ""
+fullnameOverride: "nats"
+
+image:
+  repository: nats
+  tag: "2.10-alpine"
+  pullPolicy: IfNotPresent
+
+boxImage:
+  repository: natsio/nats-box
+  tag: "0.14.5"
+  pullPolicy: IfNotPresent
+
+exporterImage:
+  repository: natsio/prometheus-nats-exporter
+  tag: "0.15.0"
+  pullPolicy: IfNotPresent
+
+# Clustering. Single-server is the default so the component deploys on
+# single-node clusters. Set cluster.enabled=true for a multi-node RAFT cluster;
+# it needs at least three schedulable nodes to keep JetStream quorum.
+cluster:
+  enabled: false
+  replicas: 3
+
+# Client authorization. Clients authenticate with an NKey so only the
+# leader-elected controller writes the KV bucket; this is enforced regardless of
+# Istio. Transport encryption comes from the Istio ambient mesh when Istio is
+# enabled and is otherwise absent, so the server runs no NATS-native TLS. The
+# NKey material lives in a Secret with these keys:
+#   user.pub — authorized client NKey public key (read by the server)
+#   user.nk  — client NKey seed (mounted into the controller and router)
+# The chart README documents how the Ansible role generates them.
+auth:
+  existingSecret: "nats-auth"
+  userPubKey: "user.pub"
+  userSeedKey: "user.nk"
+
+# KV bucket the controller's Postgres->KV bridge creates and maintains. It uses
+# memory storage; the controller repopulates it from the fingerprint Postgres
+# store, so a restart loses nothing durable.
+kv:
+  bucket: "fingerprint"
+
+jetstream:
+  # Memory store size for JetStream (NATS size syntax). The fingerprint data is
+  # small; raise this only if the bucket grows.
+  maxMemory: "256M"
+
+service:
+  clientPort: 4222
+  clusterPort: 6222
+  monitorPort: 8222
+  metricsPort: 7777
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+exporterResources:
+  requests:
+    cpu: "10m"
+    memory: "32Mi"
+  limits:
+    cpu: "100m"
+    memory: "64Mi"
+
+persistence:
+  enabled: false
+  size: "1Gi"
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 3000
+  fsGroup: 2000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+
+podAnnotations: {}
+imagePullSecrets: []
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# ServiceMonitor for Prometheus (discovered by the core observability stack).
+monitoring:
+  enabled: true

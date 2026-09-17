@@ -1,0 +1,88 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "nats.fullname" . }}-kv-init
+  labels:
+    {{- include "nats.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 10
+  template:
+    metadata:
+      labels:
+        {{- include "nats.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: kv-init
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          image: "{{ .Values.boxImage.repository }}:{{ .Values.boxImage.tag }}"
+          imagePullPolicy: {{ .Values.boxImage.pullPolicy }}
+          env:
+            - name: HOME
+              value: /tmp
+            - name: XDG_CONFIG_HOME
+              value: /tmp
+          command:
+            - sh
+            - -c
+            - |
+                SERVER="nats://nats-svc.{{ .Release.Namespace }}.svc:{{ .Values.service.clientPort }}"
+                AUTH="--nkey=/etc/nats/nkey/{{ .Values.auth.userSeedKey }}"
+                BUCKET="{{ .Values.kv.bucket }}"
+                # kv add doubles as the readiness gate: it can only succeed once the
+                # server is connectable and JetStream is up. It is not idempotent
+                # though — on a bucket that already exists this CLI exits non-zero
+                # with "stream name already in use", so that one error counts as
+                # success. Without it the loop can never finish on the second run of
+                # this hook, which is every upgrade.
+                # kv ls is avoided as the check because this CLI fails it on a local
+                # schema-load bug even against a healthy server, which would hang the
+                # gate forever.
+                echo "Ensuring KV bucket $BUCKET (waits for JetStream)...";
+                while true; do
+                  if out=$(nats --server "$SERVER" $AUTH kv add "$BUCKET" \
+                             --replicas=1 --storage=memory --history=1 2>&1); then
+                    echo "KV bucket $BUCKET created";
+                    break;
+                  fi
+                  case "$out" in
+                    *"already in use"*|*"already exists"*)
+                      echo "KV bucket $BUCKET is already there, leaving it alone";
+                      break;;
+                  esac
+                  # Report what actually happened rather than asserting a cause: the
+                  # previous message claimed JetStream was not ready for every failure,
+                  # including the one that never resolves.
+                  echo "NATS not ready yet ($out), retrying in 2 seconds...";
+                  sleep 2;
+                done;
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: nkey
+              mountPath: /etc/nats/nkey
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: nkey
+          secret:
+            secretName: {{ .Values.auth.existingSecret | quote }}
+            defaultMode: 0440
+            items:
+              - key: {{ .Values.auth.userSeedKey }}
+                path: {{ .Values.auth.userSeedKey }}

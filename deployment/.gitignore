@@ -1,0 +1,4 @@
+upgrade/metadata/*
+upgrade/reports/*
+components/velero/charts/*
+ansible.log

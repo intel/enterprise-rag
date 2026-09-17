@@ -1,0 +1,17 @@
+---
+- name: "app_fingerprint | Uninstall Helm chart"
+  kubernetes.core.helm:
+    name: "{{ fingerprint_helm_release_name }}"
+    namespace: "{{ fingerprint_namespace }}"
+    state: absent
+    wait: true
+    wait_timeout: "300s"
+
+- name: "app_fingerprint | Delete namespace"
+  kubernetes.core.k8s:
+    state: absent
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ fingerprint_namespace }}"

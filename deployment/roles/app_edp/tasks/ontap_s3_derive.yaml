@@ -1,0 +1,35 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# Derives edp_storage_type from the ONTAP S3 parameters, so an ONTAP S3 deployment needs
+# the endpoint and the two access keys and nothing else.
+#
+# Included from app_pre_install, which every RAG component depends on, because a role
+# default cannot do this: role defaults are role-scoped and app_check_pods and app_ui
+# each declare their own edp_storage_type, so they would keep believing 'seaweedfs' and
+# the health check would wait for SeaweedFS pods that do not exist. An explicit
+# edp_storage_type is an extra var and still wins; ontap_s3_resolve.yaml reports the
+# conflict if it disagrees with an active proxy.
+
+- name: "app_edp | ONTAP S3 | Resolve the endpoint for the storage type derivation"
+  ansible.builtin.include_tasks:
+    file: ontap_s3_endpoint.yaml
+
+# Gated on operator-supplied values only. Reading edp_storage_type here would be
+# self-referential: ontap_s3_resolve.yaml decides activation partly from it.
+- name: "app_edp | ONTAP S3 | Derive the s3compatible storage type"
+  ansible.builtin.set_fact:
+    edp_storage_type: "s3compatible"
+    _edp_storage_type_derived: true
+  when:
+    - _edp_ontap_s3_lif | length > 0
+    - _edp_storage_backend == 'netapp-trident'
+    - edp_s3_compatible_access_key_id | default('', true) | string | trim | length > 0
+
+- name: "app_edp | ONTAP S3 | Report the derived storage type"
+  ansible.builtin.debug:
+    msg: >-
+      EDP object store: s3compatible, derived from the ONTAP S3 endpoint
+      {{ _edp_ontap_s3_lif }}. Set edp_storage_type explicitly to override.
+  when: _edp_storage_type_derived | default(false) | bool

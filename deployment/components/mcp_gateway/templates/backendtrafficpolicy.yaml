@@ -1,0 +1,51 @@
+{{- /*
+Copyright (C) 2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+Rate limiting for the MCP data path. Type Local needs no rate-limit service, so it adds
+no infrastructure - the trade-off is that the counters are per Envoy pod, and the
+EnvoyProxy runs as a DaemonSet, so the effective cluster-wide ceiling is the configured
+limit multiplied by the number of gateway pods. Set the limits with that in mind.
+
+Two buckets:
+  route      one bucket for all traffic on the route, which bounds total volume including
+             requests rejected before the JWT filter populates the claim header
+  perClient  keyed on the azp claim the SecurityPolicy projects into a header, so one
+             noisy or compromised agent cannot exhaust the budget of the others
+
+Per-source-address keying would need Global rate limiting, which requires deploying a
+rate-limit service; that is deliberately not part of this component.
+*/ -}}
+{{- if and .Values.httpRoute.enabled .Values.rateLimit.enabled }}
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: mcp-gateway-rate-limit
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: mcp-gateway
+    app.kubernetes.io/name: mcp-gateway
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: mcp-gateway-route
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: mcp-gateway-health-route
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        - clientSelectors:
+            - headers:
+                - name: {{ .Values.securityPolicy.jwt.clientHeader | quote }}
+                  type: Distinct
+          limit:
+            requests: {{ .Values.rateLimit.perClient.requests }}
+            unit: {{ .Values.rateLimit.perClient.unit }}
+        - limit:
+            requests: {{ .Values.rateLimit.route.requests }}
+            unit: {{ .Values.rateLimit.route.unit }}
+{{- end }}

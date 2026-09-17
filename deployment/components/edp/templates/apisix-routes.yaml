@@ -1,0 +1,75 @@
+{{- /*
+Copyright (C) 2024-2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+Renders ApisixRoute objects for endpoints declared under .Values.apisix.endpoints.
+Shared values (routeHost, ingressClassName, auth.*) are injected centrally by Ansible
+written by Ansible directly into this release under .Values.apisix (no shared values file).
+Per-component endpoints live in this chart's own values.yaml and may be merged/overridden
+at install time.
+*/ -}}
+{{- $apisix := .Values.apisix | default dict -}}
+{{- if $apisix }}
+{{- $auth := $apisix.auth | default dict -}}
+{{- range $apisix.endpoints | default list }}
+{{- if .enabled }}
+---
+apiVersion: apisix.apache.org/v2
+kind: ApisixRoute
+metadata:
+  name: {{ .name }}-route
+  namespace: {{ .namespace | default $.Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ $.Chart.Name }}
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+    helm.sh/chart: {{ $.Chart.Name }}-{{ $.Chart.Version }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+spec:
+  ingressClassName: {{ $apisix.ingressClassName | default "apisix" }}
+  http:
+    - name: {{ .name }}-route
+      match:
+        {{- with $apisix.routeHost }}
+        hosts:
+          - {{ . | quote }}
+        {{- end }}
+        paths:
+          - {{ .path }}
+      backends:
+        - serviceName: {{ .backend_service }}
+          servicePort: {{ .service_port }}
+      plugins:
+        - name: proxy-rewrite
+          enable: true
+          config:
+            {{- if .service_path }}
+            uri: {{ .service_path }}
+            {{- else if .service_regex }}
+            regex_uri:
+              {{- range .service_regex }}
+              - {{ . | quote }}
+              {{- end }}
+            {{- end }}
+        - name: limit-count
+          enable: true
+          config:
+            count: {{ .rate_limit_count | default 30 }}
+            time_window: 60
+            key_type: var
+            key: http_authorization
+            rejected_code: 429
+        - name: authz-keycloak
+          enable: true
+          config:
+            resource_registration_endpoint: {{ $auth.resource_registration_endpoint }}
+            token_endpoint: {{ $auth.token_endpoint }}
+            client_id: {{ $auth.client_id }}
+            policy_enforcement_mode: "ENFORCING"
+            ssl_verify: false
+            permissions:
+              {{- range .permissions }}
+              - {{ . | quote }}
+              {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

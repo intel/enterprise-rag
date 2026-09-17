@@ -1,0 +1,129 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_inference_models Role Defaults
+# =============================================================================
+# Deploys the pipeline's models via model-manager, sizes them for the cluster,
+# and owns the models it deployed (see inference_owner_label).
+# =============================================================================
+
+inference_namespace: "llm-inference"
+
+# ai-gateway: LLM traffic routes through EPP for load-balanced scheduling.
+# Stable svc name in envoy-gateway-system, model-aware (routes by path).
+inference_aigw_endpoint: "http://ai-gateway.envoy-gateway-system.svc"
+
+# Path to model-manager CLI (in ai-solutions ext/)
+inference_model_manager_path: "{{ playbook_dir }}/../model-manager"
+
+# Models to deploy — each must exist in model-manager's models.yaml.
+# The 'role' field maps to the endpoint var (llm|embedding|reranking).
+inference_models: []
+
+# ── Accelerator ─────────────────────────────────────────────────────────────
+# Mirrors the core repo's configs/defaults/accelerators.yaml. Cluster default is
+# CPU; a GPU flavour (e.g. chatqna_intel_gpu) sets kubernetes_accelerator=intel-gpu.
+# The active profile's vllm_runtime / k8s_resource / render_group_gid are exported
+# to model-manager (MM_VLLM_RUNTIME / MM_ACCEL_RESOURCE / MM_ACCEL_RENDER_GID),
+# which remaps a model's logical `vllm` runtime to the variant (vllm-xpu) and
+# requests the resource. Per-model pinning is expressed in the pipeline config: an
+# inference_models entry's `accelerator:` (e.g. cpu on embed/rerank) is passed to
+# model-manager as --accelerator and wins over the cluster default.
+#
+# render_group_gid is the host `render` group GID, exported as MM_ACCEL_RENDER_GID
+# so model-manager adds it as a pod-level supplementalGroup — level-zero on the Intel
+# `xe` driver rejects device enumeration from a non-root process that isn't in `render`,
+# so without it the vLLM-XPU pod (non-root) sees zero GPUs. GID differs per distro;
+# verify with `getent group render` and override here if it isn't 991. Kept in lockstep
+# with the core repo's accelerator profile so both model-deploy paths agree.
+kubernetes_accelerator: "cpu"
+inference_accelerator_profiles:
+  cpu:
+    k8s_resource: ""
+    vllm_runtime: ""
+    render_group_gid: null
+  intel-gpu:
+    k8s_resource: "gpu.intel.com/xe"
+    vllm_runtime: "vllm-xpu"
+    render_group_gid: 991
+
+# Readiness wait — combined as --wait-timeout (retries * delay seconds)
+inference_model_ready_retries: 120
+inference_model_ready_delay: 10
+
+# ── Ownership ───────────────────────────────────────────────────────────────
+# Stamped on every serving CR this role deploys (model-manager --label) and used
+# as the selector for what to undeploy. model-manager's built-in
+# managed-by=model-manager cannot serve this purpose: .core's llm_services and
+# hand-deploys share inference_namespace and carry that same label.
+#
+# Deliberately not an app.kubernetes.io/* key: KServe stamps
+# app.kubernetes.io/part-of=llminferenceservice on the Deployments and pods it
+# creates for these CRs, so reusing that key would put two different values for
+# the same key on one object graph.
+inference_owner_label: "erag.intel.com/managed-by=app_inference_models"
+
+# Serving kinds model-manager may create — the runtime decides which
+# (vllm → LLMInferenceService, openvino → InferenceService), so both are queried.
+inference_serving_kinds:
+  - api_version: "serving.kserve.io/v1alpha2"
+    kind: "LLMInferenceService"
+  - api_version: "serving.kserve.io/v1beta1"
+    kind: "InferenceService"
+
+# Undeploy wait — passed to model-manager as `undeploy --wait --wait-timeout`
+# (retries * delay seconds), which blocks until the pods are gone and their cores
+# released. Its own default is 180s, too short for a large model.
+inference_undeploy_wait_retries: 60
+inference_undeploy_wait_delay: 10
+
+# Post-undeploy confirmation that the serving CRs really are gone. Short by
+# design: --wait above already returned, so this only catches a delete that
+# failed silently (model-manager's `kubectl delete` swallows its own errors).
+inference_undeploy_confirm_retries: 12
+inference_undeploy_confirm_delay: 5
+
+# ── Replica sizing ──────────────────────────────────────────────────────────
+# When true (default), calculate_replicas.py sizes each role for the cluster
+# and overrides models.yaml's cpu/memory/replicas. When false, models.yaml
+# values are deployed verbatim (no --cpu/--memory/--replicas overrides sent
+# to model-manager).
+inference_auto_size: true
+
+# Path to the replica calculator (bundled with this repo).
+inference_calc_replicas_script: "{{ playbook_dir }}/../ext/enterprise.ai-erag/deployment/scripts/calculate_replicas.py"
+
+# Baseline CPU per role — used only if env/local/models.yaml has no `cpu:` for
+# the matching model (the catalog values normally win).
+inference_default_llm_cpu: 32
+inference_default_embedding_cpu: 4
+inference_default_reranking_cpu: 4
+
+# Baseline memory per role — same fallback rule as the CPU defaults above.
+# calculate_replicas.py assumes ~64 GiB per LLM / 4 GiB per embed+rerank when
+# verifying memory fit; keep these numbers aligned with that reservation.
+inference_default_llm_memory: "64Gi"
+inference_default_embedding_memory: "4Gi"
+inference_default_reranking_memory: "4Gi"
+
+# Prefer more replicas at reduced per-replica CPU (true) vs one large replica
+# per NUMA node (false). See calculate_replicas.py --throughput-mode.
+inference_throughput_mode: true
+
+# Hard cap on replicas per node — protects against exceeding pod limits.
+inference_max_replicas_per_node: 10
+
+# ── Node topology discovery (multinode-safe) ────────────────────────────────
+# Runs a short-lived DaemonSet that execs `lscpu` + `/proc/meminfo` on each
+# node. Replaces the localhost-only lscpu path so replica sizing is correct
+# when the Ansible controller is not itself a k8s node, or when nodes are
+# heterogeneous. Pod runs unprivileged, matches PSS 'restricted'.
+inference_topology_ns: "kube-system"
+inference_topology_ds_name: "erag-inference-topology-probe"
+# Minimal (~5 MB) busybox image — matches the nri_cpu_balloons probe pattern,
+# so the layer is already cached on nodes. Uses /sys and /proc only (no lscpu).
+inference_topology_image: "busybox:1.36"
+inference_topology_wait_retries: 30
+inference_topology_wait_delay: 10

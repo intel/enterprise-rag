@@ -1,0 +1,20 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "app_mcp_gateway | Uninstall Helm chart"
+  kubernetes.core.helm:
+    name: "{{ mcp_helm_release_name }}"
+    release_namespace: "{{ mcp_namespace }}"
+    state: absent
+    wait: true
+    wait_timeout: "300s"
+
+- name: "app_mcp_gateway | Delete namespace"
+  kubernetes.core.k8s:
+    state: absent
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ mcp_namespace }}"

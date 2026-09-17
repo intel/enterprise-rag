@@ -1,0 +1,41 @@
+{#
+Copyright (C) 2024-2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+#}
+
+{% if tag is defined %}
+image:
+  chat_history:
+    tag: "{{ tag }}"
+{% endif %}
+    repository: "{{ registry }}"
+
+ferretdb:
+  postgresql:
+    auth:
+      password: "{{ CHAT_HISTORY_POSTGRES_PASSWORD }}"
+{% if chat_history_additional_values is defined and chat_history_additional_values %}
+{{ chat_history_additional_values | to_nice_yaml }}
+{% endif %}
+
+{% if minimal_configuration | default(false) | bool %}
+minimalConfiguration: true
+minimalResources:
+  chat-history-svc:
+    requests:
+      cpu: "50m"
+{% endif %}
+
+# --- APISIX route wiring (consumed by templates/apisix-routes.yaml in this chart) ---
+{% set _apisix_kc_ns = keycloak_namespace | default('keycloak') %}
+{% set _apisix_realm = (ui_keycloak_realm if (ui_keycloak_realm | default("") | length > 0) else erag_keycloak_realm | default("EnterpriseRAG")) %}
+{% set _apisix_kc_base = 'http://keycloak-service.' ~ _apisix_kc_ns ~ '.svc:8080' %}
+apisix:
+  enabled: {{ (apisix_enabled | default(false)) | bool | string | lower }}
+  ingressClassName: apisix
+  routeHost: "{{ (ui_domain_name if ui_domain_name is defined else '') }}"
+  auth:
+    realm: "{{ _apisix_realm }}"
+    client_id: "{{ apisix_oidc_client_id | default('EnterpriseRAG-oidc-backend') }}"
+    resource_registration_endpoint: "{{ _apisix_kc_base }}/realms/{{ _apisix_realm }}/authz/protection/resource_set"
+    token_endpoint: "{{ _apisix_kc_base }}/realms/{{ _apisix_realm }}/protocol/openid-connect/token"

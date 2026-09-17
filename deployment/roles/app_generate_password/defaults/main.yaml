@@ -1,0 +1,7 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+rag_log_dir: "{{ log_dir }}/rag"                   # app_pre_install
+password_file: "{{ rag_log_dir }}/default_credentials.yaml"
+secure_logs: true                                  # global

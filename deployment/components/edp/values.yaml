@@ -1,0 +1,1023 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Default values for helm.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# allowInsecureImages due to repository override to: [bitnamilegacy]
+global:
+  security:
+    allowInsecureImages: true
+  parentChartDefined: true
+
+pipelineNamespace: "chatqna"
+
+# Replica count of the embedding model served by Enterprise Inference. Supplied
+# by the app_edp role; drives MAX_NEW_WORKERS and CELERY_BATCH_SIZE.
+embeddingReplicas: 1
+
+proxy:
+  http_proxy: ""
+  https_proxy: ""
+  no_proxy: ""
+
+edpExternalUrl: "https://s3.solutions.ai"
+edpExternalCertVerify: "false"
+edpInternalUrl: "http://seaweedfs-s3.seaweedfs.svc:8333"
+edpInternalCertVerify: "false"
+edpBaseRegion: 'us-east-1'
+edpSqsEventQueueUrl: ""
+edpAccessKey: ""
+edpSecretKey: ""
+edpOidcConfigUrl: "http://keycloak-service.keycloak.svc:8080/realms/EnterpriseRAG/.well-known/openid-configuration"
+edpOidcClientSecret: ""
+bucketNameRegexFilter: '.*'
+presignedUrlCredentialsSystemFallback: "false"
+# Catalog name (models.yaml -> name): what KServe serves the model as, and what
+# vLLM accepts in the request "model" field
+embedding_model_name: &embedding_model_name "nomic-embed"
+
+sharepointTenantId: ""
+sharepointClientId: ""
+sharepointClientSecret: ""
+keycloakBrokerIdpAlias: ""
+# TTL of the Redis lock that serializes SharePoint sync runs (EDP_SP_SYNC_LOCK_TTL_SECONDS).
+# Seconds; must outlast the longest expected sync, otherwise a second sync can start
+# while the first is still running.
+sharepointSyncLockTtlSeconds: "600"
+
+
+s3ApiDomain: "s3.solutions.ai"
+uiBrowserDomain: "seaweedfs.solutions.ai"
+s3DomainPrefix: "s3"
+uiBrowserDomainPrefix: "seaweedfs"
+
+redisUrl: "edp-redis:6379"
+redisUsername: "default"
+redisPassword: ""
+
+postgresDatabasePassword: ""
+postgresAdminPassword: ""
+
+seaweedfs:
+  namespace: "seaweedfs"
+  version: "4.37.0"
+  repo: "https://seaweedfs.github.io/seaweedfs/helm"
+  persistence:
+    enabled: true
+    master:
+      size: "2Gi"
+      volumeSizeLimitMB: 1024
+    filer:
+      size: "10Gi"
+    volume:
+      size: "50Gi"
+  s3:
+    port: 8333
+  webhook_endpoint: "http://edp-backend.edp.svc:5000/seaweedfs_event"
+  # ignoreBuckets:
+  # - name: bucketToIgnore
+  # - name: anotherOne
+  podSecurityContext:
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+  createBuckets:
+  - name: default
+    anonymousRead: true
+  - name: secondary
+    anonymousRead: true
+  - name: only-admin
+    anonymousRead: false
+  iamKeycloak: # used when rbac is enables in the main config yaml
+    claim: "minio_roles"
+    sts:
+      tokenDuration: 1h
+      maxSessionLength: 12h
+      issuer: seaweedfs-sts
+    audiences:
+      - "EnterpriseRAG-oidc-minio"
+      - "EnterpriseRAG-oidc-backend"
+      - "account"
+    scopes:
+      - "openid"
+      - "profile"
+      - "email"
+      - "roles"
+    roleMapping:
+      - value: "consoleAdmin"
+        role: "arn:aws:iam::role/S3AdminRole"
+      - value: "erag-admin-group"
+        role: "arn:aws:iam::role/S3UserRole"
+      - value: "erag-maintainer-group"
+        role: "arn:aws:iam::role/S3UserRole"
+      - value: "erag-user-group"
+        role: "arn:aws:iam::role/S3ReadOnlyRole"
+    defaultRole: "arn:aws:iam::role/S3ReadOnlyRole"
+    policies:
+      - name: "S3AdminPolicy"
+        actions:
+          - "s3:*"
+        resources:
+          - "*"
+      - name: "S3UserPolicy"
+        actions:
+          - "s3:ListBucket"
+          - "s3:GetObject"
+          - "s3:PutObject"
+          - "s3:DeleteObject"
+          - "s3:ListAllMyBuckets"
+        resources:
+          - "arn:aws:s3:::default/*"
+          - "arn:aws:s3:::default"
+          - "arn:aws:s3:::secondary/*"
+          - "arn:aws:s3:::secondary"
+      - name: "S3ReadOnlyPolicy"
+        actions:
+          - "s3:ListBucket"
+          - "s3:GetObject"
+        resources:
+          - "arn:aws:s3:::default/*"
+          - "arn:aws:s3:::default"
+          - "arn:aws:s3:::secondary/*"
+          - "arn:aws:s3:::secondary"
+    roles:
+      - name: "S3AdminRole"
+        arn: "arn:aws:iam::role/S3AdminRole"
+        policies:
+          - "S3AdminPolicy"
+      - name: "S3UserRole"
+        arn: "arn:aws:iam::role/S3UserRole"
+        policies:
+          - "S3UserPolicy"
+      - name: "S3ReadOnlyRole"
+        arn: "arn:aws:iam::role/S3ReadOnlyRole"
+        policies:
+          - "S3ReadOnlyPolicy"
+
+postgresql:
+  enabled: true
+  fullnameOverride: "edp-postgresql"
+  image:
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+  auth:
+    username: "edp" # cannot refence secret
+    database: "edp" # cannot refence secret
+    existingSecret: "edp-postgresql-secret"
+    secretKey: "DATABASE_PASSWORD"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "200Mi"
+    limits:
+      cpu: "512m"
+      memory: "2Gi"
+  persistence:
+    enabled: true
+    size: "10Gi"
+
+# When minimalConfiguration is true, resource requests/limits for celery and
+# textExtractor are reduced to values suitable for a 32-core / 64 GB single-user
+# deployment. Set via edp.minimal_configuration: true in config.yaml.
+# Individual services.<name>.resources overrides still take priority.
+minimalConfiguration: false
+minimalResources:
+  edp-celery:
+    requests:
+      cpu: "100m"
+  edp-text-extractor:
+    requests:
+      cpu: "1"
+
+celery:
+  nameOverride: "edp-celery"
+  name: "enterprise-rag-enhanced-dataprep"
+  repository: "docker.io/intel"
+  tag: latest
+  pullPolicy: Always
+  config:
+    concurrency: "6"
+    logLevel: "info"
+    eragLoggerLevel: "INFO" # "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+    # CELERY_BATCH_SIZE (chunks sent per batch to the embedding service) and
+    # MAX_NEW_WORKERS are computed in templates/configmap.yaml from
+    # embeddingReplicas and balloonsEnabled:
+    # - balloons enabled:  workers = replicas x 8, batch size = replicas x 128
+    # - balloons disabled: workers = replicas x 4, batch size = replicas x 32
+    scheduledSync:
+      enabled: false
+      syncPeriodSeconds: "60"
+      sharepointSyncPeriodSeconds: "60"
+  environment:
+    - name: EDP_EXTERNAL_URL
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_EXTERNAL_URL
+    - name: EDP_INTERNAL_URL
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_INTERNAL_URL
+    - name: EDP_EXTERNAL_CERT_VERIFY
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_EXTERNAL_CERT_VERIFY
+    - name: EDP_INTERNAL_CERT_VERIFY
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_INTERNAL_CERT_VERIFY
+    - name: EDP_BASE_REGION
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_BASE_REGION
+    - name: MINIO_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_ACCESS_KEY
+    - name: MINIO_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_SECRET_KEY
+    - name: BUCKET_NAME_REGEX_FILTER
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: BUCKET_NAME_REGEX_FILTER
+    - name: CELERY_BROKER_URL
+      valueFrom:
+        secretKeyRef:
+          name: edp-celery-secrets
+          key: CELERY_BROKER_URL
+    - name: CELERY_BACKEND_URL
+      valueFrom:
+        secretKeyRef:
+          name: edp-celery-secrets
+          key: CELERY_BACKEND_URL
+    - name: TEXT_EXTRACTOR_ENDPOINT
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: TEXT_EXTRACTOR_ENDPOINT
+    - name: TEXT_COMPRESSION_ENDPOINT
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: TEXT_COMPRESSION_ENDPOINT
+    - name: TEXT_SPLITTER_ENDPOINT
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: TEXT_SPLITTER_ENDPOINT
+    - name: LATE_CHUNKING_ENDPOINT
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: LATE_CHUNKING_ENDPOINT
+    - name: EMBEDDING_ENDPOINT
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: EMBEDDING_ENDPOINT
+    - name: INGESTION_ENDPOINT
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: INGESTION_ENDPOINT
+    - name: DPGUARD_ENDPOINT
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: DPGUARD_ENDPOINT
+    - name: FINGERPRINT_ENDPOINT
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: FINGERPRINT_ENDPOINT
+    - name: FINGERPRINT_PIPELINE
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: FINGERPRINT_PIPELINE
+    - name: DATABASE_HOST
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_HOST
+    - name: DATABASE_PORT
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_PORT
+    - name: DATABASE_NAME
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_NAME
+    - name: DATABASE_USER
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_USER
+    - name: DATABASE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_PASSWORD
+    - name: DPGUARD_ENABLED
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: DPGUARD_ENABLED
+    - name: LATE_CHUNKING_ENABLED
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: LATE_CHUNKING_ENABLED
+    - name: BATCH_SIZE
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: CELERY_BATCH_SIZE
+    - name: SHAREPOINT_TENANT_ID
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: SHAREPOINT_TENANT_ID
+    - name: SHAREPOINT_CLIENT_ID
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: SHAREPOINT_CLIENT_ID
+    - name: SHAREPOINT_CLIENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: SHAREPOINT_CLIENT_SECRET
+    - name: KEYCLOAK_BROKER_IDP_ALIAS
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: KEYCLOAK_BROKER_IDP_ALIAS
+    - name: EDP_OIDC_CONFIG_URL
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_OIDC_CONFIG_URL
+
+  replicas: 1
+  resources:
+    requests:
+      cpu: "512m"
+      memory: "4Gi"
+    limits:
+      cpu: "2"
+      memory: "8Gi"
+
+flower:
+  enabled: true
+  nameOverride: "edp-flower"
+  name: "enterprise-rag-enhanced-dataprep"
+  repository: "docker.io/intel"
+  tag: latest
+  pullPolicy: Always
+  command: "celery -A tasks.celery flower"
+  environment:
+    - name: FLOWER_ADDRESS
+      value: "0.0.0.0"
+    - name: FLOWER_PORT
+      value: "5555"
+    - name: CELERY_BROKER_URL
+      valueFrom:
+        secretKeyRef:
+          name: edp-celery-secrets
+          key: CELERY_BROKER_URL
+    - name: CELERY_BACKEND_URL
+      valueFrom:
+        secretKeyRef:
+          name: edp-celery-secrets
+          key: CELERY_BACKEND_URL
+    - name: DATABASE_HOST
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_HOST
+    - name: DATABASE_PORT
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_PORT
+    - name: DATABASE_NAME
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_NAME
+    - name: DATABASE_USER
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_USER
+    - name: DATABASE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_PASSWORD
+  replicas: 1
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "512m"
+      memory: "1Gi"
+
+backend:
+  postgresql:
+    image:
+      repository: bitnamilegacy/postgresql
+  environment:
+    - name: CELERY_BROKER_URL
+      valueFrom:
+        secretKeyRef:
+          name: edp-celery-secrets
+          key: CELERY_BROKER_URL
+    - name: CELERY_BACKEND_URL
+      valueFrom:
+        secretKeyRef:
+          name: edp-celery-secrets
+          key: CELERY_BACKEND_URL
+    - name: DATABASE_HOST
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_HOST
+    - name: DATABASE_PORT
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_PORT
+    - name: DATABASE_NAME
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_NAME
+    - name: DATABASE_USER
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_USER
+    - name: DATABASE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: edp-postgresql-secret
+          key: DATABASE_PASSWORD
+    - name: EDP_EXTERNAL_URL
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_EXTERNAL_URL
+    - name: EDP_INTERNAL_URL
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_INTERNAL_URL
+    - name: EDP_EXTERNAL_CERT_VERIFY
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_EXTERNAL_CERT_VERIFY
+    - name: EDP_INTERNAL_CERT_VERIFY
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_INTERNAL_CERT_VERIFY
+    - name: EDP_BASE_REGION
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_BASE_REGION
+    - name: MINIO_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_ACCESS_KEY
+    - name: MINIO_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_SECRET_KEY
+    - name: BUCKET_NAME_REGEX_FILTER
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: BUCKET_NAME_REGEX_FILTER
+    - name: SEAWEEDFS_IGNORE_BUCKETS
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: SEAWEEDFS_IGNORE_BUCKETS
+    - name: "TEXT_EXTRACTOR_ENDPOINT"
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: TEXT_EXTRACTOR_ENDPOINT
+    - name: "TEXT_COMPRESSION_ENDPOINT"
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: TEXT_COMPRESSION_ENDPOINT
+    - name: "TEXT_SPLITTER_ENDPOINT"
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: TEXT_SPLITTER_ENDPOINT
+    - name: LATE_CHUNKING_ENABLED
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: LATE_CHUNKING_ENABLED
+    - name: "EMBEDDING_ENDPOINT"
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: EMBEDDING_ENDPOINT
+    - name: "RETRIEVER_ENDPOINT"
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: RETRIEVER_ENDPOINT
+    - name: "RERANKER_ENDPOINT"
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: RERANKER_ENDPOINT
+    - name: "PRESIGNED_URL_CREDENTIALS_SYSTEM_FALLBACK"
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: PRESIGNED_URL_CREDENTIALS_SYSTEM_FALLBACK
+    - name: "USE_BEARER_TOKEN_AUTH"
+      valueFrom:
+        configMapKeyRef:
+          name: edp-configmap
+          key: USE_BEARER_TOKEN_AUTH
+    - name: SHAREPOINT_TENANT_ID
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: SHAREPOINT_TENANT_ID
+    - name: SHAREPOINT_CLIENT_ID
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: SHAREPOINT_CLIENT_ID
+    - name: SHAREPOINT_CLIENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: SHAREPOINT_CLIENT_SECRET
+    - name: KEYCLOAK_BROKER_IDP_ALIAS
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: KEYCLOAK_BROKER_IDP_ALIAS
+    - name: EDP_OIDC_CONFIG_URL
+      valueFrom:
+        secretKeyRef:
+          name: edp-access-secret
+          key: EDP_OIDC_CONFIG_URL
+  config:
+    eragLoggerLevel: "INFO" # "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+    rbac:
+      enabled: false
+      validationType: "ALWAYS" # "NONE", "ALWAYS", "CACHED", "STATIC"
+      cacheExpiration: "600" # in seconds
+      staticConfig: |
+        [
+          "default"
+        ]
+  nameOverride: "edp-backend"
+  name: "enterprise-rag-enhanced-dataprep"
+  repository: "docker.io/intel"
+  tag: latest
+  pullPolicy: Always
+  replicas: 1
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+
+lateChunking:
+  enabled: false
+  nameOverride: "edp-late-chunking"
+  name: "enterprise-rag-late-chunking"
+  repository: "docker.io/intel"
+  tag: latest
+  pullPolicy: Always
+  replicas: 1
+  environment:
+    - name: OMP_NUM_THREADS
+      valueFrom:
+        resourceFieldRef:
+          resource: limits.cpu
+  config:
+    chunk_size: "512"
+    chunk_overlap: "0"
+    embedding_service_endpoint: "http://embedding-svc.chatqna.svc:6000/v1/embeddings"
+    model_name: "jinaai/jina-embeddings-v2-base-en"
+  resources:
+    requests:
+      cpu: "4"
+      memory: "1Gi"
+    limits:
+      cpu: "8"
+      memory: "8Gi"
+  hpa:
+    minReplicas: 1
+    maxReplicas: 2
+    targetValue: 2
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 60
+        policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 15
+        - type: Pods
+          value: 1
+          periodSeconds: 15
+      scaleUp:
+        selectPolicy: Max
+        stabilizationWindowSeconds: 0
+        policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 15
+
+textExtractor:
+  nameOverride: "edp-text-extractor"
+  name: "enterprise-rag-text-extractor"
+  repository: "docker.io/intel"
+  tag: latest
+  pullPolicy: Always
+  replicas: 1
+  environment:
+    - name: OMP_NUM_THREADS
+      value: "1"
+    - name: TEXT_EXTRACTOR_MAX_WORKERS
+      valueFrom:
+        resourceFieldRef:
+          resource: limits.cpu
+    # Cap docling / ONNXRuntime intra-op thread pool to 1 thread PER PROCESS.
+    # The extractor spawns TEXT_EXTRACTOR_MAX_WORKERS (= limits.cpu) Python
+    # worker processes for page-parallel extraction; each worker also holds
+    # its own docling model. If ORT itself is allowed multiple intra-op
+    # threads, N workers × M threads over-subscribes the pod's CPU cgroup
+    # and thrashes the scheduler. One worker → one core → one ORT thread is
+    # the correct fit. Without this cap, ORT queries the HOST's
+    # hardware_concurrency() (bypasses the cgroup cpuset) and spawns dozens
+    # of threads per worker — OOM territory on high-core boxes.
+    - name: DOCLING_NUM_THREADS
+      value: "1"
+  resources:
+    requests:
+      cpu: "4"
+      memory: "8Gi"
+    limits:
+      cpu: "12"
+      memory: "30Gi"
+  hpa:
+    minReplicas: 1
+    maxReplicas: 3
+    scaleUpTargetValue: 2
+    scaleDownTargetValue: "1"
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 60
+        policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 15
+        - type: Pods
+          value: 1
+          periodSeconds: 15
+      scaleUp:
+        selectPolicy: Max
+        stabilizationWindowSeconds: 60
+        policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+
+textCompression:
+  nameOverride: "edp-text-compression"
+  name: "enterprise-rag-text-compression"
+  repository: "docker.io/intel"
+  tag: latest
+  pullPolicy: Always
+  replicas: 1
+  environment:
+    - name: OMP_NUM_THREADS
+      valueFrom:
+        resourceFieldRef:
+          resource: limits.cpu
+  config:
+    default_text_compression_methods: "header_footer_stripper"
+  resources:
+    requests:
+      cpu: "0.1"
+      memory: "64Mi"
+    limits:
+      cpu: "512m"
+      memory: "1Gi"
+
+textSplitter:
+  nameOverride: "edp-text-splitter"
+  name: "enterprise-rag-text-splitter"
+  repository: "docker.io/intel"
+  tag: latest
+  pullPolicy: Always
+  replicas: 1
+  environment:
+    - name: OMP_NUM_THREADS
+      valueFrom:
+        resourceFieldRef:
+          resource: limits.cpu
+  config:
+    chunk_size: "512"
+    chunk_overlap: "64"
+    embedding_service_endpoint: "http://embedding-svc.chatqna.svc:6000/v1/embeddings"
+    # For semantic chunking
+    use_semantic_chunking: "False"
+    # For late chunking
+    use_late_chunking: "False"
+    late_chunk_size: "8192"
+    late_chunk_overlap: "1024"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "512Mi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+
+dpguard:
+  enabled: false
+  nameOverride: "edp-dpguard"
+  name: "enterprise-rag-dpguard"
+  repository: "docker.io/intel"
+  tag: latest
+  pullPolicy: Always
+  replicas: 1
+  config:
+    dpguard_port: "8070"
+  resources:
+    requests:
+      cpu: "4"
+      memory: "8Gi"
+    limits:
+      cpu: "4"
+      memory: "8Gi"
+
+# Embedding is an optional element that allows to run a separate embedding server
+# if not enabled, a remote embedding is used based on remoteEmbeddingUri endpoint
+embedding:
+  enabled: true
+  remoteEmbeddingUri: "http://embedding-svc.chatqna.svc:6000/v1/embeddings"
+  config:
+    connector: "langchain"
+    modelName: "nomic-ai/nomic-embed-text-v1"
+    modelServer: "vllm"
+    # Model servers live outside this namespace (deployed by Enterprise
+    # Inference), so there is no usable default. Supply it when enabling this.
+    modelServerEndpoint: ""
+    timeout: "120"
+    eragLoggerLevel: "INFO"
+  nameOverride: "edp-embedding"
+  name: "enterprise-rag-embedding"
+  repository: "docker.io/intel"
+  tag: latest
+  pullPolicy: Always
+  replicas: 1
+  resources:
+    requests:
+      cpu: "1"
+      memory: "2Gi"
+    limits:
+      cpu: "4"
+      memory: "4Gi"
+
+ingestion:
+  nameOverride: "edp-ingestion"
+  name: "enterprise-rag-ingestion"
+  repository: "docker.io/intel"
+  tag: latest
+  config:
+    eragLoggerLevel: "INFO" # "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+    embedding_model_name: *embedding_model_name # catalog name, e.g. "nomic-embed"
+    # Vector Algorithm configuration
+    vector_algorithm: "FLAT" # "FLAT", "HNSW", "SVS-VAMANA"
+    vector_dims: "768" # Auto-detected from embedding_model_id by resolve_vector_dims.py; kept here as Helm chart default only
+    vector_datatype: "FLOAT32" # FLOAT16, FLOAT32, FLOAT64
+    vector_distance_metric: "COSINE" # L2, IP, COSINE
+    # For HNSW Algorithm additional settings are available
+    vector_hnsw_m: "32"
+    vector_hnsw_ef_construction: "32"
+    vector_hnsw_ef_runtime: "32"
+    vector_hnsw_epsilon: "0.01"
+  pullPolicy: Always
+  replicas: 1
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "512Mi"
+    limits:
+      cpu: "2"
+      memory: "2Gi"
+
+awsSqs:
+  environment:
+    - name: AWS_SQS_EVENT_QUEUE_URL
+      valueFrom:
+        secretKeyRef:
+          name: edp-aws-access-secrets
+          key: AWS_SQS_EVENT_QUEUE_URL
+    - name: EDP_BACKEND_ENDPOINT
+      valueFrom:
+        secretKeyRef:
+          name: edp-aws-access-secrets
+          key: EDP_BACKEND_ENDPOINT
+    - name: AWS_DEFAULT_REGION
+      valueFrom:
+        secretKeyRef:
+          name: edp-aws-access-secrets
+          key: AWS_DEFAULT_REGION
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: edp-aws-access-secrets
+          key: AWS_ACCESS_KEY_ID
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: edp-aws-access-secrets
+          key: AWS_SECRET_ACCESS_KEY
+  enabled: false
+  nameOverride: "edp-aws"
+  name: "enterprise-rag-enhanced-dataprep"
+  repository: "docker.io/intel"
+  tag: latest
+  pullPolicy: Always
+  command: "python sqs.py"
+  replicas: 1
+  resources:
+    requests:
+      cpu: "1"
+      memory: "1Gi"
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+
+# This is for the secretes for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+# This is to override the chart name.
+nameOverride: "edp"
+fullnameOverride: "edp-chart"
+
+#This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# This is for setting Kubernetes Annotations to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 3000
+  fsGroup: 2000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+securityContextWithTemp:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# APISIX routes for EDP. Common values injected by app_apisix.
+apisix:
+  endpoints:
+    - name: edp-presigned
+      enabled: true
+      namespace: edp
+      path: /api/v1/edp/presignedUrl
+      backend_service: edp-backend
+      service_port: 5000
+      rate_limit_count: 120
+      service_regex:
+        - ^/api/v1/edp/presignedUrl$
+        - /api/presignedUrl
+      permissions:
+        - admin#admin-access
+        - user#user-access
+        - maintainer#maintainer-access
+    - name: edp-admin
+      enabled: true
+      namespace: edp
+      path: /api/v1/edp/*
+      backend_service: edp-backend
+      service_port: 5000
+      rate_limit_count: 120
+      service_regex:
+        - ^/api/v1/edp/links$
+        - /api/links
+        - ^/api/v1/edp/link/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})$
+        - /api/link/$1
+        - ^/api/v1/edp/link/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})/retry$
+        - /api/link/$1/retry
+        - ^/api/v1/edp/link/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})/task$
+        - /api/link/$1/task
+        - ^/api/v1/edp/files$
+        - /api/files
+        - ^/api/v1/edp/file/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})$
+        - /api/file/$1
+        - ^/api/v1/edp/file/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})/retry$
+        - /api/file/$1/retry
+        - ^/api/v1/edp/file/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})/task$
+        - /api/file/$1/task
+        - ^/api/v1/edp/list_buckets$
+        - /api/list_buckets
+        - ^/api/v1/edp/file/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})/extract$
+        - /api/file/$1/extract
+        - ^/api/v1/edp/link/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})/extract$
+        - /api/link/$1/extract
+        - ^/api/v1/edp/retrieve$
+        - /api/retrieve
+        - ^/api/v1/edp/files/sync
+        - /api/files/sync
+        - ^/api/v1/edp/sharepoint/sites$
+        - /api/sharepoint/sites
+        - ^/api/v1/edp/sharepoint/sites/([^/]+)$
+        - /api/sharepoint/sites/$1
+        - ^/api/v1/edp/sharepoint/sync$
+        - /api/sharepoint/sync
+        - ^/api/v1/edp/sharepoint/file-url$
+        - /api/sharepoint/file-url
+        - ^/api/v1/edp/sharepoint/files$
+        - /api/sharepoint/files
+      permissions:
+        - admin#admin-access
+        - maintainer#maintainer-access
+
+monitoring:
+  enabled: true

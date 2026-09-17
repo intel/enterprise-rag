@@ -1,0 +1,48 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+
+- name: "app_generate_password | Check if key already exists in password file"
+  ansible.builtin.shell: "grep -q '^{{ item.name }}:' {{ password_file }}"
+  register: key_exists_check
+  changed_when: false
+  ignore_errors: true
+  no_log: "{{ secure_logs }}"
+
+- name: "app_generate_password | Generate key"
+  when: key_exists_check.rc != 0
+  block:
+  - name: "app_generate_password | Generate a secure key if it does not exist"
+    ansible.builtin.set_fact:
+      key: "{{ lookup('community.general.random_string', length=16, special=false) }}"
+    no_log: "{{ secure_logs }}"
+
+  - name: "app_generate_password | Write key to the file if it does not exist"
+    ansible.builtin.lineinfile:
+      path: "{{ password_file }}"
+      line: "{{ item.name }}: {{ key }}"
+      create: yes
+      mode: '0600'
+      regexp: "^{{ item.name }}:.*$"
+      state: present
+    no_log: "{{ secure_logs }}"
+
+  - name: "app_generate_password | Set fact for key"
+    ansible.builtin.set_fact:
+      "{{ item.name }}": "{{ key }}"
+    no_log: "{{ secure_logs }}"
+
+- name: "app_generate_password | Get existing key from file if it exists"
+  ansible.builtin.shell: "grep '^{{ item.name }}:' {{ password_file }} | cut -d ':' -f 2 | sed 's/ //g'"
+  register: existing_key_content
+  changed_when: false
+  when: key_exists_check.rc == 0
+  no_log: "{{ secure_logs }}"
+
+- name: "app_generate_password | Set fact for existing key"
+  ansible.builtin.set_fact:
+    "{{ item.name }}": "{{ existing_key_content.stdout }}"
+  when: key_exists_check.rc == 0
+  no_log: "{{ secure_logs }}"
+

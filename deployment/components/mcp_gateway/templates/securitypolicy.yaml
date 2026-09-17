@@ -1,0 +1,60 @@
+{{- /*
+Copyright (C) 2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+Route-level JWT enforcement for the MCP data path. Agents obtain their own Keycloak
+token (client_credentials against their own client) and present it as a Bearer token;
+Envoy validates signature, issuer, audience and expiry here, so an unauthenticated
+request never reaches the gateway. The azp claim is projected into a header the
+BackendTrafficPolicy uses to rate-limit per calling agent.
+
+The health route gets its own empty-spec policy: liveness/readiness and external
+monitoring must not need a token.
+*/ -}}
+{{- if .Values.httpRoute.enabled }}
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: mcp-gateway-jwt
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: mcp-gateway
+    app.kubernetes.io/name: mcp-gateway
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: mcp-gateway-route
+  jwt:
+    providers:
+      - name: keycloak
+        issuer: {{ required "securityPolicy.jwt.issuer is required when JWT enforcement is enabled" .Values.securityPolicy.jwt.issuer | quote }}
+        audiences:
+          {{- range .Values.securityPolicy.jwt.audiences }}
+          - {{ . | quote }}
+          {{- end }}
+        remoteJWKS:
+          uri: {{ required "securityPolicy.jwt.jwksUri is required when JWT enforcement is enabled" .Values.securityPolicy.jwt.jwksUri | quote }}
+          cacheDuration: {{ .Values.securityPolicy.jwt.cacheDuration | quote }}
+        claimToHeaders:
+          - claim: azp
+            header: {{ .Values.securityPolicy.jwt.clientHeader | quote }}
+{{- end }}
+{{- if .Values.httpRoute.enabled }}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: mcp-gateway-health-no-auth
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: mcp-gateway
+    app.kubernetes.io/name: mcp-gateway
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: mcp-gateway-health-route
+{{- end }}

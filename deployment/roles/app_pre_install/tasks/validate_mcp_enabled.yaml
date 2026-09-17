@@ -1,0 +1,69 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "app_pre_install | install: Report effective mcp_enabled"
+  ansible.builtin.debug:
+    msg: >-
+      mcp_enabled={{ mcp_enabled | default(false) | bool }}
+      for pipeline '{{ pipeline_type }}' variant '{{ pipeline_variant }}'
+
+- name: "app_pre_install | install: Validate mcp_enabled against the composed pipeline"
+  when: mcp_enabled | default(false) | bool
+  block:
+    - name: "app_pre_install | install: Resolve the selected pipeline directory"
+      ansible.builtin.set_fact:
+        _mcp_pipeline_dir: "{{ pipelines_dir | regex_replace('/+$', '') }}/{{ pipeline_type }}"
+
+    - name: "app_pre_install | install: Check the selected pipeline and variant exist"
+      ansible.builtin.stat:
+        path: >-
+          {{ _mcp_pipeline_dir }}/{{ 'pipeline.yaml' if pipeline_variant == 'base'
+             else 'variants/' ~ pipeline_variant ~ '/meta.yaml' }}
+      register: _mcp_selection
+
+    - name: "app_pre_install | install: Defer an unknown pipeline selection to app_pipeline"
+      ansible.builtin.debug:
+        msg: >-
+          Pipeline '{{ pipeline_type }}' variant '{{ pipeline_variant }}' not found -
+          skipping the MCP precondition check; app_pipeline validates the selection.
+      when: not _mcp_selection.stat.exists
+
+    - name: "app_pre_install | install: Check the composed flow can back the MCP gateway"
+      when: _mcp_selection.stat.exists
+      block:
+        - name: "app_pre_install | install: Load pipeline metadata for the MCP check"
+          ansible.builtin.include_vars:
+            file: "{{ _mcp_pipeline_dir }}/pipeline.yaml"
+            name: _mcp_pipeline_meta
+
+        - name: "app_pre_install | install: Compose the pipeline flow for the MCP check"
+          ansible.builtin.command:
+            argv:
+              - "{{ deployment_dir }}/scripts/compose_pipeline.py"
+              - "{{ _mcp_pipeline_dir }}"
+              - "{{ '' if pipeline_variant == 'base' else pipeline_variant }}"
+              - "{{ {'endpoints': _mcp_pipeline_meta.endpoints} | to_json }}"
+          register: _mcp_composed
+          changed_when: false
+
+        - name: "app_pre_install | install: Fail when the pipeline cannot back the MCP gateway"
+          ansible.builtin.fail:
+            msg: |
+              mcp_enabled is true but pipeline '{{ pipeline_type }}' variant
+              '{{ pipeline_variant }}' does not deploy both retriever-svc and reranking-svc.
+
+              Composed services: {{ _mcp_services | join(', ') }}
+
+              The MCP gateway exposes only EDP-backed tools (retrieve_context, ingest_url,
+              ingest_file, list_buckets, check_ingestion_status), and EDP reaches the
+              pipeline through retriever-svc and reranking-svc.
+
+              Either set mcp_enabled: false in env/<env>/config.rag.yaml, or select a
+              chatqna-based flavour (chatqna, audioqna, pl_chatqna).
+          vars:
+            _mcp_services: >-
+              {{ (_mcp_composed.stdout | from_yaml).spec.nodes.values()
+                 | map(attribute='steps') | flatten
+                 | map(attribute='internalService.serviceName', default='') | list }}
+          when: not ('retriever-svc' in _mcp_services and 'reranking-svc' in _mcp_services)

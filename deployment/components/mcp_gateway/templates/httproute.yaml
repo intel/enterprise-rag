@@ -1,0 +1,79 @@
+{{- /*
+Copyright (C) 2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+Two routes from the shared Envoy Gateway to the MCP gateway service. No URLRewrite:
+the service serves the same prefix.
+
+  mcp-gateway-route         /api/v1/mcp prefix - JWT enforced (see securitypolicy.yaml)
+  mcp-gateway-health-route  health probe + OAuth protected-resource metadata, no auth
+
+The unauthenticated route uses Exact matches, which take precedence over the prefix
+match, so only those two paths escape JWT enforcement. The metadata document has to be
+reachable without a token or the discovery it exists for cannot happen.
+*/ -}}
+{{- if .Values.httpRoute.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: mcp-gateway-route
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: mcp-gateway
+    app.kubernetes.io/name: mcp-gateway
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  parentRefs:
+    - name: {{ .Values.httpRoute.gatewayRef.name }}
+      namespace: {{ .Values.httpRoute.gatewayRef.namespace }}
+      sectionName: {{ .Values.httpRoute.gatewayRef.sectionName | default "https-apex" }}
+  {{- with .Values.httpRoute.hostnames }}
+  hostnames:
+    {{- range . }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- end }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/v1/mcp
+      timeouts:
+        request: {{ .Values.httpRoute.timeout | quote }}
+        backendRequest: {{ .Values.httpRoute.timeout | quote }}
+      backendRefs:
+        - name: mcp-gateway-svc
+          port: {{ .Values.service.port }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: mcp-gateway-health-route
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: mcp-gateway
+    app.kubernetes.io/name: mcp-gateway
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  parentRefs:
+    - name: {{ .Values.httpRoute.gatewayRef.name }}
+      namespace: {{ .Values.httpRoute.gatewayRef.namespace }}
+      sectionName: {{ .Values.httpRoute.gatewayRef.sectionName | default "https-apex" }}
+  {{- with .Values.httpRoute.hostnames }}
+  hostnames:
+    {{- range . }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- end }}
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /api/v1/mcp/health
+        - path:
+            type: Exact
+            value: /api/v1/mcp/.well-known/oauth-protected-resource
+      backendRefs:
+        - name: mcp-gateway-svc
+          port: {{ .Values.service.port }}
+{{- end }}

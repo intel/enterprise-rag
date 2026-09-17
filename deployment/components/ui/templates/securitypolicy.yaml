@@ -1,0 +1,22 @@
+{{- /*
+Copyright (C) 2024-2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+SecurityPolicy — overrides the gateway-level JWT policy for the UI HTTPRoute.
+This allows browsers to load the UI without a Bearer token; authentication is
+handled by the Keycloak login flow within the application itself.
+*/ -}}
+{{- if and .Values.httpRoute.enabled .Values.securityPolicy.noAuth.enabled }}
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: {{ include "helm-ui.fullname" . }}-no-auth
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "helm-ui.labels" . | nindent 4 }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: {{ include "helm-ui.fullname" . }}-route
+{{- end }}

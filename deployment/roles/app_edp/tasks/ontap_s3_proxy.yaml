@@ -1,0 +1,124 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "app_edp | ONTAP S3 | Read the BackendTLSPolicy CRD"
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: backendtlspolicies.gateway.networking.k8s.io
+  register: _edp_ontap_btp_crd
+  check_mode: false
+  changed_when: false
+  when: _edp_ontap_s3_tls_mode == 'ca'
+
+- name: "app_edp | ONTAP S3 | Assert the cluster serves BackendTLSPolicy v1alpha3"
+  ansible.builtin.assert:
+    that: "'v1alpha3' in _edp_ontap_btp_versions"
+    fail_msg: >-
+      edp_ontap_s3_tls_mode is 'ca', which needs
+      CustomResourceDefinition/backendtlspolicies.gateway.networking.k8s.io serving
+      v1alpha3. This cluster serves {{ _edp_ontap_btp_versions | default([]) | join(', ') | default('nothing', true) }}.
+      The kind is experimental-channel only. It normally arrives with envoy-gateway's
+      own Gateway API bundle (gateway-helm, roles/envoy_gateway/defaults/main.yaml),
+      which is a newer bundle than the standard-channel CRDs the istio role installs.
+      Install the experimental channel, or use edp_ontap_s3_tls_mode: insecure, which
+      needs no extra CRD.
+    success_msg: "app_edp: ONTAP S3 BackendTLSPolicy v1alpha3 available"
+    quiet: true
+  vars:
+    _edp_ontap_btp_versions: >-
+      {{ (_edp_ontap_btp_crd.resources | default([{}]) | first).spec.versions | default([])
+         | map(attribute='name') | list }}
+  when: _edp_ontap_s3_tls_mode == 'ca'
+
+- name: "app_edp | ONTAP S3 | Create the CA ConfigMap for upstream TLS"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: "{{ edp_ontap_s3_ca_configmap_name }}"
+        namespace: "{{ edp_namespace }}"
+      data:
+        ca.crt: "{{ lookup('file', ontap_s3_ca_cert_file) }}"
+  when: _edp_ontap_s3_tls_mode == 'ca'
+
+# Every mode renders a different set of objects and the HTTPRoute is byte-identical
+# between ca and plaintext, so leaving the previous mode's objects behind silently
+# changes behaviour: a BackendTLSPolicy that survives a switch to plaintext makes
+# the gateway speak TLS to a plaintext port and answer 503 on every upload.
+- name: "app_edp | ONTAP S3 | Remove the objects the current TLS mode does not use"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: "{{ item.api }}"
+    kind: "{{ item.kind }}"
+    name: "{{ item.name }}"
+    namespace: "{{ edp_namespace }}"
+  loop: "{{ _edp_ontap_s3_stale_objects[_edp_ontap_s3_tls_mode] | default([]) }}"
+  loop_control:
+    label: "{{ item.kind }}/{{ item.name }}"
+  register: _edp_ontap_prune
+  # An absent CRD is not a failure here: the BackendTLSPolicy kind only exists on
+  # clusters carrying the Gateway API experimental channel, and the Backend kind
+  # only when envoy-gateway enables its extension APIs. Anything else must fail.
+  failed_when: >-
+    _edp_ontap_prune is failed
+    and 'Failed to find exact match' not in (_edp_ontap_prune.msg | default(''))
+  vars:
+    _edp_ontap_s3_stale_objects:
+      insecure:
+        - {api: gateway.networking.k8s.io/v1alpha3, kind: BackendTLSPolicy, name: "{{ edp_ontap_s3_backend_name }}-tls"}
+        - {api: discovery.k8s.io/v1, kind: EndpointSlice, name: "{{ edp_ontap_s3_backend_name }}"}
+        - {api: v1, kind: Service, name: "{{ edp_ontap_s3_backend_name }}"}
+        - {api: v1, kind: ConfigMap, name: "{{ edp_ontap_s3_ca_configmap_name }}"}
+      ca:
+        - {api: gateway.envoyproxy.io/v1alpha1, kind: Backend, name: "{{ edp_ontap_s3_backend_name }}"}
+      plaintext:
+        - {api: gateway.networking.k8s.io/v1alpha3, kind: BackendTLSPolicy, name: "{{ edp_ontap_s3_backend_name }}-tls"}
+        - {api: gateway.envoyproxy.io/v1alpha1, kind: Backend, name: "{{ edp_ontap_s3_backend_name }}"}
+        - {api: v1, kind: ConfigMap, name: "{{ edp_ontap_s3_ca_configmap_name }}"}
+
+# Gateway API awards an overlapping match to the older route, so a SeaweedFS route
+# left over from a previous install keeps receiving the browser uploads while
+# edpInternalUrl already points at ONTAP: the upload succeeds and nothing is ever
+# ingested. Only the S3 API route collides; seaweedfs-admin-route claims a
+# different hostname (or a different path prefix in path mode).
+- name: "app_edp | ONTAP S3 | Remove the SeaweedFS S3 route claiming the same hostname"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: "{{ item.api }}"
+    kind: "{{ item.kind }}"
+    name: "{{ item.name }}"
+    namespace: "{{ edp_seaweedfs_namespace }}"
+  loop:
+    - {api: gateway.envoyproxy.io/v1alpha1, kind: SecurityPolicy, name: seaweedfs-s3-no-auth}
+    - {api: gateway.networking.k8s.io/v1, kind: HTTPRoute, name: seaweedfs-s3-route}
+  loop_control:
+    label: "{{ item.kind }}/{{ item.name }}"
+  register: _edp_ontap_sw_prune
+  # The SecurityPolicy CRD is absent when envoy-gateway is not installed; a real
+  # error (RBAC, webhook, apiserver) must still stop the install, because the route
+  # that stays behind is the one that silently swallows the uploads.
+  failed_when: >-
+    _edp_ontap_sw_prune is failed
+    and 'Failed to find exact match' not in (_edp_ontap_sw_prune.msg | default(''))
+
+- name: "app_edp | ONTAP S3 | Resolve the gateway listener to bind"
+  ansible.builtin.include_tasks:
+    file: s3_listener_section.yaml
+
+- name: "app_edp | ONTAP S3 | Apply the reverse proxy objects"
+  kubernetes.core.k8s:
+    state: present
+    # Apply semantics (last-applied-configuration), so that changing ontap_s3_port
+    # prunes the previous port instead of leaving the Service and EndpointSlice with
+    # both.
+    apply: true
+    definition: "{{ lookup('template', 'ontap-s3-proxy.yaml.j2') | from_yaml_all | list }}"
+
+- name: "app_edp | ONTAP S3 | Verify the proxy attached to the gateway"
+  ansible.builtin.include_tasks:
+    file: ontap_s3_attach.yaml
+  when: not ansible_check_mode

@@ -1,0 +1,59 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Shared pod-query tasks.  Sets facts:
+#   missing_namespaces, empty_namespaces, not_ready_containers,
+#   undesirable_pods, all_pods
+# Requires: enabled_namespaces (list) — populated by get_namespaces.yaml
+
+- name: "app_check_pods | Get all namespaces"
+  kubernetes.core.k8s_info:
+    kind: Namespace
+  register: check_pods_namespaces_info
+
+- name: "app_check_pods | Compare enabled namespaces with existing namespaces"
+  ansible.builtin.set_fact:
+    missing_namespaces: >-
+      {{
+        enabled_namespaces | unique |
+        difference(check_pods_namespaces_info.resources | map(attribute='metadata.name') | list)
+      }}
+
+- name: "app_check_pods | Get pods in enabled namespaces"
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: "{{ item }}"
+  with_items: "{{ enabled_namespaces | unique }}"
+  when: item in (check_pods_namespaces_info.resources | map(attribute='metadata.name') | list)
+  register: check_pods_pods_info
+
+- name: "app_check_pods | Identify empty namespaces"
+  ansible.builtin.set_fact:
+    empty_namespaces: >-
+      {{
+        check_pods_pods_info.results | selectattr('resources', 'defined') |
+        selectattr('resources', 'equalto', []) |
+        map(attribute='item') | list
+      }}
+
+- name: "app_check_pods | Collect all non-empty pods"
+  ansible.builtin.set_fact:
+    all_pods: >-
+      {{
+        check_pods_pods_info.results | selectattr('resources', 'defined') |
+        rejectattr('resources', 'equalto', []) |
+        map(attribute='resources') | flatten | list
+      }}
+
+- name: 'app_check_pods | Identify containers with "not ready" status (Running pods only)'
+  ansible.builtin.set_fact:
+    not_ready_containers: >-
+      {%- set result = [] -%}
+      {%- for pod in all_pods | selectattr('status.phase', 'equalto', 'Running') -%}
+        {%- for container in pod.status.containerStatuses | default([]) -%}
+          {%- if not container.ready -%}
+            {%- set _ = result.append({'pod': pod.metadata.name, 'container': container.name}) -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{ result }}

@@ -1,0 +1,245 @@
+# Copyright (C) 2024-2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+
+- name: "app_edp | Set edp_helm_values"
+  ansible.builtin.set_fact:
+    edp_helm_values: {}
+
+- name: "app_edp | Load + merge each Helm values file (Helm-style, later files override earlier ones)"
+  ansible.builtin.include_tasks:
+    file: _merge_values_file.yaml
+  loop: "{{ values_files }}"
+  loop_control:
+    loop_var: _values_file
+
+- name: "app_edp | Set SeaweedFS facts"
+  ansible.builtin.set_fact:
+    useBearerTokenAuth: "{{ edp_helm_values.useBearerTokenAuth | default(false) }}"
+    kcDomainName: "{{ erag_keycloak_domain_name | default('auth.solutions.ai') }}"
+    keycloakRealm: "{{ ui_keycloak_realm | default('EnterpriseRAG') }}"
+    clientId: "{{ client_id | default('EnterpriseRAG-oidc-minio') }}"
+    s3_host: "{{ edp_helm_values.s3ApiDomain | default((edp_helm_values.s3DomainPrefix | default('s3')) ~ '.' ~ (base_domain_name | default('solutions.ai'))) }}"
+    admin_host: "{{ edp_helm_values.uiBrowserDomain | default((edp_helm_values.uiBrowserDomainPrefix | default('seaweedfs')) ~ '.' ~ (base_domain_name | default('solutions.ai'))) }}"
+
+- name: "app_edp | Define SeaweedFS S3 config"
+  ansible.builtin.set_fact:
+    s3_auth_config:
+      identities:
+        - name: "app_edp | Admin"
+          credentials:
+            - accessKey: "{{ EDP_MINIO_ACCESS_KEY }}"
+              secretKey: "{{ EDP_MINIO_SECRET_KEY }}"
+          actions:
+            - "Read"
+            - "Write"
+            - "List"
+            - "Tagging"
+            - "Admin"
+
+- name: "app_edp | Set OIDC endpoints for SeaweedFS"
+  vars:
+    keycloak_realm_url: "http://keycloak-service.{{ keycloak_namespace }}.svc:8080/realms/{{ keycloakRealm }}"
+  ansible.builtin.set_fact:
+    oidc_issuer: "https://{{ erag_keycloak_domain_name | default('auth.solutions.ai') }}{{ erag_keycloak_path_prefix | default('') }}/realms/{{ keycloakRealm }}"
+    oidc_jwksUri: "{{ keycloak_realm_url }}/protocol/openid-connect/certs"
+    oidc_userInfoUri: "{{ keycloak_realm_url }}/protocol/openid-connect/userinfo"
+    sts: "{{ edp_helm_values.seaweedfs.iamKeycloak.sts | default('{}') }}"
+    claim: "{{ edp_helm_values.seaweedfs.iamKeycloak.claim | default('minio_roles') }}"
+    audiences: "{{ edp_helm_values.seaweedfs.iamKeycloak.audiences | default('{}') | to_json }}"
+    scopes: "{{ edp_helm_values.seaweedfs.iamKeycloak.scopes | default('{}') | to_json }}"
+    roles: "{{ edp_helm_values.seaweedfs.iamKeycloak.roles | default([]) }}"
+    default_role: "{{ edp_helm_values.seaweedfs.iamKeycloak.defaultRole | default('arn:aws:iam::role/S3ReadOnlyRole') }}"
+    role_mapping: "{{ edp_helm_values.seaweedfs.iamKeycloak.roleMapping | default([]) }}"
+    policies: "{{ edp_helm_values.seaweedfs.iamKeycloak.policies | default([]) }}"
+  when: useBearerTokenAuth
+
+- name: "app_edp | Generate STS signing key"
+  ansible.builtin.command: openssl rand -hex 32
+  register: sts_signing_key_cmd
+  no_log: true
+  when: useBearerTokenAuth
+
+- name: "app_edp | Set STS signing key fact"
+  ansible.builtin.set_fact:
+    sts_signing_key: "{{ sts_signing_key_cmd.stdout }}"
+  no_log: true
+  when: useBearerTokenAuth
+
+- name: "app_edp | Generate IAM Keycloak configuration from template"
+  ansible.builtin.template:
+    src: "iam_keycloak.json.j2"
+    dest: "{{ rag_tmp_dir }}/iam_keycloak.json"
+    mode: '0644'
+  when: useBearerTokenAuth
+
+- name: "app_edp | Generate SeaweedFS values from template"
+  ansible.builtin.template:
+    src: "seaweedfs-values.yaml.j2"
+    dest: "{{ rag_tmp_dir }}/seaweedfs-values.yaml"
+    mode: '0644'
+
+- name: "app_edp | Create SeaweedFS namespace"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ edp_seaweedfs_namespace }}"
+
+- name: "app_edp | Label SeaweedFS namespace — Istio"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ edp_seaweedfs_namespace }}"
+        labels:
+          istio.io/dataplane-mode: "ambient"
+          erag-istio-protected: "true"
+  when: istio_enabled | default(false) | bool
+
+- name: "app_edp | Label SeaweedFS namespace — PSS"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ edp_seaweedfs_namespace }}"
+        labels:
+          pod-security.kubernetes.io/enforce: "restricted"
+          pod-security.kubernetes.io/audit: "restricted"
+          pod-security.kubernetes.io/warn: "restricted"
+  when: enforce_pss | default(false) | bool
+
+- name: "app_edp | Create SeaweedFS IAM config secret"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: seaweedfs-iam-config
+        namespace: "{{ edp_seaweedfs_namespace }}"
+      type: Opaque
+      data:
+        seaweedfs_s3_config: "{{ lookup('file', rag_tmp_dir + '/iam_keycloak.json') | b64encode }}"
+  when: useBearerTokenAuth
+
+- name: "app_edp | Check if SeaweedFS admin secret exists"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: seaweedfs-admin-secret
+    namespace: "{{ edp_seaweedfs_namespace }}"
+  register: seaweedfs_admin_secret_check
+
+- name: "app_edp | Generate SeaweedFS admin password"
+  ansible.builtin.set_fact:
+    seaweedfs_admin_password: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters,digits') }}"
+    seaweedfs_admin_user: "admin"
+  when: seaweedfs_admin_secret_check.resources | length == 0
+
+- name: "app_edp | Create SeaweedFS admin secret"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: seaweedfs-admin-secret
+        namespace: "{{ edp_seaweedfs_namespace }}"
+      type: Opaque
+      data:
+        adminUser: "{{ seaweedfs_admin_user | b64encode }}"
+        adminPassword: "{{ seaweedfs_admin_password | b64encode }}"
+  when: seaweedfs_admin_secret_check.resources | length == 0
+
+- name: "app_edp | Create SeaweedFS S3 secret"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: seaweedfs-s3-secret
+        namespace: "{{ edp_seaweedfs_namespace }}"
+      type: Opaque
+      data:
+        admin_access_key_id: "{{ EDP_MINIO_ACCESS_KEY | b64encode }}"
+        admin_secret_access_key: "{{ EDP_MINIO_SECRET_KEY | b64encode }}"
+        seaweedfs_s3_config: "{{ s3_auth_config | to_json | b64encode }}"
+
+- name: "app_edp | Ensure SeaweedFS Helm repository"
+  kubernetes.core.helm_repository:
+    name: seaweedfs
+    repo_url: "{{ edp_helm_values.seaweedfs.repo | default('https://seaweedfs.github.io/seaweedfs/helm') }}"
+
+- name: "app_edp | Install SeaweedFS Helm release"
+  kubernetes.core.helm:
+    name: seaweedfs
+    chart_ref: seaweedfs/seaweedfs
+    chart_version: "{{ edp_helm_values.seaweedfs.version }}"
+    namespace: "{{ edp_seaweedfs_namespace }}"
+    create_namespace: true
+    state: present
+    wait: true
+    timeout: "{{ helm_timeout }}"
+    values_files:
+      - "{{ rag_tmp_dir }}/seaweedfs-values.yaml"
+    values:
+      s3:
+        extraEnvironmentVars:
+          TIME: "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S%z') }}"
+  register: helm_repo_install_result
+  until: helm_repo_install_result is succeeded
+  retries: 5
+  delay: 15
+
+# HTTPRoutes for seaweedfs-s3 + seaweedfs-admin against the core Envoy Gateway.
+# Per-component routing lives alongside the component rather than in a standalone
+# gateway helm chart.
+
+# The S3 route's listener is resolved from the live Gateway: on an ONTAP deployment the
+# core installer adds a listener claiming s3.<base_domain_name> exactly, which takes
+# that hostname away from the wildcard listener.
+- name: "app_edp | Resolve the gateway listener for the S3 route"
+  ansible.builtin.include_tasks:
+    file: s3_listener_section.yaml
+  when: _edp_s3_section is not defined
+
+- name: "app_edp | Apply SeaweedFS HTTPRoutes (S3 API + admin UI)"
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'seaweedfs-httproutes.yaml.j2') | from_yaml_all | list }}"
+
+- name: "app_edp | Mark SeaweedFS secrets for password management"
+  ansible.builtin.include_role:
+    name: app_password_mgmt
+    tasks_from: markup.yaml
+  vars:
+    namespace: "{{ edp_seaweedfs_namespace }}"
+    secret_name: "seaweedfs-s3-secret"
+    password_mappings:
+      - { key: admin_access_key_id, variable: EDP_SEAWEEDFS_ACCESS_KEY, user: "" }
+      - { key: admin_secret_access_key, variable: EDP_SEAWEEDFS_SECRET_KEY, user: "" }
+
+- name: "app_edp | Mark SeaweedFS admin secrets for password management"
+  ansible.builtin.include_role:
+    name: app_password_mgmt
+    tasks_from: markup.yaml
+  vars:
+    namespace: "{{ edp_seaweedfs_namespace }}"
+    secret_name: "seaweedfs-admin-secret"
+    password_mappings:
+      - { key: adminUser, variable: SEAWEEDFS_ADMIN_USER, user: "" }
+      - { key: adminPassword, variable: SEAWEEDFS_ADMIN_PASSWORD, user: "" }
+
+- name: "app_edp | Update credentials file from password management"
+  ansible.builtin.include_role:
+    name: app_password_mgmt
+    tasks_from: lookup.yaml

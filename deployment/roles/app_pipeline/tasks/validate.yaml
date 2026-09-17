@@ -1,0 +1,30 @@
+---
+- name: "app_pipeline | Check GMC Helm release"
+  kubernetes.core.helm_info:
+    name: "{{ gmc_helm_release_name }}"
+    release_namespace: "{{ gmc_namespace }}"
+  register: _gmc_release
+
+- name: "app_pipeline | Assert GMC operator installed"
+  ansible.builtin.assert:
+    that: _gmc_release.status is defined
+    fail_msg: "GMC Helm release '{{ gmc_helm_release_name }}' not found in {{ gmc_namespace }}"
+    success_msg: "GMC operator: OK"
+    quiet: true
+
+- name: "app_pipeline | Check GMConnector CRD"
+  kubernetes.core.k8s_info:
+    api_version: gmc.erag.intel.com/v1alpha3
+    kind: GMConnector
+    name: "{{ pipeline_type }}"
+    namespace: "{{ pipeline_namespace }}"
+  register: _gmconnector
+
+- name: "app_pipeline | Assert GMConnector deployed"
+  ansible.builtin.assert:
+    that:
+      - _gmconnector.resources | length > 0
+      - _gmconnector.resources[0].status.status is defined
+    fail_msg: "GMConnector '{{ pipeline_type }}' not found or not ready in {{ pipeline_namespace }}"
+    success_msg: "app_pipeline: OK"
+    quiet: true

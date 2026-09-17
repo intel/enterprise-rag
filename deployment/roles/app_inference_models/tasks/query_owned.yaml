@@ -1,0 +1,51 @@
+---
+# =============================================================================
+# app_inference_models — find the models this role owns
+# =============================================================================
+# Exposes `_owned` — {model name: replica count} for every serving CR carrying
+# inference_owner_label, or {} when nothing was deployed from here. Included by
+# reconcile.yaml (install) and teardown.yaml.
+#
+# The label is the whole ownership record: it lives on the object it describes,
+# so it cannot go stale the way a separate state file would, and anything
+# unlabeled is simply not ours. Replicas come from the live spec, whose location
+# is kind-dependent (LLMInferenceService.spec.replicas vs
+# InferenceService.spec.predictor.minReplicas).
+
+- name: "app_inference_models | owned | Query serving resources we own"
+  kubernetes.core.k8s_info:
+    api_version: "{{ item.api_version }}"
+    kind: "{{ item.kind }}"
+    namespace: "{{ inference_namespace }}"
+    label_selectors:
+      - "{{ inference_owner_label }}"
+  loop: "{{ inference_serving_kinds }}"
+  loop_control:
+    label: "{{ item.kind }}"
+  register: _owned_query
+
+- name: "app_inference_models | owned | Reset accumulator"
+  ansible.builtin.set_fact:
+    _owned: {}
+
+- name: "app_inference_models | owned | Index owned models by name"
+  ansible.builtin.set_fact:
+    _owned: >-
+      {{
+        _owned | combine({
+          item.metadata.name: (
+            item.spec.replicas
+            | default((item.spec.predictor | default({})).minReplicas | default(0))
+          ) | int
+        })
+      }}
+  loop: "{{ _owned_query.results | map(attribute='resources') | flatten }}"
+  loop_control:
+    label: "{{ item.metadata.name }}"
+
+- name: "app_inference_models | owned | debug | Owned models"
+  ansible.builtin.debug:
+    msg: >-
+      {{ inference_namespace }}: {{ _owned | length }} model(s) labelled
+      {{ inference_owner_label }}
+      {{ ('— ' ~ (_owned | list | join(', '))) if _owned else '' }}

@@ -1,0 +1,58 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "app_edp | Resolve ONTAP S3 configuration"
+  ansible.builtin.include_tasks:
+    file: ontap_s3_resolve.yaml
+
+- name: "app_edp | Validate the ONTAP S3 reverse proxy"
+  ansible.builtin.include_tasks:
+    file: ontap_s3_validate.yaml
+  when: _edp_ontap_s3_active | bool
+
+- name: "app_edp | Check Helm release"
+  kubernetes.core.helm_info:
+    name: "{{ edp_helm_release_name }}"
+    release_namespace: "{{ edp_namespace }}"
+  register: _edp_release
+
+- name: "app_edp | Assert installed"
+  ansible.builtin.assert:
+    that: _edp_release.status is defined
+    fail_msg: "EDP Helm release '{{ edp_helm_release_name }}' not found in {{ edp_namespace }}"
+    success_msg: "app_edp: OK"
+    quiet: true
+
+- name: "app_edp | Check edp-access-secret for SharePoint credentials"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: edp-access-secret
+    namespace: "{{ edp_namespace }}"
+  register: _edp_access_secret
+  no_log: "{{ secure_logs | default(true) }}"
+  when: erag_keycloak_oidc_tenant_id | default('', true) | string | trim | length > 0
+
+- name: "app_edp | Assert SharePoint credentials are present in edp-access-secret"
+  ansible.builtin.assert:
+    that:
+      - _edp_access_secret.resources | default([]) | length > 0
+      - _edp_secret_data['SHAREPOINT_TENANT_ID'] | default('') | b64decode | length > 0
+      - _edp_secret_data['SHAREPOINT_CLIENT_ID'] | default('') | b64decode | length > 0
+      - _edp_secret_data['SHAREPOINT_CLIENT_SECRET'] | default('') | b64decode | length > 0
+      - _edp_secret_data['KEYCLOAK_BROKER_IDP_ALIAS'] | default('') | b64decode | length > 0
+      - erag_keycloak_oidc_endpoint | default('', true) | string | trim | length > 0
+    fail_msg: >-
+      erag_keycloak_oidc_tenant_id is set but erag_keycloak_oidc_endpoint is empty, or
+      Secret 'edp-access-secret' in {{ edp_namespace }} is missing one or more of
+      SHAREPOINT_TENANT_ID, SHAREPOINT_CLIENT_ID, SHAREPOINT_CLIENT_SECRET,
+      KEYCLOAK_BROKER_IDP_ALIAS.
+      SharePoint ingestion will return 404 "SharePoint integration is not
+      configured." Re-run:
+      ./es_auto_installer.sh install app_edp --only --env <name>
+    success_msg: "app_edp: SharePoint credentials present"
+    quiet: true
+  vars:
+    _edp_secret_data: "{{ (_edp_access_secret.resources | default([{}]) | first).data | default({}) }}"
+  when: erag_keycloak_oidc_tenant_id | default('', true) | string | trim | length > 0

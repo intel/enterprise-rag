@@ -1,0 +1,111 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+replicaCount: 1
+
+proxy:
+  http_proxy: ""
+  https_proxy: ""
+  no_proxy: ""
+
+domainName: &dname "solutions.ai"
+type: chatqna
+
+extraNginxVars:
+  # ChatQnA endpoints
+  chatqnaEndpoint: "http://auth-apisix-gateway.auth-apisix.svc"
+  systemFingerprintEndpoint: "http://auth-apisix-gateway.auth-apisix.svc"
+  chatHistoryEndpoint: "http://auth-apisix-gateway.auth-apisix.svc"
+  edpEndpoint: "http://auth-apisix-gateway.auth-apisix.svc"
+  dataprepClientMaxBodySize: "0"
+  # Docsum endpoints
+  docsumEndpoint: "http://auth-apisix-gateway.auth-apisix.svc"
+  # AudioQnA endpoints
+  audioqnaEndpoint: "http://auth-apisix-gateway.auth-apisix.svc"
+  # Status endpoint
+  statusEndpoint: "http://auth-apisix-gateway.auth-apisix.svc"
+
+extraUiConfigVars:
+  keycloakDomainName: "auth.solutions.ai"
+  keycloakRealm: "EnterpriseRAG"
+  keycloakClientId: "EnterpriseRAG-oidc"
+  adminResourceRole: "ERAG-admin"
+  userResourceRole: "ERAG-user"
+  maintainerResourceRole: "ERAG-maintainer"
+  grafanaDomainName: "grafana.solutions.ai"
+  keycloakAdminPanelDomainName: "auth.solutions.ai"
+  s3DomainName: "s3.solutions.ai"
+  chatDisclaimerText: "Responses from this solution may require further verification. You are solely responsible for verifying the accuracy of the information provided and how you choose to use it."
+  chatMaintenanceMode: "false"
+  # Why chat is unavailable, when chatMaintenanceMode is "true": "" for planned
+  # maintenance, "no-llm" for a pipeline that composes no LLM step.
+  chatMaintenanceReason: ""
+  # "true" sends the Keycloak bearer token on S3 requests (SeaweedFS with RBAC).
+  useBearerTokenAuth: "false"
+  nerEnabled: false
+
+image:
+  ui:
+    repository: "docker.io/intel"
+    name: enterprise-rag-chatqna-conversation-ui
+    pullPolicy: Always
+    tag: "latest"
+
+imagePullSecrets: []
+
+nameOverride: "ui-app"
+fullnameOverride: "ui-chart"
+
+service:
+  type: ClusterIP
+  name: &svcName "ui-chart"
+  port: &svcPort 4173
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: "ui-app"
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 3000
+  fsGroup: 2000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+
+# Gateway API HTTPRoute (replaces legacy Ingress)
+httpRoute:
+  enabled: true
+  gatewayRef:
+    name: erag-gateway
+    namespace: erag-gateway
+    sectionName: https
+  hostnames:
+    - *dname
+  timeouts:
+    request: 0s
+    backendRequest: 0s
+
+securityPolicy:
+  # Disable gateway-level JWT enforcement for the UI route so the browser
+  # can load the app without a token (Keycloak login handles auth at app level).
+  noAuth:
+    enabled: true
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

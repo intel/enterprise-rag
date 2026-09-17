@@ -1,0 +1,25 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# Shared Prompt Template step - format context and query for the LLM. #}
+{# Identical across chatqna and translation.                           #}
+step:
+  name: PromptTemplate
+  dependency: Hard
+  data: $response
+  internalService:
+    serviceName: prompt-template-svc
+    config:
+      endpoint: /v1/prompt_template
+      paramsKey: prompt_template
+      paramsKind: prompt_template
+resources:
+  prompt-template-usvc:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 4
+        memory: 2Gi

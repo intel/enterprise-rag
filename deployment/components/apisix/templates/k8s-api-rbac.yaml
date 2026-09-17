@@ -1,0 +1,56 @@
+{{- /*
+Copyright (C) 2024-2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+ClusterRole + ClusterRoleBinding granting the APISIX ServiceAccount read-only
+access to K8s objects required by per-pipeline status watcher routes.
+*/ -}}
+{{- if and .Values.k8sApi.enabled .Values.k8sApi.rbac.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.k8sApi.rbac.clusterRoleName }}
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+rules:
+  - apiGroups: [""]
+    resources: [pods, services, endpoints, configmaps]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [pods/status, services/status]
+    verbs: [get]
+  - apiGroups: ["apps"]
+    resources: [deployments, statefulsets, replicasets, daemonsets]
+    verbs: [get, list, watch]
+  - apiGroups: ["apps"]
+    resources: [deployments/status, statefulsets/status, replicasets/status, daemonsets/status]
+    verbs: [get]
+  - apiGroups: ["gmc.erag.intel.com"]
+    resources: [gmconnectors]
+    verbs: [get, list, watch]
+  - apiGroups: ["gmc.erag.intel.com"]
+    resources: [gmconnectors/status]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.k8sApi.rbac.clusterRoleBindingName }}
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.k8sApi.rbac.clusterRoleName }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.k8sApi.rbac.serviceAccountName }}
+    namespace: {{ .Values.k8sApi.rbac.serviceAccountNamespace }}
+{{- end }}

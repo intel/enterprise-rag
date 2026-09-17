@@ -1,0 +1,13 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+galaxy_info:
+  role_name: app_data_consistency
+  description: >-
+    Counts the rows, keys and users each data store holds, compares two such
+    snapshots across an upgrade, and writes the result to a report file. Helper
+    role: include it with tasks_from (snapshot | compare | report), not as a
+    component.
+  license: Apache-2.0
+  min_ansible_version: "2.14"
+dependencies: []

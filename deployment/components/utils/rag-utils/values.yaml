@@ -1,0 +1,85 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+rag_watcher:
+  config:
+    # One of: cronjob, job
+    deploymentMode: "cronjob"
+    # CronJob schedule (every 2 minutes by default)
+    schedule: "*/2 * * * *"
+
+    successfulJobsHistoryLimit: 1
+    failedJobsHistoryLimit: 2
+
+    # Pod scheduling
+    priorityClassName: "system-cluster-critical"
+    nodeSelector: {}
+    affinity: {}
+    tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+        effect: "NoSchedule"
+
+    # Resource requirements
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 3000
+      fsGroup: 2000
+      seccompProfile:
+        type: RuntimeDefault
+
+    containerSecurityContext:
+      capabilities:
+        drop:
+          - ALL
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+
+  data:
+    # Enable operation of rag watcher
+    watcher_enabled: true
+    # Label selector for nodes to watch (empty = all nodes)
+    node_selector: ""
+    # Label selector for workloads to be skipped (not refreshed)
+    skip_workload_selector: ""
+    # Label selector for workloads to skip verification (but still refresh)
+    skip_verify_selector: "app.kubernetes.io/name in (otelcol-traces-collector)"
+    # Refresh targets are discovered by this namespace label, so the watcher tracks
+    # the platform and inference layers without knowing what they deployed.
+    ambient_label: "istio.io/dataplane-mode=ambient"
+    # Waited on for readiness but never refreshed. istiod/ztunnel/istio-cni carry
+    # istio.io/dataplane-mode=none so they cannot drift, and bouncing the CA that
+    # signs their certs would risk a bootstrap deadlock. Drift here is reported only.
+    gate_namespaces: "istio-system cert-manager"
+    # Namespaces the readiness gate probes; must match the gate_namespaces entries.
+    istio_namespace: "istio-system"
+    ca_namespace: "cert-manager"
+    # Per-workload timeout for the readiness gate
+    mesh_ready_timeout: "600s"
+    # Recovery wait after deleting an unenrolled pod, so a multi-instance database
+    # rolls one instance at a time instead of losing all of them at once.
+    pod_ready_timeout: "300s"
+    # Stored node boot IDs for tracking reboots
+    node_boot_ids: ""
+
+# Service Account configuration
+serviceAccount:
+  create: true
+  name: ""
+
+# Image configuration
+images:
+  init-container:
+    repository: "docker.io/intel"
+    image: "enterprise-rag-init-container"
+    tag: "1.5.0"
+    pullPolicy: IfNotPresent

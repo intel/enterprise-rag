@@ -1,0 +1,151 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# Job-based Keycloak configuration - runs inside the cluster, no port-forward needed
+
+- name: "app_keycloak_config | Set init container image reference"
+  ansible.builtin.set_fact:
+    init_container_image: "{{ registry }}/enterprise-rag-init-container:{{ tag }}"
+
+- name: "app_keycloak_config | Set per-run configurator variables"
+  ansible.builtin.set_fact:
+    minio_domain: "{{ edp_minio_domain_name }}"
+    minio_path_prefix: "{{ edp_seaweedfs_path_prefix | default('') }}"
+    ui_domain: "{{ ui_domain_name }}"
+    credentials_secret_name: "erag-credentials"
+    configurator_job_name: "keycloak-configurator-{{ ansible_date_time.epoch }}"
+
+- name: "app_keycloak_config | Check for existing Grafana SSO env Secret"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: "{{ grafana_oauth_secret_name }}"
+    namespace: "{{ grafana_oauth_namespace }}"
+  register: _kc_grafana_sso
+  failed_when: false
+
+- name: "app_keycloak_config | Reuse existing Grafana OAuth client secret"
+  ansible.builtin.set_fact:
+    grafana_oauth_client_secret: "{{ _kc_grafana_sso.resources[0].data['GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET'] | b64decode }}"
+  when:
+    - (_kc_grafana_sso.resources | default([])) | length > 0
+    - _kc_grafana_sso.resources[0].data['GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET'] is defined
+  no_log: "{{ secure_logs | default(true) }}"
+
+- name: "app_keycloak_config | Generate Grafana OAuth client secret (first run)"
+  ansible.builtin.set_fact:
+    grafana_oauth_client_secret: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+  when: grafana_oauth_client_secret | default('') | length == 0
+  no_log: "{{ secure_logs | default(true) }}"
+
+- name: "app_keycloak_config | Find previous configurator Jobs"
+  kubernetes.core.k8s_info:
+    api_version: batch/v1
+    kind: Job
+    namespace: "{{ keycloak_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/name=keycloak-configurator"
+  register: old_configurator_jobs
+
+- name: "app_keycloak_config | Delete previous configurator Jobs"
+  kubernetes.core.k8s:
+    api_version: batch/v1
+    kind: Job
+    name: "{{ item.metadata.name }}"
+    namespace: "{{ keycloak_namespace }}"
+    state: absent
+    delete_options:
+      propagationPolicy: Background
+  loop: "{{ old_configurator_jobs.resources | default([]) }}"
+  loop_control:
+    label: "{{ item.metadata.name }}"
+  when: old_configurator_jobs.resources | default([]) | length > 0
+
+- name: "app_keycloak_config | Generate configurator Job manifest"
+  ansible.builtin.template:
+    src: configurator-job.yaml.j2
+    dest: "{{ rag_tmp_dir }}/keycloak-configurator-job.yaml"
+    mode: '0600'
+
+- name: "app_keycloak_config | Apply configurator Job"
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ rag_tmp_dir }}/keycloak-configurator-job.yaml"
+    wait: false
+  register: configurator_job
+
+- name: "app_keycloak_config | Wait for configurator Job to complete"
+  kubernetes.core.k8s_info:
+    api_version: batch/v1
+    kind: Job
+    name: "{{ configurator_job_name }}"
+    namespace: "{{ keycloak_namespace }}"
+  register: job_status
+  until: >
+    (job_status.resources | length > 0) and
+    ((job_status.resources[0].status.succeeded is defined and job_status.resources[0].status.succeeded >= 1) or
+    (job_status.resources[0].status.failed is defined and job_status.resources[0].status.failed >= 1))
+  retries: 60
+  delay: 10
+
+- name: "app_keycloak_config | Check if configurator Job succeeded"
+  ansible.builtin.fail:
+    msg: "Keycloak configurator Job failed. Check logs: kubectl logs -n {{ keycloak_namespace }} job/{{ configurator_job_name }}"
+  when: >
+    job_status.resources[0].status.failed is defined and
+    job_status.resources[0].status.failed >= 1
+
+- name: "app_keycloak_config | Get Job logs for debugging"
+  kubernetes.core.k8s_log:
+    api_version: batch/v1
+    kind: Job
+    name: "{{ configurator_job_name }}"
+    namespace: "{{ keycloak_namespace }}"
+  register: job_logs
+
+- name: "app_keycloak_config | Display configurator Job output"
+  ansible.builtin.debug:
+    msg: "{{ job_logs.log_lines }}"
+  when: job_logs.log_lines | length > 0
+
+- name: "app_keycloak_config | Clean up sensitive credentials secret"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Secret
+    name: keycloak-configurator-sensitive
+    namespace: "{{ keycloak_namespace }}"
+  when: (erag_keycloak_oidc_endpoint | default('') | length > 0) or (erag_keycloak_federation_endpoint | default('') | length > 0)
+  failed_when: false
+
+- name: "app_keycloak_config | Read erag-credentials secret"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: "{{ credentials_secret_name }}"
+    namespace: "{{ keycloak_namespace }}"
+  register: erag_credentials_secret
+  no_log: "{{ secure_logs }}"
+
+- name: "app_keycloak_config | Write default_credentials.txt from erag-credentials secret"
+  ansible.builtin.copy:
+    dest: "{{ rag_log_dir }}/default_credentials.txt"
+    mode: '0600'
+    content: |
+      KEYCLOAK_ERAG_ADMIN_USERNAME={{ erag_credentials_secret.resources[0].data['KEYCLOAK_ERAG_ADMIN_USERNAME'] | b64decode }}
+      KEYCLOAK_ERAG_ADMIN_PASSWORD="{{ erag_credentials_secret.resources[0].data['KEYCLOAK_ERAG_ADMIN_PASSWORD'] | b64decode }}"
+      KEYCLOAK_ERAG_USER_USERNAME={{ erag_credentials_secret.resources[0].data['KEYCLOAK_ERAG_USER_USERNAME'] | b64decode }}
+      KEYCLOAK_ERAG_USER_PASSWORD="{{ erag_credentials_secret.resources[0].data['KEYCLOAK_ERAG_USER_PASSWORD'] | b64decode }}"
+      KEYCLOAK_ERAG_MAINTAINER_USERNAME={{ erag_credentials_secret.resources[0].data['KEYCLOAK_ERAG_MAINTAINER_USERNAME'] | b64decode }}
+      KEYCLOAK_ERAG_MAINTAINER_PASSWORD="{{ erag_credentials_secret.resources[0].data['KEYCLOAK_ERAG_MAINTAINER_PASSWORD'] | b64decode }}"
+      {% if mcp_enabled | default(false) | bool and erag_credentials_secret.resources[0].data['MCP_CLIENT_SECRET'] is defined %}
+      MCP_CLIENT_ID={{ erag_credentials_secret.resources[0].data['MCP_CLIENT_ID'] | b64decode }}
+      MCP_CLIENT_SECRET="{{ erag_credentials_secret.resources[0].data['MCP_CLIENT_SECRET'] | b64decode }}"
+      {% endif %}
+  no_log: "{{ secure_logs }}"
+  when: erag_credentials_secret.resources | length > 0
+
+- name: "app_keycloak_config | Inject Grafana SSO into platform Grafana"
+  ansible.builtin.include_tasks: configure_grafana_sso.yaml
+  when: grafana_oauth_domain | default('') | length > 0

@@ -1,0 +1,115 @@
+---
+- name: "app_chat_history | Set override_values.yaml path"
+  ansible.builtin.set_fact:
+    chat_history_helm_override_values_path: >-
+      {{ rag_tmp_dir }}/{{ chat_history_helm_release_name }}-override-values.yaml
+
+- name: "app_chat_history | Build Helm chart dependencies"
+  ansible.builtin.command:
+    cmd: helm dependency build
+    chdir: "{{ chat_history_helm_chart_directory }}"
+  register: helm_repo_add_result
+  until: helm_repo_add_result is succeeded
+  retries: 5
+  delay: 15
+
+- name: "app_chat_history | Generate password"
+  ansible.builtin.include_role:
+    name: app_generate_password
+    tasks_from: generate_password.yaml
+  loop:
+    - name: "CHAT_HISTORY_POSTGRES"
+      user: "{{ chat_history_db_user }}"
+
+- name: "app_chat_history | Ensure namespace exists"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ item }}"
+  loop:
+    - "{{ chat_history_namespace }}"
+    - "{{ pipeline_namespace }}"
+
+- name: "app_chat_history | Label namespace — Istio"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ chat_history_namespace }}"
+        labels:
+          istio.io/dataplane-mode: "ambient"
+          erag-istio-protected: "true"
+  when: istio_enabled | default(false) | bool
+
+- name: "app_chat_history | Label namespace — PSS"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ chat_history_namespace }}"
+        labels:
+          pod-security.kubernetes.io/enforce: "restricted"
+          pod-security.kubernetes.io/audit: "restricted"
+          pod-security.kubernetes.io/warn: "restricted"
+  when: enforce_pss | default(false) | bool
+
+- name: "app_chat_history | Create password secret"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ chat_history_db_password_secret_name }}"
+        namespace: "{{ item }}"
+      data:
+        POSTGRES_PASSWORD: "{{ CHAT_HISTORY_POSTGRES_PASSWORD | b64encode }}"
+        POSTGRES_USER: >-
+          {{ chat_history_db_user | b64encode }}
+        POSTGRES_DB: "{{ 'postgres' | b64encode }}"
+  no_log: "{{ secure_logs }}"
+  loop:
+    - "{{ chat_history_namespace }}"
+
+- name: "app_chat_history | Generate override values file from template"
+  ansible.builtin.template:
+    src: "values.yaml.j2"
+    dest: "{{ chat_history_helm_override_values_path }}"
+    mode: '0644'
+
+- name: "app_chat_history | Set values_files list"
+  ansible.builtin.set_fact:
+    values_files:
+      - "{{ chat_history_helm_default_values_file }}"
+      - "{{ chat_history_helm_override_values_path }}"
+
+- name: "app_chat_history | Install or Upgrade Helm chart"
+  kubernetes.core.helm:
+    name: "{{ chat_history_helm_release_name }}"
+    chart_ref: "{{ chat_history_helm_chart_directory }}"
+    namespace: "{{ chat_history_namespace }}"
+    values_files: "{{ values_files }}"
+    state: present
+    create_namespace: true
+    timeout: "{{ helm_timeout }}"
+  register: helm_repo_install_result
+  until: helm_repo_install_result is succeeded
+  retries: 5
+  delay: 15
+
+- name: "app_chat_history | Mark secret for password management"
+  ansible.builtin.include_role:
+    name: app_password_mgmt
+    tasks_from: markup.yaml
+  vars:
+    namespace: "{{ chat_history_namespace }}"
+    secret_name: "{{ chat_history_db_password_secret_name }}"
+    password_mappings:
+        - {key: POSTGRES_PASSWORD, variable: CHAT_HISTORY_POSTGRES_PASSWORD, user: "{{ chat_history_db_user }}"}

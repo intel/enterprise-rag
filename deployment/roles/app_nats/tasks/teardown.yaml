@@ -1,0 +1,28 @@
+---
+- name: "app_nats | Uninstall Helm chart"
+  kubernetes.core.helm:
+    name: "{{ nats_helm_release_name }}"
+    namespace: "{{ nats_namespace }}"
+    state: absent
+    wait: true
+    wait_timeout: "300s"
+
+# Install mirrors the auth secret into the consumer namespaces; those namespaces
+# outlive this role, so remove the mirrored copies here to leave no stale NKey.
+- name: "app_nats | Delete mirrored client auth secret from consumer namespaces"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Secret
+    name: "{{ nats_auth_secret_name }}"
+    namespace: "{{ item }}"
+  loop: "{{ nats_client_namespaces }}"
+
+- name: "app_nats | Delete namespace"
+  kubernetes.core.k8s:
+    state: absent
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ nats_namespace }}"

@@ -1,0 +1,30 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# Builds `enabled_namespaces` — the namespace set the health check inspects.
+# Two set_fact tasks (not one) because the second references the first.
+
+- name: "app_check_pods | Get list of pipeline namespaces"
+  ansible.builtin.set_fact:
+    pipeline_namespaces: "{{ [pipeline_namespace] + [gmc_namespace | default('system')] }}"
+
+- name: "app_check_pods | Get list of component namespaces"
+  ansible.builtin.set_fact:
+    enabled_namespaces: >
+      {{
+        [
+          apisix_namespace if (apisix_enabled | default(true) | bool) else None,
+          ui_namespace if (ui_enabled | default(true) | bool) else None,
+          edp_namespace if (edp_enabled | default(false) | bool) else None,
+          fingerprint_namespace,
+          chat_history_namespace if (chat_history_enabled | default(false) | bool) else None,
+          vector_databases_namespace if (vector_databases_enabled | default(false) | bool) else None,
+          edp_seaweedfs_namespace if ((edp_enabled | default(false) | bool) and (edp_storage_type | default('')) == 'seaweedfs') else None,
+          audio_namespace if (audio_enabled | default(false) | bool) and (pipeline_type | default('chatqna')) == 'chatqna' else None,
+          mcp_namespace if (mcp_enabled | default(false) | bool) else None
+        ]
+        | select('defined') | select('truthy') | list
+        +
+        pipeline_namespaces
+      }}

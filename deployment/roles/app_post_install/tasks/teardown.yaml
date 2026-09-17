@@ -1,0 +1,20 @@
+---
+- name: "app_post_install | Create log and work directories if they do not exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '755'
+  loop:
+    - "{{ log_dir }}"
+    - "{{ tmp_dir }}"
+    - "{{ rag_log_dir }}"
+    - "{{ rag_tmp_dir }}"
+
+# First, because teardown runs the components in reverse: this role goes before
+# anything is removed, so the manifest says "deleting" while the removal is in
+# progress and an interrupted teardown is recognisable. app_pre_install deletes
+# it at the end.
+- name: "app_post_install | Mark deployment manifest as deleting"
+  ansible.builtin.include_role:
+    name: app_deployment_manifest
+    tasks_from: mark_deleting.yaml

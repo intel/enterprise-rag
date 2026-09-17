@@ -1,0 +1,56 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Headless service backing the StatefulSet. Cluster peers resolve each other
+# through its per-pod DNS records.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nats.fullname" . }}
+  labels:
+    {{- include "nats.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "nats.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: client
+      port: {{ .Values.service.clientPort }}
+      targetPort: client
+    - name: cluster
+      port: {{ .Values.service.clusterPort }}
+      targetPort: cluster
+    - name: monitor
+      port: {{ .Values.service.monitorPort }}
+      targetPort: monitor
+---
+# Client service used by the controller and router (nats-svc.nats.svc:4222).
+# The extra service label lets the ServiceMonitor scrape this service alone and
+# not the headless one, which has no metrics port.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats-svc
+  labels:
+    {{- include "nats.labels" . | nindent 4 }}
+    nats.io/service: client
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "nats.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: client
+      port: {{ .Values.service.clientPort }}
+      targetPort: client
+    - name: cluster
+      port: {{ .Values.service.clusterPort }}
+      targetPort: cluster
+    - name: monitor
+      port: {{ .Values.service.monitorPort }}
+      targetPort: monitor
+    {{- if .Values.monitoring.enabled }}
+    - name: metrics
+      port: {{ .Values.service.metricsPort }}
+      targetPort: metrics
+    {{- end }}

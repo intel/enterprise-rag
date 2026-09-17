@@ -1,0 +1,56 @@
+---
+# solution_version and default_image_tag live in version.yaml. Guarded, so the
+# copy the manifest role already loaded on the install path is not re-read.
+- name: "app_pre_install | Load version metadata"
+  ansible.builtin.include_vars:
+    file: "{{ deployment_dir }}/version.yaml"
+  when: solution_version is not defined
+
+- name: "app_pre_install | Apply the default image tag when none is configured"
+  ansible.builtin.set_fact:
+    tag: "{{ default_image_tag }}"
+    tag_source: "default"
+  when: tag is not defined or tag | string | length == 0
+
+- name: "app_pre_install | Report the applied default image tag"
+  ansible.builtin.debug:
+    msg: >-
+      Image tag not set in the configuration — using the default
+      '{{ default_image_tag }}' from version.yaml.
+  when: tag_source | default('configured') == 'default'
+
+- name: "app_pre_install | Add image tag / solution version mismatch issue"
+  vars:
+    _tag_issue: >-
+      Image tag "{{ tag }}" does not contain the solution version
+      "{{ solution_version }}". To fix, choose one of: (1) comment out or remove
+      the tag field to use the default "{{ default_image_tag }}" (recommended);
+      (2) set tag to a value containing "{{ solution_version }}", for example
+      "{{ solution_version }}" or "{{ solution_version }}.dev1"; (3) set
+      tag_override: true to bypass this check for a custom tagging policy.
+  ansible.builtin.set_fact:
+    configuration_issues: "{{ configuration_issues + [_tag_issue] }}"
+  when:
+    - not (tag_override | default(false) | bool)
+    - solution_version not in (tag | string)
+
+- name: "app_pre_install | Warn that tag_override bypasses the version check"
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: tag_override is set — the image tag '{{ tag }}' is not checked against
+      solution version {{ solution_version }}. Confirm the images are compatible.
+  when: tag_override | default(false) | bool
+
+- name: "app_pre_install | Fail with all configuration issues"
+  ansible.builtin.fail:
+    msg: |
+      CONFIGURATION FAILED
+
+      {{ configuration_issues | length }} issue(s) must be resolved before continuing:
+
+      {% for issue in configuration_issues %}
+      {{ loop.index }}. {{ issue }}
+      {% endfor %}
+
+      Please resolve all issues above and run the deployment again.
+  when: configuration_issues | length > 0

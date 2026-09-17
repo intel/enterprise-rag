@@ -1,0 +1,92 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+{#
+  One counting query, run inside the cluster. No ServiceAccount, Role or
+  RoleBinding: the query talks to a database or to an HTTP endpoint, never to the
+  Kubernetes API, so the namespace's default ServiceAccount with no permissions
+  is what it needs.
+
+  Every credential arrives through secretKeyRef. Nothing is written into the
+  container's command or args, so `kubectl get pod <pod> -o yaml` shows the
+  script path and nothing else.
+#}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ _dcj_configmap_name }}
+  namespace: {{ dcj_namespace }}
+  labels:
+    app.kubernetes.io/name: {{ data_consistency_job_label }}
+    app.kubernetes.io/component: {{ dcj_label }}
+data:
+  query.sh: |
+{{ lookup('file', role_path + '/files/' + dcj_script) | indent(4, first=True) }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ _dcj_job_name }}
+  namespace: {{ dcj_namespace }}
+  labels:
+    app.kubernetes.io/name: {{ data_consistency_job_label }}
+    app.kubernetes.io/component: {{ dcj_label }}
+spec:
+  backoffLimit: {{ data_consistency_job_backoff_limit }}
+  activeDeadlineSeconds: {{ data_consistency_job_deadline_seconds }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ data_consistency_job_label }}
+        app.kubernetes.io/component: {{ dcj_label }}
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ data_consistency_job_run_as_user }}
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: query
+          image: {{ dcj_image }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          command: ["{{ dcj_shell | default('/bin/sh') }}", "/scripts/query.sh"]
+          env:
+            - name: HOME
+              value: /tmp
+{% for entry in dcj_env %}
+            - name: {{ entry.name }}
+{% if entry.secret is defined %}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ entry.secret }}
+                  key: {{ entry.key }}
+{% else %}
+              value: "{{ entry.value }}"
+{% endif %}
+{% endfor %}
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: scripts
+          configMap:
+            name: {{ _dcj_configmap_name }}
+            defaultMode: 0555
+        - name: tmp
+          emptyDir: {}

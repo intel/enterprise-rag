@@ -1,0 +1,42 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# Configure an already-deployed Keycloak (deployed by core/keycloak via Operator).
+# Uses Job-based configuration (configure_keycloak.yaml) — NOT realmImport — so
+# realms/clients/users can be reconfigured on upgrades without recreating the
+# Keycloak instance.
+
+- name: "app_keycloak_config | Assert external OIDC configuration is complete"
+  ansible.builtin.include_tasks: assert_oidc_config.yaml
+
+- name: "app_keycloak_config | Warn that SharePoint is inactive"
+  ansible.builtin.debug:
+    msg: >-
+      SharePoint integration will be inactive: set erag_keycloak_oidc_tenant_id
+      to enable SharePoint ingestion. Single Sign-On login is unaffected.
+  when:
+    - erag_keycloak_oidc_endpoint | default('', true) | string | trim | length > 0
+    - erag_keycloak_oidc_tenant_id | default('', true) | string | trim | length == 0
+
+- name: "app_keycloak_config | Verify Keycloak admin secret exists in {{ keycloak_namespace }}"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: "{{ keycloak_admin_secret_name }}"
+    namespace: "{{ keycloak_namespace }}"
+  register: _kc_admin_secret
+  failed_when: _kc_admin_secret.resources | length == 0
+
+- name: "app_keycloak_config | Mark admin secret for password management"
+  ansible.builtin.include_role:
+    name: app_password_mgmt
+    tasks_from: markup.yaml
+  vars:
+    namespace: "{{ keycloak_namespace }}"
+    secret_name: "{{ keycloak_admin_secret_name }}"
+    password_mappings:
+      - { key: password, variable: KEYCLOAK_REALM_ADMIN_PASSWORD, user: "{{ keycloak_admin_user }}" }
+
+- name: "app_keycloak_config | Run Keycloak configurator Job"
+  ansible.builtin.include_tasks: configure_keycloak.yaml

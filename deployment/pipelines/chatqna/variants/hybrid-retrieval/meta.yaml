@@ -1,0 +1,35 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Hybrid Retrieval Variant Metadata
+# Combines vector search and BM25 keyword search with RRF fusion
+#
+# NOT YET DEPLOYABLE - pending GMC step-name registration. The composer emits a valid
+# GMConnector for this variant, but its steps (RRF, BM25, VectorReranked) are not yet
+# recognized by the GMC operator, so `kubectl apply` is rejected by the validating
+# webhook ("invalid step name: RRF"). Enabling it requires wiring in src/gmc and the
+# chart (see deployment/CLAUDE.md "Integrating a new microservice" checklist):
+#   1. src/gmc/api/v1alpha3/gmconnector_types.go  - add StepNameType constants RRF/BM25/VectorReranked
+#   2. src/gmc/api/v1alpha3/validating_webhook.go - add the same names to stepNames
+#   3. src/gmc/internal/controller/gmconnector_controller.go - add RRF -> rrf-usvc.yaml to yamlDict
+#   4. deployment/components/gmc/manifests_common/rrf-usvc.yaml.tpl - RRF Service + Deployment
+#   5. deployment/components/gmc/values.yaml - rrf-usvc image entry under images:
+#   6. deployment/images.yaml - rrf-usvc image build entry
+# Tracked for a later PR; query-rewrite is fully wired and deployable.
+#
+# ALSO BLOCKED by the fingerprint parameter projection. The two retriever branches are
+# meant to differ by search_type, but:
+#   - `data: '{"search_type": ...}'` on an Ensemble step is inert. The router only acts on
+#     data == "$response"; handleEnsemblePipeline passes the request through unchanged.
+#   - search_type is a field of the `retriever` parameter group, and the router overlays
+#     that group onto the request at the top level, overwriting whatever is there. Both
+#     branches carry paramsKey: retriever, so both would get the same search_type.
+# Distinguishing them needs two rows of the same kind - paramsKey retriever_vector and
+# retriever_bm25, both paramsKind: retriever - seeded with different search_type values,
+# with each branch's step naming its own key.
+
+replaces:
+  - retriever
+  - reranking
+
+description: "Hybrid retrieval with vector search + BM25 keyword search, fused via RRF"

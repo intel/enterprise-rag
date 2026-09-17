@@ -1,0 +1,108 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ teardown_job_name }}
+  namespace: {{ keycloak_namespace }}
+  labels:
+    app.kubernetes.io/name: keycloak-configurator
+    app.kubernetes.io/component: teardown
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: keycloak-configurator
+        app.kubernetes.io/component: teardown
+    spec:
+      serviceAccountName: keycloak-configurator
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: teardown
+          image: {{ init_container_image }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -euo pipefail
+              KEYCLOAK_URL="{{ keycloak_internal_url }}"
+              REALM="{{ erag_keycloak_realm }}"
+
+              # Wait for Keycloak to be reachable
+              for i in $(seq 1 30); do
+                curl -sf "${KEYCLOAK_URL}/realms/master" >/dev/null 2>&1 && break
+                [ "$i" -eq 30 ] && { echo "[ERROR] Keycloak unreachable"; exit 1; }
+                sleep 2
+              done
+
+              # Get admin token
+              TOKEN=$(curl -sf -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
+                -H "Content-Type: application/x-www-form-urlencoded" \
+                --data-urlencode "username=${KEYCLOAK_ADMIN_USER}" \
+                --data-urlencode "password=${KEYCLOAK_ADMIN_PASSWORD}" \
+                --data-urlencode "grant_type=password" \
+                --data-urlencode "client_id=admin-cli" | jq -r .access_token)
+
+              [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ] && { echo "[ERROR] Failed to get admin token"; exit 1; }
+
+              # Check if realm exists
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X GET \
+                "${KEYCLOAK_URL}/admin/realms/${REALM}" \
+                -H "Authorization: Bearer $TOKEN")
+
+              if [ "$HTTP_CODE" = "404" ]; then
+                echo "[INFO] Realm '${REALM}' does not exist — nothing to delete"
+                exit 0
+              fi
+
+              # Delete realm
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
+                "${KEYCLOAK_URL}/admin/realms/${REALM}" \
+                -H "Authorization: Bearer $TOKEN")
+
+              if [ "$HTTP_CODE" = "204" ] || [ "$HTTP_CODE" = "404" ]; then
+                echo "[SUCCESS] Realm '${REALM}' deleted"
+              else
+                echo "[ERROR] Failed to delete realm '${REALM}' (HTTP $HTTP_CODE)"
+                exit 1
+              fi
+          env:
+            - name: KEYCLOAK_ADMIN_USER
+              value: "{{ keycloak_admin_user }}"
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ keycloak_admin_secret_name }}
+                  key: password
+{% if http_proxy is defined and http_proxy != "" %}
+            - name: http_proxy
+              value: "{{ http_proxy }}"
+{% endif %}
+{% if https_proxy is defined and https_proxy != "" %}
+            - name: https_proxy
+              value: "{{ https_proxy }}"
+{% endif %}
+{% if no_proxy is defined and no_proxy != "" %}
+            - name: no_proxy
+              value: "{{ no_proxy }}"
+{% endif %}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

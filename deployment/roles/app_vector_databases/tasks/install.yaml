@@ -1,0 +1,309 @@
+---
+- name: "app_vector_databases | Set override_values.yaml path"
+  ansible.builtin.set_fact:
+    vector_databases_helm_override_values_path: "{{ rag_tmp_dir }}/{{ vector_databases_helm_release_name }}-override-values.yaml"
+
+- name: "app_vector_databases | Ensure namespace exists"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ vector_databases_namespace }}"
+
+- name: "app_vector_databases | Label namespace — Istio"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ vector_databases_namespace }}"
+        labels:
+          istio.io/dataplane-mode: "ambient"
+          erag-istio-protected: "true"
+  when: istio_enabled | default(false) | bool
+
+- name: "app_vector_databases | Label namespace — PSS"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ vector_databases_namespace }}"
+        labels:
+          pod-security.kubernetes.io/enforce: "restricted"
+          pod-security.kubernetes.io/audit: "restricted"
+          pod-security.kubernetes.io/warn: "restricted"
+  when: enforce_pss | default(false) | bool
+
+- name: "app_vector_databases | Configure Redis-based vector store"
+  when: vector_databases_vector_store == 'redis-cluster'
+  block:
+    - name: "app_vector_databases | Generate password for Redis"
+      ansible.builtin.include_role:
+        name: app_generate_password
+        tasks_from: generate_password.yaml
+      loop:
+        - {name: 'REDIS', user: "default"}
+      when: REDIS_PASSWORD is not defined
+
+    - name: "app_vector_databases | Generate user connection details for Redis vector store"
+      ansible.builtin.set_fact:
+        vector_database_connection_username: "default"
+        vector_database_connection_port: "6379"
+
+    - name: "app_vector_databases | Generate host connection details for Redis vector store"
+      ansible.builtin.set_fact:
+        vector_database_connection_host: >-
+          {{
+            vector_databases_namespace + '-' + vector_databases_vector_store +
+            '-headless' + '.' + vector_databases_namespace + '.svc'
+          }}
+
+    - name: "app_vector_databases | Generate uri connection details for Redis vector store"
+      ansible.builtin.set_fact:
+        vector_database_connection_host_with_auth: >-
+          {{
+            "redis://" + vector_database_connection_username + ':' + REDIS_PASSWORD + '@' + vector_database_connection_host  + ':' + vector_database_connection_port
+          }}
+
+- name: "app_vector_databases | Configure Postgres-like vector store"
+  when: vector_databases_vector_store == 'pgvector'
+  block:
+    - name: "app_vector_databases | Generate user connection details for vector store"
+      ansible.builtin.set_fact:
+        vector_database_connection_username: "edp"
+        vector_database_connection_port: "5432"
+        vector_database_name: "vdb"
+
+    - name: "app_vector_databases | Generate password"
+      ansible.builtin.include_role:
+        name: app_generate_password
+        tasks_from: generate_password.yaml
+      loop:
+        - {name: 'POSTGRES', user: "{{ vector_database_connection_username }}"}
+
+    - name: "app_vector_databases | Generate host connection details for vector store"
+      ansible.builtin.set_fact:
+        vector_database_connection_host: >-
+          {{
+            'pgvector.' + vector_databases_namespace + '.svc'
+          }}
+
+    - name: "app_vector_databases | Generate uri connection details for vector store"
+      ansible.builtin.set_fact:
+        vector_database_connection_host_with_auth: >-
+          {{
+            "postgresql://" + vector_database_connection_username + ':' + POSTGRES_PASSWORD + '@' + vector_database_connection_host  + ':' + vector_database_connection_port + '/' + vector_database_name
+          }}
+
+- name: "app_vector_databases | Configure Mssql-like vector store"
+  when: vector_databases_vector_store == 'mssql'
+  block:
+    - name: "app_vector_databases | Read EULA env var"
+      ansible.builtin.set_fact:
+        mssql_eula_env: "{{ lookup('env', 'MSSQL_ACCEPT_EULA') | default('', true) }}"
+
+    - name: "app_vector_databases | Decide whether to prompt for EULA"
+      ansible.builtin.set_fact:
+        mssql_eula_need_prompt: "{{ mssql_eula_env == '' }}"
+
+    - name: "app_vector_databases | Set EULA accepted from env"
+      ansible.builtin.set_fact:
+        mssql_eula_accept: 'Y'
+      when: not mssql_eula_need_prompt
+
+    - name: "app_vector_databases | Ask the operator to accept the EULA"
+      ansible.builtin.pause:
+        prompt: |
+          Do you accept the Microsoft SQL Server 2025 {{ vector_databases_stores.mssql.mssql_pid }} Edition EULA? [Y/N]
+          Type Y to accept, N to decline. Press ENTER to confirm.
+      register: mssql_eula_prompt_result
+      until: mssql_eula_prompt_result.user_input is match('^[YyNn]$')
+      when: mssql_eula_need_prompt
+      retries: 5
+      delay: 0
+
+    - name: "app_vector_databases | Normalize input to uppercase"
+      ansible.builtin.set_fact:
+        mssql_eula_accept: "{{ mssql_eula_prompt_result.user_input | upper }}"
+      when: mssql_eula_need_prompt
+
+    - name: "app_vector_databases | Abort if EULA not accepted"
+      ansible.builtin.fail:
+        msg: "Microsoft SQL Server 2025 EULA not accepted. Aborting installation."
+      when: mssql_eula_accept != 'Y'
+
+    - name: "app_vector_databases | Generate password"
+      ansible.builtin.include_role:
+        name: app_generate_password
+        tasks_from: generate_password.yaml
+      loop:
+        - {name: 'MSSQL', user: "default"}
+
+    - name: "app_vector_databases | Generate user connection details for vector store"
+      ansible.builtin.set_fact:
+        vector_database_connection_username: "edp"
+        vector_database_connection_port: "1433"
+        vector_database_name: "vdb"
+
+    - name: "app_vector_databases | Generate host connection details for vector store"
+      ansible.builtin.set_fact:
+        vector_database_connection_host: >-
+          {{
+            'mssql.' + vector_databases_namespace + '.svc'
+          }}
+
+    - name: "app_vector_databases | Generate uri connection details for vector store"
+      ansible.builtin.set_fact:
+        vector_database_connection_host_with_auth: >-
+          {{
+            "SERVER=" + vector_database_connection_host + ';DATABASE=' + vector_database_name + ';UID=' + vector_database_connection_username + ';PWD=' + MSSQL_PASSWORD + ';'
+          }}
+
+- name: "app_vector_databases | Create namespace list for creating vector db connection details"
+  ansible.builtin.set_fact:
+    vector_db_connection_detail_namespaces: >-
+      {{
+        (
+          [pipeline_namespace] +
+          ([edp_namespace] if edp_enabled else [])
+        ) | flatten
+      }}
+
+- name: "app_vector_databases | Ensure required namespaces exist for vector store configs"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ item }}"
+  loop: "{{ vector_db_connection_detail_namespaces | flatten }}"
+  ignore_errors: true
+
+- name: "app_vector_databases | Create redis compatible vector store configs for services in namespaces"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "vector-database-config"
+        namespace: "{{ item }}"
+      data:
+        VECTOR_STORE: "{{ vector_databases_vector_store | b64encode }}"
+        REDIS_URL: "{{ vector_database_connection_host_with_auth | b64encode }}"
+        REDIS_HOST: "{{ vector_database_connection_host | b64encode }}"
+        REDIS_PORT: "{{ vector_database_connection_port | b64encode }}"
+        REDIS_USERNAME: "{{ vector_database_connection_username | b64encode }}"
+        REDIS_PASSWORD: '{{ REDIS_PASSWORD | b64encode }}'
+  when: vector_databases_vector_store == 'redis-cluster'
+  no_log: "{{ secure_logs }}"
+  loop: "{{ vector_db_connection_detail_namespaces | flatten }}"
+
+- name: "app_vector_databases | Create pgvector compatible vector store configs for services in namespaces"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "vector-database-config"
+        namespace: "{{ item }}"
+      data:
+        VECTOR_STORE: "{{ vector_databases_vector_store | b64encode }}"
+        POSTGRES_URL: "{{ vector_database_connection_host_with_auth | b64encode }}"
+        POSTGRES_HOST: "{{ vector_database_connection_host | b64encode }}"
+        POSTGRES_PORT: "{{ vector_database_connection_port | b64encode }}"
+        POSTGRES_USERNAME: "{{ vector_database_connection_username | b64encode }}"
+        POSTGRES_PASSWORD: '{{ POSTGRES_PASSWORD | b64encode }}'
+        POSTGRES_DB: '{{ vector_database_name | b64encode }}'
+  when: vector_databases_vector_store == 'pgvector'
+  no_log: "{{ secure_logs }}"
+  loop: "{{ vector_db_connection_detail_namespaces | flatten }}"
+
+- name: "app_vector_databases | Create mssql compatible vector store configs for services in namespaces"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "vector-database-config"
+        namespace: "{{ item }}"
+      data:
+        VECTOR_STORE: "{{ vector_databases_vector_store | b64encode }}"
+        MSSQL_URL: "{{ vector_database_connection_host_with_auth | b64encode }}"
+        MSSQL_HOST: "{{ vector_database_connection_host | b64encode }}"
+        MSSQL_PORT: "{{ vector_database_connection_port | b64encode }}"
+        MSSQL_USER: "{{ vector_database_connection_username | b64encode }}"
+        MSSQL_PASSWORD: '{{ MSSQL_PASSWORD | b64encode }}'
+        MSSQL_DB: '{{ vector_database_name | b64encode }}'
+  when: vector_databases_vector_store == 'mssql'
+  no_log: "{{ secure_logs }}"
+  loop: "{{ vector_db_connection_detail_namespaces | flatten }}"
+
+- name: "app_vector_databases | Generate override values file from template"
+  ansible.builtin.template:
+    src: "values.yaml.j2"
+    dest: "{{ vector_databases_helm_override_values_path }}"
+    mode: '0644'
+
+- name: "app_vector_databases | Set values_files list"
+  ansible.builtin.set_fact:
+    values_files: >
+      {{
+        [vector_databases_helm_default_values_file] +
+        [vector_databases_helm_override_values_path]
+      }}
+
+- name: "app_vector_databases | Install or Upgrade Helm chart"
+  kubernetes.core.helm:
+    name: "{{ vector_databases_helm_release_name }}"
+    chart_ref: "{{ vector_databases_helm_chart_directory }}"
+    namespace: "{{ vector_databases_namespace }}"
+    values_files: "{{ values_files }}"
+    state: present
+    create_namespace: true
+    timeout: "{{ helm_timeout }}"
+  register: helm_repo_install_result
+  until: helm_repo_install_result is succeeded
+  retries: 5
+  delay: 15
+
+- name: "app_vector_databases | Mark secret for password management"
+  ansible.builtin.include_role:
+    name: app_password_mgmt
+    tasks_from: markup.yaml
+  vars:
+      namespace: "{{ vector_databases_namespace }}"
+      secret_name: "redis-cluster-secret"
+      password_mappings:
+        - {key: REDIS_PASSWORD, variable: REDIS_PASSWORD, user: "default"}
+  when: vector_databases_vector_store in ['redis-cluster']
+
+- name: "app_vector_databases | Mark secret for password management"
+  ansible.builtin.include_role:
+    name: app_password_mgmt
+    tasks_from: markup.yaml
+  vars:
+      namespace: "{{ vector_databases_namespace }}"
+      secret_name: "pgvector-secret"
+      password_mappings:
+        - {key: POSTGRES_PASSWORD, variable: POSTGRES_PASSWORD, user: "{{ vector_database_connection_username }}"}
+  when: vector_databases_vector_store == 'pgvector'
+
+- name: "app_vector_databases | Mark secret for password management"
+  ansible.builtin.include_role:
+    name: app_password_mgmt
+    tasks_from: markup.yaml
+  vars:
+      namespace: "{{ vector_databases_namespace }}"
+      secret_name: "mssql-secret"
+      password_mappings:
+        - {key: MSSQL_PASSWORD, variable: MSSQL_PASSWORD, user: "{{ vector_database_connection_username }}"}
+  when: vector_databases_vector_store == 'mssql'

@@ -1,0 +1,121 @@
+---
+- name: "app_pre_install | Load solution configuration"
+  ansible.builtin.include_tasks:
+    file: solution_config.yaml
+
+# Treats undefined, "" and 0 alike as "not set". Single reference to the var, so
+# there is no short-circuit ordering to get right, and | string keeps | length
+# from raising on an int.
+- name: "app_pre_install | Check whether vector_dims was pinned in config"
+  ansible.builtin.set_fact:
+    _vector_dims_explicit: "{{ vector_databases_vector_dims | default('', true) | string | length > 0 }}"
+
+- name: "app_pre_install | Resolve vector_dims from embedding model"
+  ansible.builtin.include_tasks:
+    file: resolve_vector_dims.yaml
+  when: not (_vector_dims_explicit | bool)
+
+# Detection never ran, so record why rather than leaving the summary at 'pending'.
+- name: "app_pre_install | Record explicitly configured vector_dims"
+  ansible.builtin.set_fact:
+    vector_databases_vector_dims_source: "explicit_config"
+  when: _vector_dims_explicit | bool
+
+# An empty vector_databases_vector_dims in config.yaml arrives as an extra var,
+# which outranks the set_fact above — detection runs but its result can never be
+# applied, and the empty string would render into the Helm values. Only an assert
+# catches that, so fail here rather than build an unusable index.
+- name: "app_pre_install | Verify vector_dims is a positive integer"
+  ansible.builtin.assert:
+    that:
+      - vector_databases_vector_dims | default(0, true) | int > 0
+    fail_msg: >-
+      vector_databases_vector_dims is '{{ vector_databases_vector_dims | default('<unset>') }}',
+      which is not a usable vector dimension. Either remove the key from
+      config.yaml entirely to auto-detect it from the embedding model, or set it
+      to a positive integer. Leaving it blank does not mean "auto".
+    success_msg: "vector_databases_vector_dims={{ vector_databases_vector_dims }} (source: {{ vector_databases_vector_dims_source | default('pending', true) }})"
+
+- name: "app_pre_install | Validate mcp_enabled"
+  ansible.builtin.include_tasks:
+    file: validate_mcp_enabled.yaml
+
+- name: "app_pre_install | Verify configuration"
+  ansible.builtin.include_tasks:
+    file: verify_config.yaml
+
+- name: "app_pre_install | Display configuration summary"
+  ansible.builtin.debug:
+    msg: |
+
+      ==================== CONFIGURATION SUMMARY ====================
+
+      CONFIGURATION SUCCESSFUL
+
+      All configuration checks passed successfully!
+
+      Pipeline Configuration:
+        • Type: {{ pipeline_type | default('undefined') }}
+        • Variant: {{ pipeline_variant | default('base') }}{{ ' (upload mode: embedding only, no chat)' if (pipeline_variant | default('base')) == 'upload' else '' }}
+
+      Environment Configuration:
+        • hugging_token: {{ 'SET' if hugging_token is defined and hugging_token != '' else 'NOT SET (ensure models are publicly available)' }}
+
+      Proxy Configuration:
+      {% if http_proxy is defined and http_proxy != '' %}
+        • HTTP Proxy: {{ http_proxy }}
+      {% endif %}
+      {% if https_proxy is defined and https_proxy != '' %}
+        • HTTPS Proxy: {{ https_proxy }}
+      {% endif %}
+      {% if no_proxy is defined and no_proxy != '' %}
+        • Combined NoProxy: {{ no_proxy }}
+      {% endif %}
+      {% if additional_no_proxy is defined and additional_no_proxy != '' %}
+        • User Additional NoProxy: {{ additional_no_proxy }}
+      {% endif %}
+      {% if (http_proxy is not defined or http_proxy == '') and (https_proxy is not defined or https_proxy == '') %}
+        • Proxy: Not configured
+      {% endif %}
+
+      Domain Configuration:
+        • UI: {{ base_domain_name | default('undefined') }}
+        • Keycloak: {{ erag_keycloak_domain_name | default('undefined') }}
+        • Telemetry: {{ telemetry_domain_name | default('undefined') }}
+      {% if edp_enabled | default(false) | bool %}
+        • EDP Storage: {{ edp_storage_type | default('seaweedfs') }}
+        {% if edp_storage_type | default('seaweedfs') == 'seaweedfs' %}
+        • EDP Browser: {{ edp_minio_domain_name | default('undefined') }}
+        • EDP S3 API: {{ edp_minio_api_domain_name | default('undefined') }}
+        {% endif %}
+      {% endif %}
+
+      TLS Configuration:
+        • Managed by cert-manager in ai-solutions (gateway_tls_mode)
+
+      Services Status:
+        • Istio: {{ istio_enabled | default('undefined') }}
+        • Keycloak: {{ keycloak_enabled | default('undefined') }}
+        • APISIX: {{ apisix_enabled | default('undefined') }}
+        • Vector DB: {{ vector_databases_enabled | default('undefined') }}
+        • EDP: {{ edp_enabled | default('undefined') }}
+      {% if edp_enabled | default(false) | bool %}
+        • Late Chunking: {{ edp_late_chunking_enabled | default(false) }}
+      {% endif %}
+        • UI: {{ ui_enabled | default('undefined') }}
+        • Telemetry: {{ telemetry_enabled | default('undefined') }}
+
+      Image Configuration:
+        • Registry: {{ registry | default('undefined') }}
+        • Tag: {{ tag | default('undefined') }} ({{ tag_source | default('configured') }}{{ ', tag_override active' if tag_override | default(false) | bool else '' }})
+
+      Model Configuration:
+        • LLM Model: {{ llm_model_name | default('undefined') }}
+        • Embedding Model: {{ embedding_model_name | default('undefined') }} ({{ embedding_model_id | default('undefined') }})
+        • Reranking Model: {{ reranking_model_name | default('undefined') }}
+        • Vector Dims: {{ vector_databases_vector_dims | default('auto', true) }} (source: {{ vector_databases_vector_dims_source | default('pending', true) }})
+
+
+      Ready to proceed with deployment!
+      ============================================================
+  when: configuration_issues | length == 0

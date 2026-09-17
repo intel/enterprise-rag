@@ -1,0 +1,9 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# Retrieve-Rerank variant steps #}
+{# Replaces the generation tail with nothing, so the composed flow ends after the #}
+{# base reranking step. Contributing no steps also means contributing no          #}
+{# resources: prompt-template-usvc, in-guard-usvc and llm-usvc drop out of the    #}
+{# aggregated overlay and are never deployed.                                     #}
+steps: []

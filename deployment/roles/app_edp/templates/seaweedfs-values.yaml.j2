@@ -1,0 +1,125 @@
+s3:
+  enabled: true
+  port: {{ edp_helm_values.seaweedfs.s3.port | default(8333) }}
+  loggingOverrideLevel: {{ edp_helm_values.seaweedfs.s3.loggingOverrideLevel | default(5) }}
+
+  enableAuth: {{ not (edp_rbac_enabled | default(false)) }}
+
+  logs:
+    type: "stederr"
+
+  extraArgs:
+{% if edp_rbac_enabled | default(false) %}
+    - "-iam.config=/etc/seaweedfs/iam/seaweedfs_s3_config"
+{% endif %}
+    - "-tlsVerifyClientCert=false"
+
+  # Disable the static identity secret completely
+  # We want to support both if RBAC is enabled (IAM for OIDC, Secret for static admin)
+  createSecret: false
+{% if not (edp_rbac_enabled | default(false)) %}
+  existingConfigSecret: "seaweedfs-s3-secret"
+{% endif %}
+  credentials:
+    enabled: true
+
+  extraVolumes: |
+{% if edp_rbac_enabled | default(false) %}
+    - name: iam-config
+      secret:
+        secretName: seaweedfs-iam-config
+{% endif %}
+  extraVolumeMounts: |
+{% if edp_rbac_enabled | default(false) %}
+    - name: iam-config
+      mountPath: /etc/seaweedfs/iam
+      readOnly: true
+{% endif %}
+
+  podSecurityContext:
+{{ edp_helm_values.seaweedfs.podSecurityContext | default({}) | to_nice_yaml | indent(4, true) }}
+  containerSecurityContext:
+{{ edp_helm_values.seaweedfs.containerSecurityContext | default({}) | to_nice_yaml | indent(4, true) }}
+  ingress:
+    enabled: false
+
+
+filer:
+  data:
+{% if edp_helm_values.seaweedfs.persistence.enabled | default(false) %}
+    type: "persistentVolumeClaim"
+    size: "{{ edp_helm_values.seaweedfs.persistence.filer.size | default('10Gi') }}"
+{% if edp_helm_values.seaweedfs.persistence.storageClass is defined and edp_helm_values.seaweedfs.persistence.storageClass != "" %}
+    storageClass: "{{ edp_helm_values.seaweedfs.persistence.storageClass }}"
+{% endif %}
+{% endif %}
+
+  logs:
+    type: "emptyDir"
+  podSecurityContext:
+{{ edp_helm_values.seaweedfs.podSecurityContext | default({}) | to_nice_yaml | indent(4, true) }}
+  containerSecurityContext:
+{{ edp_helm_values.seaweedfs.containerSecurityContext | default({}) | to_nice_yaml | indent(4, true) }}
+  s3:
+    enabled: true
+    enableAuth: {{ not (edp_rbac_enabled | default(false)) }}
+{% if not (edp_rbac_enabled | default(false)) %}
+    existingConfigSecret: "seaweedfs-s3-secret"
+{% endif %}
+{% if edp_helm_values.seaweedfs.createBuckets is defined %}
+    createBuckets:
+{{ edp_helm_values.seaweedfs.createBuckets | to_nice_yaml | indent(4, true) }}
+{% endif %}
+  iam: true
+  notificationConfig: |-
+    [notification.webhook]
+    enabled = true
+    endpoint = "{{ edp_helm_values.seaweedfs.webhook_endpoint | default('http://edp-backend.edp.svc:5000/seaweedfs_event') }}"
+
+
+volume:
+{% if edp_helm_values.seaweedfs.persistence.enabled | default(false) %}
+  dataDirs:
+    - name: data
+      type: "persistentVolumeClaim"
+      size: "{{ edp_helm_values.seaweedfs.persistence.volume.size | default('10Gi') }}"
+      maxVolumes: 0
+{% if edp_helm_values.seaweedfs.persistence.storageClass is defined and edp_helm_values.seaweedfs.persistence.storageClass != "" %}
+      storageClass: "{{ edp_helm_values.seaweedfs.persistence.storageClass }}"
+{% endif %}
+{% endif %}
+  podSecurityContext:
+{{ edp_helm_values.seaweedfs.podSecurityContext | default({}) | to_nice_yaml | indent(4, true) }}
+  containerSecurityContext:
+{{ edp_helm_values.seaweedfs.containerSecurityContext | default({}) | to_nice_yaml | indent(4, true) }}
+master:
+  data:
+{% if edp_helm_values.seaweedfs.persistence.enabled | default(false) %}
+    type: "persistentVolumeClaim"
+    size: "{{ edp_helm_values.seaweedfs.persistence.master.size | default('10Gi') }}"
+{% if edp_helm_values.seaweedfs.persistence.storageClass is defined and edp_helm_values.seaweedfs.persistence.storageClass != "" %}
+    storageClass: "{{ edp_helm_values.seaweedfs.persistence.storageClass }}"
+{% endif %}
+  volumeSizeLimitMB: "{{ edp_helm_values.seaweedfs.persistence.master.volumeSizeLimitMB | default('1024') }}"
+{% endif %}
+  logs:
+    type: "emptyDir"
+  podSecurityContext:
+{{ edp_helm_values.seaweedfs.podSecurityContext | default({}) | to_nice_yaml | indent(4, true) }}
+  containerSecurityContext:
+{{ edp_helm_values.seaweedfs.containerSecurityContext | default({}) | to_nice_yaml | indent(4, true) }}
+admin:
+  enabled: true
+  secret:
+    existingSecret: "seaweedfs-admin-secret"
+    userKey: "adminUser"
+    pwKey: "adminPassword"
+  podSecurityContext:
+{{ edp_helm_values.seaweedfs.podSecurityContext | default({}) | to_nice_yaml | indent(4, true) }}
+  containerSecurityContext:
+{{ edp_helm_values.seaweedfs.containerSecurityContext | default({}) | to_nice_yaml | indent(4, true) }}
+{% if routing_mode | default('subdomain') == 'path' %}
+  urlPrefix: "{{ edp_seaweedfs_path_prefix | default('/seaweedfs') }}"
+{% endif %}
+  ingress:
+    enabled: false

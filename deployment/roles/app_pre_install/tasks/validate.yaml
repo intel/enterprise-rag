@@ -1,0 +1,8 @@
+---
+- name: "app_pre_install | Load solution configuration"
+  ansible.builtin.include_tasks:
+    file: solution_config.yaml
+
+- name: "app_pre_install | Validate passed"
+  ansible.builtin.debug:
+    msg: "app_pre_install validation: OK (config checked at install time)"

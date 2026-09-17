@@ -1,0 +1,10 @@
+{{- if .Values.tokens.hug_token }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hf-token-secret
+  namespace: {{ .Values.namespace }}
+type: Opaque
+data:
+  HF_TOKEN: {{ .Values.tokens.hug_token | b64enc | quote }}
+{{- end }}

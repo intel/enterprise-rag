@@ -1,0 +1,105 @@
+---
+# =============================================================================
+# erag-layer Component Registry
+# =============================================================================
+# Loaded by ai-solutions preflight in addition to its own
+# configs/components.yaml. Declares the `erag` solution layer and acts as the
+# erag-layer sub-playbook for the rag extension.
+#
+# Naming convention: app_* (Q10-1 in migration_plan.md).
+# Each component name maps 1:1 to roles/<name>/.
+#
+# Order comes from depends_on, not from this file's order.
+# `app_apisix` MUST run before any component that ships ApisixRoute templates
+# (it provisions the gateway, the cluster-default-namespace K8s API
+# `ApisixUpstream`, and the read-only `ClusterRole`/`ClusterRoleBinding` used by
+# the per-pipeline watcher routes emitted by the gmc chart). Each component
+# chart now carries its own `apisix.endpoints` block plus its own
+# `templates/apisix-routes.yaml`; auth wiring is rendered by each role's
+# `templates/values.yaml.j2` so no shared values file is used.
+# =============================================================================
+
+layers:
+  - name: erag
+    enabled: true
+    depends_on: [platform, inference]
+
+components:
+  # --- Inference models (deploy via model-manager.sh, wait for readiness) ---
+  - name: app_inference_models
+    layer: erag
+    enabled: "{{ inference_models_enabled | default(true) | bool }}"
+    depends_on: []
+
+  # --- Bootstrap ---
+  - name: app_pre_install
+    layer: erag
+    enabled: true
+    depends_on: [app_inference_models]
+
+  # --- Data plane ---
+  - name: app_vector_databases
+    layer: erag
+    enabled: "{{ vector_databases_enabled | default(false) | bool }}"
+    depends_on: [app_pre_install]
+
+  - name: app_keycloak_config
+    layer: erag
+    enabled: "{{ keycloak_enabled | default(true) | bool }}"
+    depends_on: [app_pre_install]
+
+  # --- Edge / API surface ---
+  - name: app_apisix
+    layer: erag
+    enabled: "{{ apisix_enabled | default(true) | bool }}"
+    depends_on: [app_pre_install]
+
+  - name: app_chat_history
+    layer: erag
+    enabled: "{{ chat_history_enabled | default(false) | bool }}"
+    depends_on: [app_pre_install, app_apisix]
+
+  - name: app_nats
+    layer: erag
+    depends_on: [app_pre_install]
+
+  - name: app_fingerprint
+    layer: erag
+    depends_on: [app_pre_install, app_apisix, app_nats]
+
+  - name: app_hpa
+    layer: erag
+    enabled: "{{ hpa_enabled | default(true) | bool }}"
+    depends_on: [app_pre_install]
+
+  - name: app_pipeline
+    layer: erag
+    enabled: true
+    depends_on: [app_pre_install, app_hpa, app_nats, app_fingerprint]
+
+  - name: app_edp
+    layer: erag
+    enabled: "{{ edp_enabled | default(false) | bool }}"
+    depends_on: [app_vector_databases, app_apisix, app_hpa]
+
+  - name: app_mcp_gateway
+    layer: erag
+    enabled: "{{ mcp_enabled | default(false) | bool }}"
+    depends_on: [app_edp, app_keycloak_config]
+
+  - name: app_ui
+    layer: erag
+    enabled: "{{ ui_enabled | default(false) | bool }}"
+    depends_on: [app_pipeline, app_apisix]
+
+  # --- Reboot recovery ---
+  - name: app_watcher
+    layer: erag
+    enabled: "{{ watcher_enabled | default(true) | bool }}"
+    depends_on: [app_pre_install]
+
+  #--- Finalization ---
+  - name: app_post_install
+    layer: erag
+    enabled: true
+    depends_on: []

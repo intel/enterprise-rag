@@ -1,0 +1,44 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "nats.fullname" . }}-config
+  labels:
+    {{- include "nats.labels" . | nindent 4 }}
+data:
+  nats.conf: |
+    # The authorized client NKey is substituted from the unquoted $NATS_USER_NKEY
+    # at startup; nats-server only expands an unquoted env var, so quoting it would
+    # make the literal string fail as an invalid public key.
+    port: {{ .Values.service.clientPort }}
+    http: {{ .Values.service.monitorPort }}
+
+    jetstream {
+      store_dir: "/data/jetstream"
+      max_memory_store: {{ .Values.jetstream.maxMemory }}
+      max_file_store: 0
+    }
+
+    authorization {
+      users: [
+        { nkey: $NATS_USER_NKEY }
+      ]
+    }
+    {{- if .Values.cluster.enabled }}
+
+    cluster {
+      name: "{{ include "nats.fullname" . }}"
+      port: {{ .Values.service.clusterPort }}
+      routes: [
+        {{- $fullname := include "nats.fullname" . }}
+        {{- $ns := .Release.Namespace }}
+        {{- $port := .Values.service.clusterPort }}
+        {{- $replicas := int (include "nats.replicas" .) }}
+        {{- range $i := until $replicas }}
+        "nats://{{ $fullname }}-{{ $i }}.{{ $fullname }}.{{ $ns }}.svc:{{ $port }}",
+        {{- end }}
+      ]
+    }
+    {{- end }}

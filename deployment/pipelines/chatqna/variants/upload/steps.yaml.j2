@@ -1,0 +1,23 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# Upload variant steps - embedding only                                      #}
+{# Replaces the whole ChatQnA base flow with a single Embedding step.         #}
+step:
+  name: Embedding
+  data: $response
+  dependency: Hard
+  internalService:
+    serviceName: embedding-svc
+    config:
+      endpoint: /v1/embeddings
+resources:
+  embedding-usvc:
+    replicas: 5
+    resources:
+      requests:
+        cpu: 2
+        memory: 4Gi
+      limits:
+        cpu: 10
+        memory: 10Gi

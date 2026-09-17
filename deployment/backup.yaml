@@ -1,0 +1,96 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# =============================================================================
+# Backup / Restore
+# =============================================================================
+# Backs up and restores this solution's user data. The engine is the core repo's
+# roles/backup; what to capture is deployment/backup_profile.yaml beside this
+# playbook. Run it from the core repo root:
+#
+#   export KUBECONFIG=env/<env>/kubeconfig.yaml
+#   .venv/bin/ansible-playbook -i env/<env>/inventory/hosts.yaml \
+#     -e env_dir=$(pwd)/env/<env> \
+#     -e @env/<env>/global_config.yaml \
+#     -e @env/<env>/config.erag.yaml \
+#     -e kubernetes_kubeconfig=$(pwd)/env/<env>/kubeconfig.yaml \
+#     ext/enterprise.ai-erag/deployment/backup.yaml \
+#     -e backup_action=backup
+#
+# Restore is the same with `-e backup_action=restore`. It asks before deleting
+# anything; `-e backup_confirm=yes` answers for an unattended run. Pin a specific
+# backup with `-e velero_restore_from=<name>`.
+#
+# Requires the core repo's velero component installed and a StorageClass that can
+# snapshot. See docs/operate/backup.md.
+# =============================================================================
+
+- name: "Backup / Restore"
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  environment:
+    http_proxy: "{{ http_proxy | default('') }}"
+    https_proxy: "{{ https_proxy | default('') }}"
+    no_proxy: "{{ no_proxy | default('') }}"
+    HTTP_PROXY: "{{ http_proxy | default('') }}"
+    HTTPS_PROXY: "{{ https_proxy | default('') }}"
+    NO_PROXY: "{{ no_proxy | default('') }}"
+    K8S_AUTH_NO_PROXY: "{{ no_proxy | default('') }}"
+
+  tasks:
+    - name: "backup | Validate the invocation"
+      ansible.builtin.assert:
+        that:
+          - backup_action | default('') in ['backup', 'restore']
+          - env_dir | default('') | length > 0
+        fail_msg: >-
+          Needs backup_action=backup|restore and env_dir=<absolute path to
+          env/<env>>. See the header of this playbook for the full command.
+
+    # The profile sits one level up, beside version.yaml. Derived from this
+    # playbook's own location so the path holds wherever the repo is checked out.
+    - name: "backup | Load this solution's profile"
+      ansible.builtin.include_role:
+        name: backup
+        tasks_from: load_profile.yaml
+      vars:
+        backup_profile_file: "{{ playbook_dir }}/backup_profile.yaml"
+
+    - name: "backup | Stop when the profile is not enabled"
+      ansible.builtin.meta: end_play
+      when: not (backup_profile_active | bool)
+
+    # The core repo has no backup action any more, so this is the only place that
+    # can ask. Restore deletes the releases and volumes the profile names before
+    # Velero replays over them.
+    - name: "backup | Confirm a destructive restore"
+      when:
+        - backup_action == 'restore'
+        - not (backup_confirm | default(false) | bool)
+      block:
+        - name: "backup | Confirm a destructive restore"
+          ansible.builtin.pause:
+            prompt: |
+
+              About to RESTORE this solution in {{ env_dir }} from a Velero backup.
+              This DELETES the Helm releases and PersistentVolumeClaims listed in
+              deployment/backup_profile.yaml before replaying the backup over them.
+
+              Type YES to proceed, anything else to abort. Press ENTER to confirm.
+          register: _bk_confirm
+
+        - name: "backup | Abort when not confirmed"
+          ansible.builtin.fail:
+            msg: "Restore aborted."
+          when: (_bk_confirm.user_input | default('') | trim) != 'YES'
+
+    - name: "backup | Preflight — the backup mechanism is usable"
+      ansible.builtin.include_role:
+        name: backup
+        tasks_from: preflight.yaml
+
+    - name: "backup | Run {{ backup_action }}"
+      ansible.builtin.include_role:
+        name: backup
+        tasks_from: "{{ backup_action }}.yaml"

@@ -1,0 +1,14 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Retrieve-Rerank Variant Metadata
+# Retrieval-only ChatQnA: the flow stops after reranking, with no generation tail.
+# Consumers (MCP gateway, EDP /api/retrieve) call the retriever and reranker
+# directly, so no prompt template, input guard or LLM is deployed.
+
+replaces:
+  - prompt-template
+  - llm-guard-input
+  - llm
+
+description: "Retrieval only - embedding, retrieval and reranking without LLM generation"

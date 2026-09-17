@@ -1,0 +1,37 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Translation Pipeline Metadata
+# Modular pipeline definition with composable variants
+
+name: translation
+namespace: translation
+description: "Language detection and translation service"
+
+# Base flow - ordered list of step IDs
+base_flow:
+  - language-detection
+  - prompt-template
+  - llm
+
+# Shared llm step configuration. The model-server wiring (LLM_MODEL_SERVER_ENDPOINT,
+# LLM_MODEL_NAME, ...) is set in app_pipeline/templates/values.yaml.j2 and reaches
+# llm-usvc through its ConfigMap.
+endpoints:
+  llm:
+    disable_streaming: "False"
+    # Recommended resources for the shared llm step (llm-usvc chart key)
+    resources:
+      replicas: 1
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 4
+        memory: 6Gi
+
+# GMC router configuration
+router:
+  name: router
+  service_name: router-service
+  type: Sequence

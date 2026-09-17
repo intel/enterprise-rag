@@ -1,0 +1,18 @@
+{#
+Copyright (C) 2024-2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+#}
+
+cluster:
+  enabled: {{ nats_cluster_enabled | bool | string | lower }}
+  replicas: {{ nats_replicas }}
+
+auth:
+  existingSecret: "{{ nats_auth_secret_name }}"
+
+kv:
+  bucket: "{{ nats_kv_bucket }}"
+
+{% if nats_additional_values is defined and nats_additional_values %}
+{{ nats_additional_values | to_nice_yaml }}
+{% endif %}

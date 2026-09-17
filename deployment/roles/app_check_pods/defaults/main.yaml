@@ -1,0 +1,28 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_check_pods Role Defaults
+# =============================================================================
+
+check_pods_retries: 10
+check_pods_no_wait: false
+check_pods_no_fail: false
+check_pods_store_result: false
+
+# --- Cross-role shared defaults - Owned by other roles; declared here so
+#     get_namespaces.yaml is standalone-runnable. ---
+apisix_namespace: "auth-apisix"                              # app_apisix
+audio_namespace: "audio"                                     # app_audio
+chat_history_namespace: "chat-history"                       # app_chat_history
+edp_namespace: "edp"                                         # app_edp
+edp_seaweedfs_namespace: "seaweedfs"                         # app_edp
+edp_storage_type: "seaweedfs"                                # app_edp
+fingerprint_namespace: "fingerprint"                         # app_fingerprint
+gmc_namespace: "system"                                      # app_pipeline
+keycloak_namespace: "keycloak"                               # core/keycloak
+mcp_namespace: "mcp-gateway"                                 # app_mcp_gateway
+pipeline_namespace: "{{ pipeline_type | default('chatqna') }}" # app_pipeline
+ui_namespace: "rag-ui"                                       # app_ui
+vector_databases_namespace: "vdb"                            # app_vector_databases

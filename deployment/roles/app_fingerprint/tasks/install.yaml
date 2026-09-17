@@ -1,0 +1,115 @@
+---
+- name: "app_fingerprint | Set override_values.yaml path"
+  ansible.builtin.set_fact:
+    fingerprint_helm_override_values_path: >-
+      {{ rag_tmp_dir }}/{{ fingerprint_helm_release_name }}-override-values.yaml
+
+- name: "app_fingerprint | Build Helm chart dependencies"
+  ansible.builtin.command:
+    cmd: helm dependency build
+    chdir: "{{ fingerprint_helm_chart_directory }}"
+  register: helm_repo_add_result
+  until: helm_repo_add_result is succeeded
+  retries: "{{ helm_retries }}"
+  delay: 15
+
+- name: "app_fingerprint | Generate password"
+  ansible.builtin.include_role:
+    name: app_generate_password
+    tasks_from: generate_password.yaml
+  loop:
+    - name: "FINGERPRINT_POSTGRES"
+      user: "{{ fingerprint_db_user }}"
+
+- name: "app_fingerprint | Ensure namespaces exist"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ item }}"
+  loop:
+    - "{{ fingerprint_namespace }}"
+    - "{{ gmc_namespace }}"
+
+- name: "app_fingerprint | Label namespace — Istio"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ fingerprint_namespace }}"
+        labels:
+          istio.io/dataplane-mode: "ambient"
+          erag-istio-protected: "true"
+  when: istio_enabled | default(false) | bool
+
+- name: "app_fingerprint | Label namespace — PSS"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ fingerprint_namespace }}"
+        labels:
+          pod-security.kubernetes.io/enforce: "restricted"
+          pod-security.kubernetes.io/audit: "restricted"
+          pod-security.kubernetes.io/warn: "restricted"
+  when: enforce_pss | default(false) | bool
+
+- name: "app_fingerprint | Create password secret"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ fingerprint_db_password_secret_name }}"
+        namespace: "{{ item }}"
+      data:
+        password: "{{ FINGERPRINT_POSTGRES_PASSWORD | b64encode }}"
+  no_log: "{{ secure_logs }}"
+  loop:
+    - "{{ fingerprint_namespace }}"
+    - "{{ gmc_namespace }}"
+
+- name: "app_fingerprint | Generate override values file from template"
+  ansible.builtin.template:
+    src: "values.yaml.j2"
+    dest: "{{ fingerprint_helm_override_values_path }}"
+    mode: '0644'
+
+- name: "app_fingerprint | Set values_files list"
+  ansible.builtin.set_fact:
+    values_files: >
+      {{
+        [fingerprint_helm_default_values_file,
+         fingerprint_helm_override_values_path]
+      }}
+
+- name: "app_fingerprint | Install or Upgrade Helm chart"
+  kubernetes.core.helm:
+    name: "{{ fingerprint_helm_release_name }}"
+    chart_ref: "{{ fingerprint_helm_chart_directory }}"
+    namespace: "{{ fingerprint_namespace }}"
+    values_files: "{{ values_files }}"
+    state: present
+    create_namespace: true
+    timeout: "{{ helm_timeout }}"
+  register: helm_repo_install_result
+  until: helm_repo_install_result is succeeded
+  retries: "{{ helm_retries }}"
+  delay: 15
+
+- name: "app_fingerprint | Mark secret for password management"
+  ansible.builtin.include_role:
+    name: app_password_mgmt
+    tasks_from: markup.yaml
+  vars:
+      namespace: "{{ fingerprint_namespace }}"
+      secret_name: "{{ fingerprint_db_password_secret_name }}"
+      password_mappings:
+        - {key: password, variable: FINGERPRINT_POSTGRES_PASSWORD, user: "{{ fingerprint_db_user }}"}

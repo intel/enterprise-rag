@@ -1,0 +1,43 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# Which gateway listener an S3 route has to name in sectionName. Both the SeaweedFS
+# S3 route and the ONTAP S3 route claim the same hostname, so both bind whatever
+# this resolves.
+#
+# Gateway API resolves overlapping listener hostnames by specificity, so as soon as
+# the platform gateway carries a listener claiming s3.<base_domain> exactly (the core
+# installer's '{{ gateway_s3_listener_name }}', which holds the ClientTrafficPolicy
+# that SigV4 needs), the '*.<base_domain>' wildcard listener stops covering that name
+# and a route pinned to 'https' goes Accepted=False / NoMatchingListenerHostname.
+#
+# The rule is "name the listener whose hostname is exactly the route hostname, else
+# the wildcard one", which resolves every case without branching: the dedicated S3
+# listener, 'https-apex' in path mode, and 'https' against a core installer that
+# predates the dedicated listener or whose listener claims a different hostname.
+# Core creates that listener from ontap_s3_data_lif alone, which is not the condition
+# this role activates the proxy on, so the two are deliberately resolved from the
+# live Gateway rather than assumed to agree.
+
+- name: "app_edp | S3 listener | Read the platform gateway listeners"
+  kubernetes.core.k8s_info:
+    api_version: gateway.networking.k8s.io/v1
+    kind: Gateway
+    name: "{{ gateway_name }}"
+    namespace: "{{ gateway_namespace }}"
+  register: _edp_s3_gw_listeners
+  check_mode: false
+  changed_when: false
+
+- name: "app_edp | S3 listener | Select the listener that claims the S3 hostname"
+  ansible.builtin.set_fact:
+    _edp_s3_section: "{{ _exact | default(_wildcard, true) }}"
+  vars:
+    _tls_listeners: >-
+      {{ (_edp_s3_gw_listeners.resources | default([{}]) | first).spec.listeners | default([])
+         | selectattr('protocol', 'eq', 'HTTPS') | list }}
+    _exact: >-
+      {{ _tls_listeners | selectattr('hostname', 'defined') | selectattr('hostname', 'eq', _edp_s3_host)
+         | map(attribute='name') | list | first | default('', true) }}
+    _wildcard: "{{ 'https-apex' if _edp_s3_path_mode else 'https' }}"

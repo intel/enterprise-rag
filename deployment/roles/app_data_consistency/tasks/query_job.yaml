@@ -1,0 +1,117 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Run one counting query as an in-cluster Job and read the count out of its log.
+#
+# Follows the Job-with-wait pattern app_keycloak_config uses: previous Jobs are
+# deleted by label, the manifest is rendered into rag_tmp_dir, applied without
+# waiting, then polled until it has either succeeded or failed. A Job that fails,
+# never finishes, or prints no count fails this task and names the command that
+# shows why. There is no path that records a count of zero for a query that did
+# not run.
+#
+# Expects: dcj_store, dcj_label, dcj_namespace, dcj_image, dcj_script, dcj_env,
+#          optionally dcj_shell, and _snapshot_file_timestamp from snapshot.yaml,
+#          which is what keeps the pre-upgrade and post-upgrade Jobs of one run
+#          from sharing a name
+# Sets: _dcj_count
+
+- name: "app_data_consistency | Query — name the {{ dcj_store }} Job"
+  ansible.builtin.set_fact:
+    _dcj_job_name: "{{ data_consistency_job_label }}-{{ dcj_label }}-{{ _snapshot_file_timestamp | lower }}"
+    _dcj_configmap_name: "{{ data_consistency_job_label }}-{{ dcj_label }}-script"
+    _dcj_manifest_path: "{{ rag_tmp_dir }}/{{ data_consistency_job_label }}-{{ dcj_label }}-job.yaml"
+
+- name: "app_data_consistency | Query — find previous {{ dcj_store }} Jobs"
+  kubernetes.core.k8s_info:
+    api_version: batch/v1
+    kind: Job
+    namespace: "{{ dcj_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/name={{ data_consistency_job_label }}"
+      - "app.kubernetes.io/component={{ dcj_label }}"
+  register: _dcj_previous_jobs
+
+- name: "app_data_consistency | Query — delete previous {{ dcj_store }} Jobs"
+  kubernetes.core.k8s:
+    api_version: batch/v1
+    kind: Job
+    name: "{{ item.metadata.name }}"
+    namespace: "{{ dcj_namespace }}"
+    state: absent
+    delete_options:
+      propagationPolicy: Background
+  loop: "{{ _dcj_previous_jobs.resources | default([]) }}"
+  loop_control:
+    label: "{{ item.metadata.name }}"
+
+# The pre-upgrade snapshot runs before app_pre_install creates the work
+# directories, so this cannot assume the directory is already there.
+- name: "app_data_consistency | Query — ensure the work directory exists"
+  ansible.builtin.file:
+    path: "{{ rag_tmp_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: "app_data_consistency | Query — render the {{ dcj_store }} Job manifest"
+  ansible.builtin.template:
+    src: query-job.yaml.j2
+    dest: "{{ _dcj_manifest_path }}"
+    mode: "0600"
+
+- name: "app_data_consistency | Query — apply the {{ dcj_store }} Job"
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ _dcj_manifest_path }}"
+    wait: false
+
+# Stops on the Failed condition rather than on status.failed. status.failed
+# counts pods that have exited non-zero, so it reaches 1 on the first attempt and
+# would make backoffLimit dead; the condition is set only once the Job has given
+# up, whether it ran out of attempts or hit its deadline. failed_when is off so a
+# poll that never settles is reported by the next task, which names the command
+# that shows why.
+- name: "app_data_consistency | Query — wait for the {{ dcj_store }} Job"
+  kubernetes.core.k8s_info:
+    api_version: batch/v1
+    kind: Job
+    name: "{{ _dcj_job_name }}"
+    namespace: "{{ dcj_namespace }}"
+  register: _dcj_job_status
+  until: >
+    (_dcj_job_status.resources | default([]) | length > 0) and
+    (((_dcj_job_status.resources[0].status.succeeded | default(0)) >= 1) or
+     ((_dcj_job_status.resources[0].status.conditions | default([]))
+        | selectattr('type', 'equalto', 'Failed')
+        | selectattr('status', 'equalto', 'True') | list | length > 0))
+  retries: "{{ data_consistency_job_retries }}"
+  delay: "{{ data_consistency_job_delay }}"
+  failed_when: false
+
+- name: "app_data_consistency | Query — fail when the {{ dcj_store }} Job did not succeed"
+  ansible.builtin.fail:
+    msg: >-
+      The {{ dcj_store }} count query did not succeed. Inspect it with:
+      kubectl logs -n {{ dcj_namespace }} job/{{ _dcj_job_name }}
+  when: >
+    (_dcj_job_status.resources | default([]) | length == 0) or
+    (_dcj_job_status.resources[0].status.succeeded | default(0)) < 1
+
+- name: "app_data_consistency | Query — read the {{ dcj_store }} Job log"
+  kubernetes.core.k8s_log:
+    api_version: batch/v1
+    kind: Job
+    name: "{{ _dcj_job_name }}"
+    namespace: "{{ dcj_namespace }}"
+  register: _dcj_job_log
+
+- name: "app_data_consistency | Query — extract the {{ dcj_store }} count"
+  ansible.builtin.set_fact:
+    _dcj_count: "{{ _dcj_job_log.log | regex_search('DATA_COUNT=([0-9]+)', '\\1') | default([], true) | join('') }}"
+
+- name: "app_data_consistency | Query — fail when the {{ dcj_store }} Job printed no count"
+  ansible.builtin.fail:
+    msg: >-
+      The {{ dcj_store }} count query succeeded but printed no count. Inspect it
+      with: kubectl logs -n {{ dcj_namespace }} job/{{ _dcj_job_name }}
+  when: _dcj_count | length == 0

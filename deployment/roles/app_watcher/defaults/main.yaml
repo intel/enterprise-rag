@@ -1,0 +1,41 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_watcher Role Defaults
+# =============================================================================
+
+# --- Deployment target ---
+# The chart hard-fails outside `default`, deliberately: `default` carries no
+# ambient label, so the watcher pod is never captured by the mesh and can still
+# reach the API server when the mesh it repairs is broken.
+watcher_namespace: "default"
+
+# --- Helm ---
+watcher_helm_release_name: "rag-utils"
+watcher_helm_chart_directory: "{{ deployment_dir }}/components/utils/rag-utils"
+watcher_helm_default_values_file: "{{ watcher_helm_chart_directory }}/values.yaml"
+
+# --- Reboot detection and refresh scope ---
+# Refresh targets are discovered from this namespace label at run time, so the
+# watcher tracks the platform and inference layers without knowing what they
+# deployed. No namespace list is configured here on purpose.
+watcher_ambient_label: "istio.io/dataplane-mode=ambient"
+
+# Waited on for readiness but never refreshed. istiod, ztunnel and istio-cni all
+# carry istio.io/dataplane-mode=none so they cannot drift, and bouncing the CA
+# that signs their certs risks a bootstrap deadlock. Drift here is reported only.
+watcher_gate_namespaces:
+  - "{{ istio_namespace }}"
+  - "{{ istio_csr_namespace }}"
+
+watcher_mesh_ready_timeout: "600s"
+watcher_schedule: "*/2 * * * *"
+
+# --- Cross-role shared defaults - Owned by other roles; declared here so this role is standalone-runnable. ---
+rag_tmp_dir: "{{ tmp_dir }}/rag"                   # app_pre_install (derived from tmp_dir)
+istio_namespace: "istio-system"                    # core/istio
+istio_csr_namespace: "cert-manager"                # core/istio (hosts cert-manager-istio-csr)
+helm_timeout: "600s"                               # global
+helm_retries: 3                                    # global

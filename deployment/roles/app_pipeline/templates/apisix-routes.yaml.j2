@@ -1,0 +1,137 @@
+{#
+Copyright (C) 2024-2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+Applied by Ansible (app_pipeline) AFTER router-service is Available, so the
+APISIX ingress-controller never translates the route before its backend exists.
+Two routes:
+  - <pipeline>-route         : /api/v1/<pipeline>        -> router-service
+  - k8s-api-watcher-<ns>-route : /api/v1/<ns>/status     -> kube-apiserver (GMConnector status)
+#}
+{% set _kc_ns = keycloak_namespace | default('keycloak') %}
+{% set _realm = (ui_keycloak_realm if (ui_keycloak_realm | default('') | length > 0) else erag_keycloak_realm | default('EnterpriseRAG')) %}
+{% set _kc_base = 'http://keycloak-service.' ~ _kc_ns ~ '.svc:8080' %}
+{% set _resource_registration_endpoint = _kc_base ~ '/realms/' ~ _realm ~ '/authz/protection/resource_set' %}
+{% set _token_endpoint = _kc_base ~ '/realms/' ~ _realm ~ '/protocol/openid-connect/token' %}
+{% set _client_id = apisix_oidc_client_id | default('EnterpriseRAG-oidc-backend') %}
+{% set _route_name = pipeline_namespace %}
+---
+apiVersion: apisix.apache.org/v2
+kind: ApisixRoute
+metadata:
+  name: {{ _route_name }}-route
+  namespace: {{ pipeline_namespace }}
+  labels:
+    app.kubernetes.io/name: gmc
+    app.kubernetes.io/managed-by: ansible
+    app.kubernetes.io/instance: app_pipeline
+spec:
+  ingressClassName: apisix
+  http:
+    - name: {{ _route_name }}-route
+      match:
+        hosts:
+          - {{ ui_domain_name | quote }}
+        paths:
+          - /api/v1/{{ _route_name }}
+      backends:
+        - serviceName: router-service
+          servicePort: 8080
+      plugins:
+        - name: proxy-rewrite
+          enable: true
+          config:
+            uri: /
+        - name: limit-count
+          enable: true
+          config:
+            count: 30
+            time_window: 60
+            key_type: var
+            key: http_authorization
+            rejected_code: 429
+        - name: authz-keycloak
+          enable: true
+          config:
+            resource_registration_endpoint: {{ _resource_registration_endpoint }}
+            token_endpoint: {{ _token_endpoint }}
+            client_id: {{ _client_id }}
+            policy_enforcement_mode: "ENFORCING"
+            ssl_verify: false
+            permissions:
+              - "admin#admin-access"
+              - "user#user-access"
+              - "maintainer#maintainer-access"
+---
+apiVersion: apisix.apache.org/v2
+kind: ApisixRoute
+metadata:
+  name: k8s-api-watcher-{{ pipeline_type }}-route
+  namespace: default
+  labels:
+    app.kubernetes.io/name: gmc
+    app.kubernetes.io/managed-by: ansible
+    app.kubernetes.io/instance: app_pipeline
+spec:
+  ingressClassName: apisix
+  http:
+    - name: k8s-api-watcher-{{ pipeline_namespace }}-route
+      match:
+        hosts:
+          - {{ ui_domain_name | quote }}
+        paths:
+          - /api/v1/{{ pipeline_type }}/status
+      upstreams:
+        - name: kubernetes-api-upstream
+      plugins:
+        - name: limit-count
+          enable: true
+          config:
+            count: 30
+            time_window: 60
+            key_type: var
+            key: http_authorization
+            rejected_code: 429
+        - name: authz-keycloak
+          enable: true
+          config:
+            resource_registration_endpoint: {{ _resource_registration_endpoint }}
+            token_endpoint: {{ _token_endpoint }}
+            client_id: {{ _client_id }}
+            policy_enforcement_mode: "ENFORCING"
+            ssl_verify: false
+            permissions:
+              - "admin#admin-access"
+              - "maintainer#maintainer-access"
+        - name: serverless-pre-function
+          enable: true
+          config:
+            _meta:
+              priority: 1999
+            phase: access
+            functions:
+              - |
+                return function(conf, ctx)
+                  local core = require("apisix.core")
+                  local token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+                  local file, err = io.open(token_file, "r")
+                  if not file then
+                    core.log.error("Failed to open SA token: ", err)
+                    return 500, {message = "Failed to read ServiceAccount token"}
+                  end
+                  local token = file:read("*all")
+                  file:close()
+                  if not token or token == "" then
+                    core.log.error("SA token is empty")
+                    return 500, {message = "ServiceAccount token is empty"}
+                  end
+                  token = token:gsub("%s+", "")
+                  core.request.set_header(ctx, "Authorization", "Bearer " .. token)
+                  core.request.set_header(ctx, "Cookie", nil)
+                  core.request.set_header(ctx, "X-Auth-Request-Access-Token", nil)
+                end
+        - name: proxy-rewrite
+          enable: true
+          config:
+            scheme: https
+            uri: /apis/gmc.erag.intel.com/v1alpha3/namespaces/{{ pipeline_namespace }}/gmconnectors/{{ pipeline_type }}/status

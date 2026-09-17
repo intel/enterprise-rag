@@ -1,0 +1,27 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# LLM Guard Output variant step - output validation and safety checks #}
+{#                                                                     #}
+{# paramsKey MUST be set: the fingerprint group is `output_guard`, but  #}
+{# the default key is the lowercased step name (`llmguardoutput`).      #}
+step:
+  name: LLMGuardOutput
+  dependency: Hard
+  data: $response
+  internalService:
+    serviceName: output-scan-svc
+    config:
+      endpoint: /v1/llmguardoutput
+      paramsKey: output_guard
+      paramsKind: output_guard
+resources:
+  out-guard-usvc:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 4
+        memory: 8Gi
+      limits:
+        cpu: 8
+        memory: 16Gi

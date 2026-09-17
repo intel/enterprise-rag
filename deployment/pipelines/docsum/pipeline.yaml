@@ -1,0 +1,42 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# DocSum Pipeline Metadata
+# Modular pipeline definition for document summarization
+
+name: docsum
+namespace: docsum
+description: "Generate concise summaries from input documents"
+
+# Base flow - ordered list of step IDs
+base_flow:
+  - text-extractor
+  - text-compression
+  - text-splitter
+  - llm
+  - docsum
+
+# Shared llm step configuration. The model-server wiring (LLM_MODEL_SERVER_ENDPOINT,
+# LLM_MODEL_NAME, ...) is set in app_pipeline/templates/values.yaml.j2 and reaches
+# llm-usvc through its ConfigMap.
+endpoints:
+  llm:
+    # The DocSum step drives the LLM itself (DOCSUM_LLM_USVC_ENDPOINT: llm-svc), so
+    # the llm step must be marked downstream: the router skips it and GMC resolves
+    # llm-svc by name for the DocSum step.
+    downstream: true
+    # Recommended resources for the shared llm step (llm-usvc chart key)
+    resources:
+      replicas: 2
+      requests:
+        cpu: 200m
+        memory: 200Mi
+      limits:
+        cpu: 1
+        memory: 1Gi
+
+# GMC router configuration
+router:
+  name: router
+  service_name: router-service
+  type: Sequence

@@ -1,0 +1,103 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+replicaCount: 1
+
+nameOverride: "chat-history"
+fullnameOverride: "chat-history-svc"
+
+image:
+  chat_history:
+    name: "enterprise-rag-chat-history"
+    repository: "docker.io/intel"
+    tag: "latest"
+    pullPolicy: Always
+
+service:
+  targetPort: http
+  port: 6012
+  name: http
+
+ferretdb:
+  nameOverride: "chat-history-mongodb"
+  fullnameOverride: "chat-history-mongodb"
+  service:
+    type: ClusterIP
+    port: 27017
+    targetPort: 27017
+  postgresql:
+    auth:
+      database: "postgres"
+      username: "chat_history"
+      password: "{{ CHAT_HISTORY_POSTGRES_PASSWORD }}"
+      secretName: "mongo-database-secret"
+    persistence:
+      enabled: true
+      size: 4Gi
+
+proxy:
+  http_proxy: ""
+  https_proxy: ""
+  no_proxy: ""
+
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "250m"
+  limits:
+    memory: "512Mi"
+    cpu: 1
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 3000
+  fsGroup: 2000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+
+podAnnotations: {}
+imagePullSecrets: []
+
+global:
+  parentChartDefined: true
+
+# APISIX routes for chat-history. Common values (auth.*, routeHost, ingressClassName)
+# are written at install time by the corresponding role's values.yaml.j2.
+apisix:
+  endpoints:
+    - name: chat-history
+      enabled: true
+      namespace: chat-history
+      path: /v1/chat_history/*
+      backend_service: chat-history-svc
+      service_port: 6012
+      rate_limit_count: 120
+      service_regex:
+        - ^/v1/chat_history/save$
+        - /v1/chat_history/save
+        - ^/v1/chat_history/get$
+        - /v1/chat_history/get
+        - ^/v1/chat_history/change_name$
+        - /v1/chat_history/change_name
+        - ^/v1/chat_history/delete$
+        - /v1/chat_history/delete
+      permissions:
+        - admin#admin-access
+        - user#user-access
+        - maintainer#maintainer-access
+
+# ServiceMonitor for Prometheus (discovered by core observability stack)
+monitoring:
+  enabled: true
