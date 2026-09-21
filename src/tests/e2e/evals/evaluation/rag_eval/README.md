@@ -127,28 +127,29 @@ _This step is required only for computing RAGAS metrics._
 
 To calculate RAGAS metrics, a separate embedding service that provides vector representations of text is required. You can launch this service using existing scripts provided elsewhere in the project. 
 
-To start the TEI embedding model server, navigate to [src/comps/embeddings/impl/model_server/tei](../../../../../../src/comps/embeddings/impl/model_server/tei) and run the following commands:
+To start the VLLM embedding model server, navigate to [src/comps/embeddings/impl/model_server/vllm](../../../../../../src/comps/embeddings/impl/model_server/vllm) and run the following commands:
 
 ```bash
-cd ../../../../../../src/comps/embeddings/impl/model_server/tei
+cd ../../../../../../src/comps/embeddings/impl/model_server/vllm
 
 # (Optional) Customize port and model if needed
-export TEI_PORT=8090
-export TEI_MODEL_NAME=BAAI/bge-base-en-v1.5
+export EMBEDDING_VLLM_PORT=8108
+export EMBEDDING_VLLM_MODEL_NAME="nomic-ai/nomic-embed-text-v1"
 
 # Start the embedding service
-./run_tei.sh
+./run_vllm.sh
 ```
 
 > [!NOTE]
 > You can monitor the startup progress by following the logs (use `nerdctl` in place of `docker` if that is your container runtime):
 > ```bash
-> docker logs -f embedding-tei-model-server
+> docker logs -f embedding-vllm-model-server
 > ```
 > The service is ready when you see:
 > ```
-> INFO text_embeddings_router::http::server: Starting HTTP server: 0.0.0.0:80
-> INFO text_embeddings_router::http::server: Ready
+> (APIServer pid=1) INFO:     Started server process [1]
+> (APIServer pid=1) INFO:     Waiting for application startup.
+> (APIServer pid=1) INFO:     Application startup complete.
 > ```
 
 ## Metrics
@@ -192,27 +193,28 @@ To list all available arguments and their usage, run:
 python eval_multihop.py --help
 ```
 
-| **Argument**           | **Default Value**                                 | **Description**                                                                                                                      |
-| ---------------------- |---------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| `--output_dir`         | `./output`                                        | Directory to save evaluation results                                                                                                 |
-| `--auth_file`          | `env/local/logs/rag/default_credentials.txt`      | Path to credentials file with `KEYCLOAK_ERAG_ADMIN_USERNAME` and `KEYCLOAK_ERAG_ADMIN_PASSWORD`                                      |
-| `--cluster_config_file`| `env/local`                                       | Path to directory containing `global_config.yaml`, `config.erag.yaml`, and `config.inference.yaml`                                   |
-| `--dataset_path`       | `multihop_dataset/MultiHopRAG.json`               | Path to the evaluation dataset                                                                                                       |
-| `--docs_path`          | `multihop_dataset/corpus.json`                    | Path to the documents for retrieval                                                                                                  |
-| `--limits`             | `100`                                             | Number of queries to evaluate (0 means evaluate all; default: 100)                                                                   |
-| `--exclude_types`      | *None*                                            | Exclude queries by question type. Queries matching these question types will be skipped. Example: --exclude_types comparison_query   |
-| `--ingest_docs`        | *(flag)*                                          | Ingest documents into the vector database (use only on first run)                                                                    |
-| `--generation_metrics` | *(flag)*                                          | Compute text generation metrics (`BLEU`, `ROUGE`)                                                                                    |
-| `--retrieval_metrics`  | *(flag)*                                          | Compute retrieval metrics (`Hits@K`, `MAP@K`, `MRR@K`)                                                                               |
-| `--skip_normalize`     | *(flag)*                                          | Skip 'None' separator normalization for exact 1:1 text matching                                                                      |
-| `--ragas_metrics`      | *(flag)*                                          | Compute RAGAS metrics (answer correctness, context precision, etc.)                                                                  |
-| `--resume_checkpoint`  | *None*                                            | Path to a checkpoint file to resume evaluation from previous state                                                                   |
-| `--keep_checkpoint`    | *(flag)*                                          | Keep the checkpoint file after evaluation (do not delete)                                                                            |
-| `--llm_judge_endpoint` | `http://localhost:8008`                           | URL of the LLM judge service; only used for RAGAS evaluation                                                                         |
-| `--embedding_endpoint` | `http://localhost:8090/embed`                     | URL of the embedding service endpoint, only used for RAGAS                                                                           |
-| `--temperature`        | Read from RAG system config                       | Controls text generation randomness; defaults to RAG system setting if omitted                                                       |
-| `--max_new_tokens`     | Read from RAG system config                       | Maximum tokens generated; defaults to RAG system setting if omitted                                                                  |
-| `--bucket_names`       | *None*                                            | Filter retrieval and generation by specific bucket names. If not provided, all buckets are used. Example: --bucket_names secondary   |
+| **Argument**              | **Default Value**                                 | **Description**                                                                                                                      |
+| ------------------------- |---------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| `--output_dir`            | `./output`                                        | Directory to save evaluation results                                                                                                 |
+| `--auth_file`             | `env/local/logs/rag/default_credentials.txt`      | Path to credentials file with `KEYCLOAK_ERAG_ADMIN_USERNAME` and `KEYCLOAK_ERAG_ADMIN_PASSWORD`                                      |
+| `--cluster_config_file`   | `env/local`                                       | Path to directory containing `global_config.yaml`, `config.erag.yaml`, and `config.inference.yaml`                                   |
+| `--dataset_path`          | `multihop_dataset/MultiHopRAG.json`               | Path to the evaluation dataset                                                                                                       |
+| `--docs_path`             | `multihop_dataset/corpus.json`                    | Path to the documents for retrieval                                                                                                  |
+| `--limits`                | `100`                                             | Number of queries to evaluate (0 means evaluate all; default: 100)                                                                   |
+| `--exclude_types`         | *None*                                            | Exclude queries by question type. Queries matching these question types will be skipped. Example: --exclude_types comparison_query   |
+| `--ingest_docs`           | *(flag)*                                          | Ingest documents into the vector database (use only on first run)                                                                    |
+| `--generation_metrics`    | *(flag)*                                          | Compute text generation metrics (`BLEU`, `ROUGE`)                                                                                    |
+| `--retrieval_metrics`     | *(flag)*                                          | Compute retrieval metrics (`Hits@K`, `MAP@K`, `MRR@K`)                                                                               |
+| `--skip_normalize`        | *(flag)*                                          | Skip 'None' separator normalization for exact 1:1 text matching                                                                      |
+| `--ragas_metrics`         | *(flag)*                                          | Compute RAGAS metrics (answer correctness, context precision, etc.)                                                                  |
+| `--resume_checkpoint`     | *None*                                            | Path to a checkpoint file to resume evaluation from previous state                                                                   |
+| `--keep_checkpoint`       | *(flag)*                                          | Keep the checkpoint file after evaluation (do not delete)                                                                            |
+| `--llm_judge_endpoint`    | `http://localhost:8008`                           | URL of the LLM judge service; only used for RAGAS evaluation                                                                         |
+| `--embedding_endpoint`    | `http://localhost:8108/v1/embeddings`             | URL of the embedding service endpoint, only used for RAGAS                                                                           |
+| `--embedding_model_name`  | `nomic-ai/nomic-embed-text-v1`                  | Model name served by vLLM at the embeddings endpoint; only used for RAGAS                                                              |
+| `--temperature`           | Read from RAG system config                       | Controls text generation randomness; defaults to RAG system setting if omitted                                                       |
+| `--max_new_tokens`        | Read from RAG system config                       | Maximum tokens generated; defaults to RAG system setting if omitted                                                                  |
+| `--bucket_names`          | *None*                                            | Filter retrieval and generation by specific bucket names. If not provided, all buckets are used. Example: --bucket_names secondary   |
 
 
 > Note: If `--dataset_path` and `--docs_path` are set to their default values and the corresponding files are not found locally, they will be automatically downloaded at runtime from [yixuantt/MultiHopRAG](https://huggingface.co/datasets/yixuantt/MultiHopRAG) and saved to the expected local paths.
@@ -314,16 +316,17 @@ This section outlines how to run MultiHop evaluation of the RAG pipeline using [
 
     ⚠️ For RAGAS evaluation, you must have two external services running: an LLM-as-a-Judge service and an embedding service - see the Run LLM-as-a-Judge and Embedding section for setup instructions.
 
-    If both services are running on their default endpoints (`http://localhost:8008` for LLM judge and `http://localhost:8090/embed` for embeddings), you can simply run:
+    If both services are running on their default endpoints (`http://localhost:8008` for LLM judge and `http://localhost:8108/v1/embeddings` for embeddings, serving `nomic-ai/nomic-embed-text-v1`), you can simply run:
     ```bash
     python eval_multihop.py --ragas_metrics
     ```
 
-    To use custom endpoints:
+    To use custom endpoints or a different embedding model:
     ```bash
     python eval_multihop.py --ragas_metrics \
     --llm_judge_endpoint http://<llm_host>:<port> \
-    --embedding_endpoint http://<embedding_host>:<port>/embed
+    --embedding_endpoint http://<embedding_host>:<port>/v1/embeddings \
+    --embedding_model_name <model_name>
     ```
 
     > [!WARNING]
