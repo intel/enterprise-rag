@@ -1,0 +1,140 @@
+---
+name: Trivy
+
+# Actions are pinned to full commit SHAs (the trailing `# vX.Y.Z` is the tag
+# that SHA corresponded to) and every tool to an exact version -- no floating
+# tags. Version bumps are therefore explicit, reviewable changes to this file.
+#
+# Only GitHub-hosted runners and public actions are used. This is deliberate
+# and is why these workflows live on the public branches only: internal CI runs
+# on self-hosted runners that do not exist for this repository on github.com,
+# and it scans built container images pulled from a private registry. This
+# workflow scans the source tree instead, so it needs neither registry
+# credentials nor an image build.
+#
+# Soft-fail for the initial rollout: findings publish to Security -> Code
+# scanning instead of blocking the branch. Tighten the `exit-code` /
+# `--soft-fail` / `continue-on-error` switches once the backlog is triaged.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'release-[0-9]+\.[0-9]+'
+  pull_request:
+    branches:
+      - main
+      - 'release-[0-9]+\.[0-9]+'
+    types: [opened, synchronize, reopened, ready_for_review]
+  schedule:
+    # Weekly re-scan so new findings surface without a code change.
+    # NOTE: GitHub only fires `schedule` on the repository's default
+    # branch, so this trigger stays dormant until these workflows are
+    # also merged to `main`. The push and pull_request triggers above
+    # work on every listed branch regardless.
+    - cron: '0 4 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trivy:
+    name: Trivy (vuln, secret, misconfig, license)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Harden the runner (audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Two scans, because one severity threshold cannot serve both halves.
+      # CVEs, secrets and licences are triaged at CRITICAL,HIGH. Trivy rates
+      # nearly every Kubernetes and Dockerfile misconfiguration check LOW or
+      # MEDIUM, so the same threshold would silence that scanner entirely; it
+      # instead runs at every severity.
+      #
+      # `limit-severities-for-sarif` must be set: it defaults to false, and
+      # with it unset the action drops --severity for the SARIF run only, so
+      # the Security tab silently ignores the declared threshold and receives
+      # the LOW/MEDIUM findings the table said were absent.
+      #
+      # Dependency surface this picks up: 27 uv.lock, 7 requirements.txt,
+      # src/gmc/go.sum and 69 Dockerfiles.
+      #
+      # NOTE: the Trivy binary is pinned, but its vulnerability database is
+      # fetched fresh each run -- a scanner pinned to stale CVE data is worse
+      # than useless.
+      - name: Trivy vuln / secret / licence scan (SARIF)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.74.0
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,license
+          severity: CRITICAL,HIGH
+          limit-severities-for-sarif: true
+          format: sarif
+          output: trivy-vuln.sarif
+          exit-code: '0'
+
+      - name: Upload Trivy vuln SARIF
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        if: always() && hashFiles('trivy-vuln.sarif') != ''
+        with:
+          sarif_file: trivy-vuln.sarif
+          category: trivy-vuln
+
+      # Nothing is scoped out here, which differs from both the inference
+      # repository's equivalent workflow and from checkov.yml next to this one:
+      #
+      #   - `charts/` is not skipped. Its only entry,
+      #     deployment/components/edp/charts/edp-redis, is first-party (a
+      #     dependency-only Redis chart written here) rather than a vendored
+      #     upstream chart, so its defaults are ours to fix.
+      #   - `templates/` is not skipped either. Checkov cannot read those files
+      #     -- as raw text they are Go templates, not Kubernetes YAML -- but
+      #     Trivy has a Helm parser that renders the chart and still anchors
+      #     findings at real repository paths. Helm misconfiguration coverage
+      #     therefore comes from this scan and not from Checkov.
+      #
+      # Expect this to be the loudest of the six workflows on its first run.
+      - name: Trivy misconfiguration scan (SARIF)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.74.0
+          scan-type: fs
+          scan-ref: .
+          scanners: misconfig
+          format: sarif
+          output: trivy-misconfig.sarif
+          exit-code: '0'
+
+      - name: Upload Trivy misconfiguration SARIF
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        if: always() && hashFiles('trivy-misconfig.sarif') != ''
+        with:
+          sarif_file: trivy-misconfig.sarif
+          category: trivy-misconfig
+
+      - name: Trivy summary (table)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.74.0
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig,license
+          format: table
+          exit-code: '0'
