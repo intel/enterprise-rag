@@ -1,0 +1,41 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# solution_version is referenced below, and teardown does not otherwise load it.
+- name: "deployment_manifest | Load version metadata"
+  ansible.builtin.include_vars:
+    file: "{{ deployment_dir }}/version.yaml"
+  when: solution_version is not defined
+
+- name: "deployment_manifest | Check for existing manifest"
+  kubernetes.core.k8s_info:
+    kind: ConfigMap
+    namespace: "{{ manifest_namespace }}"
+    label_selectors:
+      - "{{ manifest_label_selector }}"
+  register: _teardown_existing
+  failed_when: false
+
+- name: "deployment_manifest | Mark manifest as deleting"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: "{{ manifest_name }}"
+        namespace: "{{ manifest_namespace }}"
+        labels: "{{ manifest_labels | combine({'app.kubernetes.io/version': solution_version}) }}"
+      data:
+        manifest.yaml: |
+          deployment:
+            version: "{{ (_teardown_existing.resources[0].data['manifest.yaml'] | from_yaml).deployment.version | default(solution_version) }}"
+            targetVersion: null
+            imageTag: "{{ (_teardown_existing.resources[0].data['manifest.yaml'] | from_yaml).deployment.imageTag | default('') }}"
+            targetImageTag: null
+            status: "{{ manifest_status_deleting }}"
+            startedAt: "{{ (_teardown_existing.resources[0].data['manifest.yaml'] | from_yaml).deployment.startedAt | default(ansible_date_time.iso8601) }}"
+            installedBy: "ansible"
+            kubernetesVersion: "unknown"
+          components: {}
+  when: _teardown_existing.resources | default([]) | length > 0

@@ -1,0 +1,55 @@
+---
+# The backup gate runs first, before anything mutates cluster state: a blocked
+# upgrade must leave nothing half-written behind. verify.yaml belongs to the core
+# installer's backup role, so the contract is one place and this is a call.
+#
+# Skipped entirely when backup is not enabled for this environment — the gate
+# demands a restore point, and demanding one from a deployment that was never
+# configured to produce any would only teach operators to pass the override.
+# The gate matches backups by the version label, so the running version has to be
+# in scope. It lives in version.yaml, which the installer does not pass as
+# extra-vars — load it here rather than letting the gate guess.
+- name: "app_pre_install | Upgrade — load the solution version"
+  ansible.builtin.include_vars:
+    file: "{{ deployment_dir }}/version.yaml"
+  when:
+    - backup_enabled | default(false) | bool
+    - solution_version is not defined
+
+- name: "app_pre_install | Upgrade — require a fresh backup"
+  ansible.builtin.include_role:
+    name: backup
+    tasks_from: verify.yaml
+  vars:
+    backup_verify_version_label: "meta.erag/solution-version"
+  when: backup_enabled | default(false) | bool
+
+- name: "app_pre_install | Upgrade — backup gate skipped"
+  ansible.builtin.debug:
+    msg: >-
+      [UPGRADE] backup_enabled is false, so this upgrade has no restore point.
+      Enable it (see docs/operate/backup.md) to have the upgrade refuse to run without a
+      fresh backup.
+  when: not (backup_enabled | default(false) | bool)
+
+# The check runs here rather than in install.yaml, whose own copy is guarded to
+# the install action so an upgrade does not check twice.
+- name: "app_pre_install | Version check"
+  ansible.builtin.include_role:
+    name: app_deployment_manifest
+    tasks_from: check_version.yaml
+
+# The stub is not created here: install.yaml creates it, and this delegates there.
+- name: "app_pre_install | Upgrade — collect pre-upgrade data snapshot"
+  ansible.builtin.include_role:
+    name: app_data_consistency
+    tasks_from: snapshot.yaml
+  vars:
+    data_consistency_snapshot_label: "pre"
+
+- name: "app_pre_install | Upgrade — preserve pre-snapshot"
+  ansible.builtin.set_fact:
+    _upgrade_pre_snapshot: "{{ _data_snapshot }}"
+
+- name: "app_pre_install | Upgrade — delegate to install"
+  ansible.builtin.include_tasks: install.yaml

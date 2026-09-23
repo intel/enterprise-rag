@@ -1,0 +1,221 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_edp Role Defaults — Enterprise Data Platform
+# =============================================================================
+
+# --- Feature flag ---
+edp_enabled: false
+
+# --- Deployment target ---
+edp_namespace: "edp"
+
+# --- Storage backend ---
+edp_storage_type: "seaweedfs"                 # seaweedfs | s3 | s3compatible
+# Follows the platform gateway's own S3 subdomain so the listener hostname and the
+# browser-facing endpoint cannot disagree.
+edp_s3_domain_prefix: "{{ gateway_s3_subdomain | default('s3', true) }}"
+edp_ui_browser_domain_prefix: "seaweedfs"
+
+# --- Path prefixes (consumed when routing_mode == "path") ---
+edp_default_s3_path_prefix: "/s3"
+edp_default_seaweedfs_path_prefix: "/seaweedfs"
+edp_s3_path_prefix: ""
+edp_seaweedfs_path_prefix: ""
+
+# Hostname and path prefix the S3 API is published under. In path mode it shares the
+# apex hostname with the UI and is distinguished by the prefix instead. Both the
+# SeaweedFS and the ONTAP S3 route read these, so they cannot drift apart.
+_edp_s3_path_mode: "{{ (routing_mode | default('subdomain')) == 'path' }}"
+_edp_s3_host: >-
+  {{ base_domain_name if _edp_s3_path_mode | bool
+     else edp_s3_domain_prefix ~ '.' ~ base_domain_name }}
+_edp_s3_prefix: "{{ edp_s3_path_prefix | default(edp_default_s3_path_prefix, true) | string | trim }}"
+
+# --- Helm ---
+edp_helm_version: "{{ helm_version }}"
+edp_helm_chart_name: "edp"
+edp_helm_chart_version: "1.1.0"
+edp_helm_release_name: "edp"
+edp_helm_chart_directory: "{{ deployment_dir }}/components/edp"
+edp_helm_default_values_file: "{{ deployment_dir }}/components/edp/values.yaml"
+
+# --- Keycloak OIDC registration ---
+edp_client_id: "EnterpriseRAG-oidc-minio"
+
+# --- SeaweedFS target (its role runs inside app_edp for now) ---
+# Note: seaweedfs.* (version, repo, namespace, iamKeycloak.*) is a LOCAL var
+# set at runtime from components/edp/values.yaml's seaweedfs: block (via the
+# edp_helm_values merge in tasks/seaweedfs.yaml).  It is NOT an Ansible var —
+# editing this file won't change it.  Override components/edp/values.yaml.
+edp_seaweedfs_namespace: "seaweedfs"
+
+# --- Vector DB auth (shared username across consumers) ---
+edp_vector_db_username: "default"
+
+# --- Redis sidecar for EDP (ingestion queue) ---
+edp_redis_name: "edp-redis"
+edp_redis_service_account: "edp-redis-sa"
+edp_redis_username: "default"
+edp_redis_password_file_name: "edp-redis-password"
+edp_redis_password_secret_name: "edp-redis-secret"
+
+# --- Redis Helm values payload (stays nested — fed verbatim to the
+#     embedded Redis chart by templates/values.yaml.j2). ---
+edp_redis_helm_values:
+  kubernetesConfig:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+  storage:
+    volumeClaimTemplate:
+      spec:
+        resources:
+          requests:
+            storage: "8Gi"
+        storageClassName: ""
+  redisConfig:
+    maxmemory: "2gb"
+
+# --- PostgreSQL (EDP metadata DB) ---
+edp_postgresql_admin_username: "admin"
+edp_postgresql_admin_password_file_name: "edp-postgresql-admin-password"
+edp_postgresql_user_username: "edp"
+edp_postgresql_user_password_file_name: "edp-postgresql-user-password"
+
+# --- Data-privacy guard ---
+edp_dp_guard_enabled: false
+
+# --- Bucket filter (applies to all storage backends) ---
+edp_bucket_name_regex_filter: ""
+
+# --- External S3 / S3-compatible credentials (rendered when edp_storage_type
+#     is 's3' or 's3compatible'; all-empty = disabled) ---
+edp_s3_region: "us-east-1"
+edp_s3_access_key_id: ""
+edp_s3_secret_access_key: ""
+edp_s3_sqs_event_queue_url: ""
+edp_s3_bucket_name_regex_filter: ""
+
+edp_s3_compatible_region: "us-east-1"
+edp_s3_compatible_access_key_id: ""
+edp_s3_compatible_secret_access_key: ""
+edp_s3_compatible_internal_url: "https://s3.example.com"
+edp_s3_compatible_external_url: "https://s3.example.com"
+edp_s3_compatible_bucket_name_regex_filter: ""
+edp_s3_compatible_external_cert_verify: true
+edp_s3_compatible_internal_cert_verify: true
+
+# --- Presigned URL credentials ---
+# Required for every external S3 endpoint: the UI always sends an Authorization
+# header, and main.py:252-296 then tries STS AssumeRoleWithWebIdentity against
+# the object store. Without the fallback that failure is fatal (HTTP 400) on any
+# backend that has no STS endpoint.
+edp_presigned_url_credentials_system_fallback: true
+
+# --- ONTAP S3 reverse proxy ---
+# ONTAP S3 answers on a storage-network data LIF that browsers cannot reach, so
+# the presigned URLs handed to the UI must be served through the platform
+# gateway. Activated automatically when ontap_s3_data_lif is set on a
+# netapp-trident cluster together with either edp_storage_type: s3compatible or
+# ONTAP S3 credentials; set to true or false to decide explicitly. Setting it to
+# true is also the only way to reuse ontap_data_lif (the NFS LIF) as the S3
+# endpoint.
+edp_ontap_s3_reverse_proxy: ""
+edp_ontap_s3_backend_name: "ontap-s3"
+edp_ontap_s3_route_name: "ontap-s3-route"
+# Large uploads stream through the gateway; its default is gateway_request_timeout (600s).
+edp_ontap_s3_request_timeout: "3600s"
+# insecure  - envoy-gateway Backend with tls.insecureSkipVerify (ONTAP ships a self-signed cert)
+# ca        - BackendTLSPolicy validating against ontap_s3_ca_cert_file
+# plaintext - no upstream TLS (also selected by ontap_s3_tls: false)
+edp_ontap_s3_tls_mode: "insecure"
+edp_ontap_s3_ca_configmap_name: "ontap-s3-ca"
+edp_ontap_s3_sni_hostname: ""
+# CORS for browser uploads to ONTAP S3, applied by the route's SecurityPolicy.
+# ONTAP S3 has no CORS configuration, so without this the preflight comes back
+# without Access-Control-* headers and the upload fails in the browser with a CORS
+# error - no server-side log anywhere, because the request never got sent.
+# Empty allowOrigins disables the block; it is empty by default in
+# routing_mode: path, where the S3 API is same-origin with the UI.
+edp_ontap_s3_cors_allow_origins: >-
+  {{ [] if _edp_s3_path_mode | bool else ['https://' ~ base_domain_name] }}
+edp_ontap_s3_validate_reachability: true
+
+# --- Late chunking ---
+# NOTE: when enabled, embedding_model_id MUST be one of the models listed in
+# late_chunking_compatible_models (see app_pre_install/tasks/solution_config.yaml).
+edp_late_chunking_enabled: false
+edp_late_chunking_chunk_size: 512
+edp_late_chunking_chunk_overlap: 64
+# Tokenizer reference loaded from the HuggingFace Hub — tracks the deployed
+# embedding model, so it is the model_id and not the catalog name.
+edp_late_chunking_model_name: "{{ embedding_model_id }}"
+
+# --- Scheduled sync (SharePoint / S3 polling) ---
+edp_scheduled_sync_enabled: false
+edp_scheduled_sync_period_seconds: "60"
+edp_scheduled_sync_sharepoint_period_seconds: "60"
+edp_sp_sync_lock_ttl_seconds: "600"
+
+# --- Semantic chunking ---
+edp_semantic_chunking_enabled: false
+
+# --- RBAC on vector DB ---
+edp_rbac_enabled: false
+edp_rbac_validation_type: "ALWAYS"
+edp_rbac_cache_expiration: 300
+edp_rbac_static_config: '["default"]'
+
+# --- Ingestion config (Helm values payload, stays nested) ---
+edp_ingestion_config: {}
+
+# --- User-supplied Helm values append-block (fed to to_nice_yaml). ---
+edp_additional_values: {}
+
+keycloak_namespace: "keycloak"
+keycloak_admin_user: "admin"
+
+# --- Cross-role shared defaults - Owned by other roles; declared here so this role is standalone-runnable. ---
+apisix_oidc_client_id: "EnterpriseRAG-oidc-backend"     # app_apisix
+audio_namespace: "audio"           # app_audio
+embedding_model_name: "nomic-embed"                # app_inference_models (catalog/served name)
+embedding_model_id: "nomic-ai/nomic-embed-text-v1"        # app_inference_models (HuggingFace repo id)
+pipeline_namespace: "{{ pipeline_type | default('chatqna') }}"        # app_pipeline
+erag_keycloak_realm: "EnterpriseRAG"        # app_keycloak_config
+erag_keycloak_domain_name: "auth.solutions.ai"  # app_keycloak_config
+erag_keycloak_path_prefix: ""  # app_keycloak_config
+# SharePoint credentials from the Entra app registration
+erag_keycloak_oidc_tenant_id: ""  # app_keycloak_config
+erag_keycloak_oidc_client_id: ""  # app_keycloak_config
+erag_keycloak_oidc_client_secret: ""  # app_keycloak_config
+erag_keycloak_oidc_alias: "enterprise-sso"  # app_keycloak_config
+# Required for SharePoint: the delegated Graph token is fetched from the Keycloak
+# identity provider, which only exists when SSO brokering is configured.
+erag_keycloak_oidc_endpoint: ""  # app_keycloak_config
+storage_backend: "local-path"                      # global (core installer)
+gateway_name: "eg-gateway"                         # envoy_gateway
+gateway_namespace: "envoy-gateway-system"          # envoy_gateway
+gateway_s3_listener_name: "https-s3"               # envoy_gateway - dedicated S3 listener
+gateway_s3_subdomain: "s3"                         # envoy_gateway
+ontap_data_lif: ""                                 # global (core installer, netapp_trident_csi) - NFS data LIF
+# ONTAP S3 endpoint. The object-store server usually answers on its own data LIF,
+# not on the NFS one, so it is a separate value.
+ontap_s3_data_lif: ""
+ontap_s3_port: 443
+ontap_s3_tls: true
+ontap_s3_ca_cert_file: ""
+ui_domain_name: "solutions.ai"            # app_ui
+ui_keycloak_realm: "EnterpriseRAG"    # app_ui
+vector_databases_vector_datatype: "FLOAT32"        # app_vector_databases
+vector_databases_vector_dims: 768                  # app_vector_databases
+rag_tmp_dir: "{{ tmp_dir }}/rag"                   # app_pre_install (derived from tmp_dir)
+secure_logs: true                                  # global
+istio_enabled: false                               # global
+enforce_pss: false                                 # global

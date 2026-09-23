@@ -1,0 +1,208 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: keycloak-configurator
+  namespace: {{ keycloak_namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: keycloak-configurator
+  namespace: {{ keycloak_namespace }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: keycloak-configurator
+  namespace: {{ keycloak_namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: keycloak-configurator
+subjects:
+  - kind: ServiceAccount
+    name: keycloak-configurator
+    namespace: {{ keycloak_namespace }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-configurator-script
+  namespace: {{ keycloak_namespace }}
+data:
+  configurator.sh: |
+{{ lookup('file', role_path + '/files/keycloak_configurator_job.sh') | indent(4, first=True) }}
+{% if (erag_keycloak_oidc_endpoint is defined and erag_keycloak_oidc_endpoint) or
+      (erag_keycloak_federation_endpoint is defined and erag_keycloak_federation_endpoint) %}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-configurator-sensitive
+  namespace: {{ keycloak_namespace }}
+  labels:
+    app.kubernetes.io/name: keycloak-configurator
+    app.kubernetes.io/component: configuration
+type: Opaque
+data:
+{% if erag_keycloak_oidc_endpoint is defined and erag_keycloak_oidc_endpoint %}
+  oidc-client-secret: {{ erag_keycloak_oidc_client_secret | default('') | b64encode }}
+{% endif %}
+{% if erag_keycloak_federation_endpoint is defined and erag_keycloak_federation_endpoint %}
+  federation-bind-password: {{ erag_keycloak_federation_bind_password | default('') | b64encode }}
+{% endif %}
+{% endif %}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ configurator_job_name }}
+  namespace: {{ keycloak_namespace }}
+  labels:
+    app.kubernetes.io/name: keycloak-configurator
+    app.kubernetes.io/component: configuration
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: keycloak-configurator
+    spec:
+      serviceAccountName: keycloak-configurator
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: configurator
+          image: {{ init_container_image }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          command: ["/bin/bash", "/scripts/configurator.sh"]
+          env:
+            - name: KEYCLOAK_URL
+              value: "http://keycloak-service.{{ keycloak_namespace }}.svc:8080{{ erag_keycloak_path_prefix | default('') }}"
+            - name: KEYCLOAK_REALM
+              value: "{{ erag_keycloak_realm }}"
+            - name: KEYCLOAK_ADMIN_USER
+              value: "{{ keycloak_admin_user }}"
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ keycloak_admin_secret_name }}
+                  key: password
+            - name: MINIO_DOMAIN
+              value: "{{ minio_domain }}"
+            - name: UI_DOMAIN
+              value: "{{ ui_domain }}"
+{% if minio_path_prefix is defined %}
+            - name: MINIO_PATH_PREFIX
+              value: "{{ minio_path_prefix }}"
+{% endif %}
+{% if grafana_oauth_domain is defined and grafana_oauth_domain %}
+            - name: GRAFANA_DOMAIN
+              value: "{{ grafana_oauth_domain }}"
+{% if grafana_oauth_path_prefix is defined and grafana_oauth_path_prefix %}
+            - name: GRAFANA_PATH_PREFIX
+              value: "{{ grafana_oauth_path_prefix }}"
+{% endif %}
+{% if grafana_oauth_client_secret is defined and grafana_oauth_client_secret %}
+            - name: GRAFANA_OAUTH_CLIENT_SECRET
+              value: "{{ grafana_oauth_client_secret }}"
+{% endif %}
+{% endif %}
+            - name: MCP_ENABLED
+              value: "{{ mcp_enabled | default(false) | bool | lower }}"
+{% if mcp_enabled | default(false) | bool %}
+            - name: MCP_CLIENT_ID
+              value: "{{ mcp_keycloak_client_id }}"
+            - name: MCP_AUDIENCE
+              value: "{{ mcp_jwt_audience }}"
+            - name: MCP_ACCESS_TOKEN_LIFESPAN
+              value: "{{ mcp_access_token_lifespan }}"
+{% endif %}
+            - name: CREDENTIALS_SECRET_NAME
+              value: "{{ credentials_secret_name }}"
+            - name: CREDENTIALS_SECRET_NAMESPACE
+              value: "{{ keycloak_namespace }}"
+{% if erag_keycloak_oidc_endpoint is defined and erag_keycloak_oidc_endpoint %}
+            - name: OIDC_ENDPOINT
+              value: "{{ erag_keycloak_oidc_endpoint }}"
+            - name: OIDC_ALIAS
+              value: "{{ erag_keycloak_oidc_alias | default('enterprise-sso') }}"
+            - name: OIDC_CLIENT_ID
+              value: "{{ erag_keycloak_oidc_client_id | default('') }}"
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-configurator-sensitive
+                  key: oidc-client-secret
+            - name: OIDC_ADMIN_GID
+              value: "{{ erag_keycloak_oidc_admin_gid | default('') }}"
+            - name: OIDC_MAINTAINER_GID
+              value: "{{ erag_keycloak_oidc_maintainer_gid | default('') }}"
+            - name: OIDC_USER_GID
+              value: "{{ erag_keycloak_oidc_user_gid | default('') }}"
+{% endif %}
+{% if erag_keycloak_federation_endpoint is defined and erag_keycloak_federation_endpoint %}
+            - name: FEDERATION_ENDPOINT
+              value: "{{ erag_keycloak_federation_endpoint }}"
+            - name: FEDERATION_BIND_DN
+              value: "{{ erag_keycloak_federation_bind_dn | default('') }}"
+            - name: FEDERATION_BIND_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-configurator-sensitive
+                  key: federation-bind-password
+            - name: FEDERATION_USERS_DN
+              value: "{{ erag_keycloak_federation_users_dn | default('') }}"
+            - name: FEDERATION_USER_ATTRIBUTE
+              value: "{{ erag_keycloak_federation_user_attribute | default('sAMAccountName') }}"
+            - name: FEDERATION_GROUPS_DN
+              value: "{{ erag_keycloak_federation_groups_dn | default('') }}"
+            - name: FEDERATION_USER_GROUP_LDAP_FILTER
+              value: "{{ erag_keycloak_federation_user_group_ldap_filter | default('(cn=erag-user-group)') }}"
+            - name: FEDERATION_MAINTAINER_GROUP_LDAP_FILTER
+              value: "{{ erag_keycloak_federation_maintainer_group_ldap_filter | default('(cn=erag-maintainer-group)') }}"
+            - name: FEDERATION_ADMIN_GROUP_LDAP_FILTER
+              value: "{{ erag_keycloak_federation_admin_group_ldap_filter | default('(cn=erag-admin-group)') }}"
+{% endif %}
+{% if http_proxy is defined and http_proxy != "" %}
+            - name: http_proxy
+              value: "{{ http_proxy }}"
+{% endif %}
+{% if https_proxy is defined and https_proxy != "" %}
+            - name: https_proxy
+              value: "{{ https_proxy }}"
+{% endif %}
+{% if no_proxy is defined and no_proxy != "" %}
+            - name: no_proxy
+              value: "{{ no_proxy }}"
+{% endif %}
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: scripts
+          configMap:
+            name: keycloak-configurator-script
+            defaultMode: 0555
+        - name: tmp
+          emptyDir: {}

@@ -1,0 +1,103 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Verify that all expected pods are healthy after installation.
+# Retries up to check_pods_retries times with a 60-second pause between attempts.
+
+- name: "app_check_pods | install | Main verification block"
+  block:
+    - name: "app_check_pods | install | Increment attempt counter"
+      ansible.builtin.set_fact:
+        check_pods_attempt: "{{ (check_pods_attempt | default(0) | int) + 1 }}"
+
+    - name: "app_check_pods | install | Get enabled namespaces"
+      ansible.builtin.include_tasks: get_namespaces.yaml
+
+    - name: "app_check_pods | install | Query pod state"
+      ansible.builtin.include_tasks: _query_pods.yaml
+
+    - name: "app_check_pods | install | Identify non-job pods not in Running/Succeeded"
+      ansible.builtin.set_fact:
+        undesirable_pods: >-
+          {%- set result = [] -%}
+          {%- for pod in all_pods -%}
+            {%- set is_job_pod = pod.metadata.ownerReferences | default([]) |
+                selectattr('kind', 'equalto', 'Job') | list | length > 0 -%}
+            {%- if not is_job_pod and pod.status.phase not in ['Running', 'Succeeded'] -%}
+              {%- set _ = result.append(pod.metadata.name) -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ result }}
+
+    - name: "app_check_pods | install | Evaluate health"
+      ansible.builtin.set_fact:
+        check_pods_healthy: >-
+          {{
+            not (
+              not_ready_containers | length > 0 or
+              undesirable_pods     | length > 0 or
+              missing_namespaces   | length > 0 or
+              empty_namespaces     | length > 0
+            )
+          }}
+
+    - name: "app_check_pods | install | Store result"
+      ansible.builtin.set_fact:
+        check_pods_result:
+          status: "{{ 'success' if check_pods_healthy | bool else 'failed' }}"
+          not_ready_containers: "{{ not_ready_containers | default([]) }}"
+          undesirable_pods: "{{ undesirable_pods | default([]) }}"
+          empty_namespaces: "{{ empty_namespaces | default([]) }}"
+          missing_namespaces: "{{ missing_namespaces | default([]) }}"
+      when: check_pods_store_result | bool
+
+    - name: "app_check_pods | install | Fail on unhealthy cluster"
+      ansible.builtin.fail:
+        msg: >-
+          {{
+            (
+              ("Not-ready containers: " ~ not_ready_containers ~ ". "
+              if not_ready_containers | length > 0 else "") +
+              ("Pods not in Running/Succeeded: " ~ undesirable_pods ~ ". "
+              if undesirable_pods | length > 0 else "") +
+              ("Empty namespaces (no pods): " ~ empty_namespaces ~ ". "
+              if empty_namespaces | length > 0 else "") +
+              ("Missing namespaces: " ~ missing_namespaces ~ ". "
+              if missing_namespaces | length > 0 else "")
+            ) | trim
+          }}
+      when: not check_pods_healthy | bool and not check_pods_no_fail | bool
+
+  rescue:
+    - name: "app_check_pods | install | Store result on rescue"
+      ansible.builtin.set_fact:
+        check_pods_result:
+          status: 'failed'
+          error: "Verification failed after {{ check_pods_attempt | default(1) }} attempt(s)."
+          not_ready_containers: "{{ not_ready_containers | default([]) }}"
+          undesirable_pods: "{{ undesirable_pods | default([]) }}"
+          empty_namespaces: "{{ empty_namespaces | default([]) }}"
+          missing_namespaces: "{{ missing_namespaces | default([]) }}"
+      when: check_pods_store_result | bool
+
+    - name: "app_check_pods | install | Fail after maximum retries"
+      ansible.builtin.fail:
+        msg: "Pod health check failed after {{ check_pods_retries }} attempt(s)."
+      when:
+        - not check_pods_no_fail | bool
+        - (check_pods_attempt | int) >= (check_pods_retries if not check_pods_no_wait | bool else 1)
+
+    - name: "app_check_pods | install | Wait before retry"
+      ansible.builtin.pause:
+        seconds: 60
+      when:
+        - not check_pods_no_wait | bool
+        - (check_pods_attempt | int) < (check_pods_retries | int)
+
+    - name: "app_check_pods | install | Retry"
+      ansible.builtin.include_role:
+        name: app_check_pods
+        tasks_from: install.yaml
+      when:
+        - not check_pods_no_wait | bool
+        - (check_pods_attempt | int) < (check_pods_retries | int)

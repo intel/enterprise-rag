@@ -1,0 +1,36 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "app_watcher | Set override_values.yaml path"
+  ansible.builtin.set_fact:
+    watcher_helm_override_values_path: >-
+      {{ rag_tmp_dir }}/{{ watcher_helm_release_name }}-override-values.yaml
+
+- name: "app_watcher | Generate override values file from template"
+  ansible.builtin.template:
+    src: "values.yaml.j2"
+    dest: "{{ watcher_helm_override_values_path }}"
+    mode: '0644'
+
+- name: "app_watcher | Set values_files list"
+  ansible.builtin.set_fact:
+    values_files: >
+      {{
+        [watcher_helm_default_values_file,
+         watcher_helm_override_values_path]
+      }}
+
+- name: "app_watcher | Install or Upgrade Helm chart"
+  kubernetes.core.helm:
+    name: "{{ watcher_helm_release_name }}"
+    chart_ref: "{{ watcher_helm_chart_directory }}"
+    namespace: "{{ watcher_namespace }}"
+    values_files: "{{ values_files }}"
+    state: present
+    create_namespace: false
+    timeout: "{{ helm_timeout }}"
+  register: helm_repo_install_result
+  until: helm_repo_install_result is succeeded
+  retries: "{{ helm_retries }}"
+  delay: 15

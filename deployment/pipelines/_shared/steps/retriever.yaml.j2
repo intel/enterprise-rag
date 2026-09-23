@@ -1,0 +1,24 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# Retriever step - Vector database search #}
+step:
+  name: Retriever
+  data: $response
+  dependency: Hard
+  internalService:
+    serviceName: retriever-svc
+    config:
+      endpoint: /v1/retrieval
+      paramsKey: retriever
+      paramsKind: retriever
+resources:
+  retriever-usvc:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 6
+        memory: 6Gi

@@ -1,0 +1,134 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: "deployment_manifest | Load version metadata"
+  ansible.builtin.include_vars:
+    file: "{{ deployment_dir }}/version.yaml"
+  when: solution_version is not defined
+
+# Asked once, here, rather than read from a variable: the cluster version belongs
+# to the platform layer and nothing defines it while this layer runs. The stub
+# does not record it at all — it is a property of the cluster, not of a version
+# transition, so it belongs on the finalized manifest only.
+- name: "deployment_manifest | Read the cluster version"
+  kubernetes.core.k8s_cluster_info:
+  register: _manifest_cluster_info
+  failed_when: false
+
+- name: "deployment_manifest | Resolve the cluster version"
+  ansible.builtin.set_fact:
+    _manifest_k8s_version: >-
+      {{ _manifest_cluster_info.version.server.kubernetes.gitVersion
+         | default('unknown') | regex_replace('^v', '') }}
+
+- name: "deployment_manifest | Ensure manifest namespace exists"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ manifest_namespace }}"
+        labels: "{{ manifest_namespace_labels }}"
+
+- name: "deployment_manifest | Query existing manifest for startedAt timestamp"
+  kubernetes.core.k8s_info:
+    kind: ConfigMap
+    namespace: "{{ manifest_namespace }}"
+    label_selectors:
+      - "{{ manifest_label_selector }}"
+  register: _finalize_existing_query
+  failed_when: false
+
+- name: "deployment_manifest | Extract startedAt from existing manifest"
+  ansible.builtin.set_fact:
+    _finalize_started_at: >-
+      {{ (_finalize_existing_query.resources[0].data['manifest.yaml'] | from_yaml).deployment.startedAt
+         if _finalize_existing_query.resources | default([]) | length > 0
+         else ansible_date_time.iso8601 }}
+
+- name: "deployment_manifest | Get current timestamp"
+  ansible.builtin.command:
+    cmd: date -u +%Y-%m-%dT%H:%M:%SZ
+  register: _finalize_timestamp
+  changed_when: false
+
+- name: "deployment_manifest | Discover ERAG components"
+  ansible.builtin.command:
+    argv:
+      - "{{ deployment_dir }}/scripts/discover_erag_components.py"
+      - "{{ deployment_dir }}/components"
+  register: _component_discovery
+  changed_when: false
+  failed_when: _component_discovery.rc != 0
+
+- name: "deployment_manifest | Parse discovered components"
+  ansible.builtin.set_fact:
+    _expected_components: "{{ _component_discovery.stdout | from_json }}"
+
+- name: "deployment_manifest | List all Helm releases"
+  ansible.builtin.command:
+    cmd: helm list -A --output json
+  register: _helm_list
+  changed_when: false
+  failed_when: false
+
+- name: "deployment_manifest | Parse Helm releases"
+  ansible.builtin.set_fact:
+    _all_helm_releases: "{{ _helm_list.stdout | from_json if (_helm_list.rc == 0 and _helm_list.stdout | trim != '') else [] }}"
+
+- name: "deployment_manifest | Build component versions map"
+  ansible.builtin.set_fact:
+    _component_versions_map: {}
+
+- name: "deployment_manifest | Match components with Helm releases"
+  vars:
+    matching_releases: "{{ _all_helm_releases | selectattr('chart', 'match', '^' + item.name + '-') | list }}"
+    found_release: "{{ matching_releases[0] if matching_releases | length > 0 else {} }}"
+    is_deployed: "{{ matching_releases | length > 0 }}"
+  ansible.builtin.set_fact:
+    _component_versions_map: >-
+      {{ _component_versions_map | combine({
+           item.name: {
+             'deployed': is_deployed,
+             'appVersion': (found_release.app_version | default(item.appVersion)),
+             'chartVersion': (found_release.chart | default(item.name + '-' + item.chartVersion) | regex_replace('.*-', '')),
+             'namespace': (found_release.namespace | default('unknown')),
+             'chart': (found_release.chart | default(item.name + '-' + item.chartVersion)),
+             'status': (found_release.status | default('not-found'))
+           }
+         }) }}
+  loop: "{{ _expected_components }}"
+  when: _expected_components | length > 0
+
+- name: "deployment_manifest | Create finalized manifest data"
+  ansible.builtin.set_fact:
+    _finalized_manifest_data:
+      deployment:
+        version: "{{ solution_version }}"
+        targetVersion: null
+        imageTag: "{{ tag | default(default_image_tag) }}"
+        targetImageTag: null
+        status: "{{ manifest_status_complete }}"
+        startedAt: "{{ _finalize_started_at | trim }}"
+        completedAt: "{{ _finalize_timestamp.stdout }}"
+        installedBy: "ansible"
+        kubernetesVersion: "{{ _manifest_k8s_version }}"
+      components: "{{ _component_versions_map }}"
+
+- name: "deployment_manifest | Write finalized ConfigMap"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: "{{ manifest_name }}"
+        namespace: "{{ manifest_namespace }}"
+        labels: "{{ manifest_labels | combine({'app.kubernetes.io/version': solution_version}) }}"
+      data:
+        manifest.yaml: "{{ _finalized_manifest_data | to_nice_yaml }}"
+
+- name: "deployment_manifest | Manifest finalized"
+  ansible.builtin.debug:
+    msg: "Manifest finalized: {{ solution_version }} ({{ manifest_status_complete }}) — {{ _component_versions_map | length }} components tracked"

@@ -1,0 +1,135 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fingerprint.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "fingerprint.name" . }}
+    helm.sh/chart: {{ include "fingerprint.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "fingerprint.selectorLabels" . | nindent 8 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- include "manifest.podLabels" (list .Values.fullnameOverride .) | nindent 6 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      serviceAccountName: fingerprint
+      initContainers:
+        - name: wait-for-postgresql
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PGHOST
+              value: "{{ .Values.postgresql.fullnameOverride }}"
+            - name: PGPORT
+              value: "5432"
+            - name: PGUSER
+              value: "{{ .Values.postgresql.auth.username }}"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.postgresql.auth.existingSecret }}"
+                  key: "{{ .Values.postgresql.auth.secretKey }}"
+            - name: PGDATABASE
+              value: "{{ .Values.postgresql.auth.database }}"
+          command:
+            - sh
+            - -c
+            - |
+                echo "Waiting for PostgreSQL server $PGHOST:$PGPORT to be ready...";
+                until pg_isready -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -t 1; do
+                  echo "PostgreSQL is not ready yet, retrying in 2 seconds...";
+                  sleep 2;
+                done;
+                echo "PostgreSQL server is ready and accepting connections!";
+      containers:
+        - name: {{ include "fingerprint.fullname" . }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          image: {{ .Values.image.fingerprint.repository }}/{{ .Values.image.fingerprint.name }}:{{ .Values.image.fingerprint.tag }}
+          imagePullPolicy: {{ .Values.image.fingerprint.pullPolicy }}
+          env:
+            - name: SYSTEM_FINGERPRINT_POSTGRES_HOST
+              value: "{{ .Values.postgresql.fullnameOverride }}"
+            - name: SYSTEM_FINGERPRINT_POSTGRES_PORT
+              value: "5432"
+            - name: SYSTEM_FINGERPRINT_DATABASE_NAME
+              value: "{{ .Values.postgresql.auth.database }}"
+            - name: SYSTEM_FINGERPRINT_POSTGRES_USER
+              value: "{{ .Values.postgresql.auth.username }}"
+            - name: SYSTEM_FINGERPRINT_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.postgresql.auth.existingSecret }}"
+                  key: "{{ .Values.postgresql.auth.secretKey }}"
+          {{- if .Values.systemFingerprint.templateLanguage }}
+            - name: SYSTEM_FINGERPRINT_TEMPLATE_LANGUAGE
+              value: {{ .Values.systemFingerprint.templateLanguage | quote }}
+          {{- end }}
+          {{- if .Values.systemFingerprint.pipeline }}
+            - name: SYSTEM_FINGERPRINT_PIPELINE
+              value: {{ .Values.systemFingerprint.pipeline | quote }}
+          {{- end }}
+          {{- if .Values.proxy.http_proxy }}
+            - name: http_proxy
+              value: {{ .Values.proxy.http_proxy }}
+          {{- end }}
+          {{- if .Values.proxy.https_proxy }}
+            - name: https_proxy
+              value: {{ .Values.proxy.https_proxy }}
+          {{- end }}
+          {{- if .Values.proxy.no_proxy }}
+            - name: no_proxy
+              value: {{ .Values.proxy.no_proxy }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 6012
+          livenessProbe:
+            httpGet:
+              path: /v1/health_check
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 6
+          readinessProbe:
+            httpGet:
+              path: /v1/health_check
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 6
+          resources:
+            {{- $defaultValues := toYaml .Values.resources | nindent 12 -}}
+            {{- include "manifest.getResource" (list .Values.fullnameOverride $defaultValues .Values) | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

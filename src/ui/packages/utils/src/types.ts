@@ -1,0 +1,10 @@
+// Copyright (C) 2024-2026 Intel Corporation
+// SPDX-License-Identifier: Apache-2.0
+
+export type BaseAppEnvKey =
+  | "API_URL"
+  | "USER_RESOURCE_ROLE"
+  | "GRAFANA_DASHBOARD_URL"
+  | "KEYCLOAK_ADMIN_PANEL_URL"
+  | "ERAG_VERSION"
+  | "PIPELINE";

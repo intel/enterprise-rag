@@ -1,0 +1,5 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: "app_check_pods | Dispatch action: {{ action }}"
+  ansible.builtin.include_tasks: "{{ action }}.yaml"

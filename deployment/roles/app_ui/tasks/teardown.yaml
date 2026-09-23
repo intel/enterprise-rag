@@ -1,0 +1,17 @@
+---
+- name: "app_ui | Uninstall Helm chart"
+  kubernetes.core.helm:
+    name: "{{ ui_helm_release_name }}"
+    namespace: "{{ ui_namespace }}"
+    state: absent
+    wait: true
+    wait_timeout: "300s"
+
+- name: "app_ui | Delete namespace"
+  kubernetes.core.k8s:
+    state: absent
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ ui_namespace }}"

@@ -1,0 +1,129 @@
+---
+# pipeline_namespace is derived from pipeline metadata (see install.yaml). Teardown
+# runs standalone, so load the same metadata here to resolve the namespace.
+# A bad/unknown pipeline_type must not abort teardown: the GMC chart and its namespace
+# still need removing, so fall back to skipping only the pipeline-namespace tasks.
+- name: "app_pipeline | Check if pipeline metadata exists"
+  ansible.builtin.stat:
+    path: "{{ pipelines_dir }}/{{ pipeline_type }}/pipeline.yaml"
+  register: pipeline_metadata_check
+
+- name: "app_pipeline | Load modular pipeline metadata"
+  ansible.builtin.include_vars:
+    file: "{{ pipelines_dir }}/{{ pipeline_type }}/pipeline.yaml"
+    name: pipeline_meta
+  when: pipeline_metadata_check.stat.exists
+
+- name: "app_pipeline | Set pipeline namespace from metadata"
+  ansible.builtin.set_fact:
+    pipeline_namespace: "{{ pipeline_meta.namespace if pipeline_metadata_check.stat.exists else '' }}"
+
+- name: "app_pipeline | Warn that pipeline resources cannot be resolved"
+  ansible.builtin.debug:
+    msg: |
+      No pipeline metadata for pipeline_type '{{ pipeline_type }}'
+      ({{ pipelines_dir }}/{{ pipeline_type }}/pipeline.yaml is missing).
+
+      Skipping pipeline-namespace teardown (routes, GMConnectors, namespace) and
+      removing the GMC chart only. If a pipeline was deployed under a different
+      pipeline_type, set it in config.rag.yaml and re-run the teardown.
+  when: not pipeline_metadata_check.stat.exists
+
+- name: "app_pipeline | Tear down audio add-on"
+  ansible.builtin.include_role:
+    name: app_audio
+  when:
+    - audio_enabled | default(false) | bool
+
+# These routes are Ansible-owned (moved out of the GMC chart), so helm uninstall
+# no longer GCs them. The pipeline-namespace route dies with its namespace below,
+# but the status watcher route lives in `default` and must be removed explicitly.
+- name: "app_pipeline | Check whether the ApisixRoute CRD is present"
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: apisixroutes.apisix.apache.org
+  register: _apisixroute_crd
+
+- name: "app_pipeline | Delete APISIX pipeline route"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: apisix.apache.org/v2
+    kind: ApisixRoute
+    name: "{{ pipeline_type }}-route"
+    namespace: "{{ pipeline_namespace }}"
+  when:
+    - _apisixroute_crd.resources | length > 0
+    - pipeline_namespace | length > 0
+
+- name: "app_pipeline | Delete APISIX status watcher route"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: apisix.apache.org/v2
+    kind: ApisixRoute
+    name: "k8s-api-watcher-{{ pipeline_type }}-route"
+    namespace: default
+  when: _apisixroute_crd.resources | length > 0
+
+- name: "app_pipeline | Delete GMConnector resources to allow graceful workload teardown"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: gmc.erag.intel.com/v1alpha3
+    kind: GMConnector
+    namespace: "{{ pipeline_namespace }}"
+    delete_all: true
+  ignore_errors: true
+  when: pipeline_namespace | length > 0
+
+- name: "app_pipeline | Wait for pipeline workload pods to terminate before deleting namespace"
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: "{{ pipeline_namespace }}"
+  register: pipeline_pods_info
+  until: pipeline_pods_info.resources | length == 0
+  retries: 30
+  delay: 10
+  when: pipeline_namespace | length > 0
+
+- name: "app_pipeline | Remove pipeline namespace"
+  kubernetes.core.k8s:
+    state: absent
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ pipeline_namespace }}"
+  when: pipeline_namespace | length > 0
+
+- name: "app_pipeline | Uninstall Helm chart"
+  kubernetes.core.helm:
+    name: "{{ gmc_helm_release_name }}"
+    namespace: "{{ gmc_namespace }}"
+    state: absent
+    wait: true
+    wait_timeout: "300s"
+
+- name: "app_pipeline | Delete GMC namespace"
+  kubernetes.core.k8s:
+    state: absent
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ gmc_namespace }}"
+
+# The GMConnector CRD ships in the chart's crds/ directory, which helm uninstall
+# never removes. Delete it explicitly so teardown leaves no stale API group behind.
+# Both groups are listed while the gmc.opea.io -> gmc.erag.intel.com rename is in flight.
+- name: "app_pipeline | Delete GMConnector CRDs"
+  kubernetes.core.k8s:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: "{{ item }}"
+    state: absent
+  loop:
+    - gmconnectors.gmc.erag.intel.com
+    - gmconnectors.gmc.opea.io
+  loop_control:
+    label: "{{ item }}"
+  failed_when: false

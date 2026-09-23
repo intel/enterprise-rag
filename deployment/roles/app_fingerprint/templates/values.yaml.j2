@@ -1,0 +1,56 @@
+{#
+Copyright (C) 2024-2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+#}
+
+{% if tag is defined %}
+image:
+  fingerprint:
+    tag: "{{ tag }}"
+{% endif %}
+    repository: "{{ registry }}"
+
+postgresql:
+  auth:
+    username: "{{ fingerprint_db_user }}"
+    database: "{{ fingerprint_db_name }}"
+    existingSecret: "{{ fingerprint_db_password_secret_name }}"
+
+{# Resolve solution language: explicit value or auto-detect from LLM model name #}
+{% if solution_language is defined and solution_language != "auto" %}
+{%   set resolved_language = solution_language %}
+{% elif 'pllum' in (llm_model_name | lower) or 'bielik' in (llm_model_name | lower) %}
+{%   set resolved_language = 'pl' %}
+{% else %}
+{%   set resolved_language = 'en' %}
+{% endif %}
+
+systemFingerprint:
+  templateLanguage: "{{ resolved_language }}"
+  pipeline: "{{ pipeline_namespace | default('chatqna') }}"
+
+{% if fingerprint_additional_values is defined and fingerprint_additional_values %}
+{{ fingerprint_additional_values | to_nice_yaml }}
+{% endif %}
+
+{% if minimal_configuration | default(false) | bool %}
+minimalConfiguration: true
+minimalResources:
+  fingerprint-svc:
+    requests:
+      cpu: "50m"
+{% endif %}
+
+# --- APISIX route wiring (consumed by templates/apisix-routes.yaml in this chart) ---
+{% set _apisix_kc_ns = keycloak_namespace | default('keycloak') %}
+{% set _apisix_realm = (ui_keycloak_realm if (ui_keycloak_realm | default("") | length > 0) else erag_keycloak_realm | default("EnterpriseRAG")) %}
+{% set _apisix_kc_base = 'http://keycloak-service.' ~ _apisix_kc_ns ~ '.svc:8080' %}
+apisix:
+  enabled: {{ (apisix_enabled | default(false)) | bool | string | lower }}
+  ingressClassName: apisix
+  routeHost: "{{ (ui_domain_name if ui_domain_name is defined else '') }}"
+  auth:
+    realm: "{{ _apisix_realm }}"
+    client_id: "{{ apisix_oidc_client_id | default('EnterpriseRAG-oidc-backend') }}"
+    resource_registration_endpoint: "{{ _apisix_kc_base }}/realms/{{ _apisix_realm }}/authz/protection/resource_set"
+    token_endpoint: "{{ _apisix_kc_base }}/realms/{{ _apisix_realm }}/protocol/openid-connect/token"

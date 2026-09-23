@@ -1,0 +1,230 @@
+{#
+Copyright (C) 2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+ONTAP S3 reverse proxy on the core Envoy Gateway.
+
+Browsers PUT documents straight to the URL EDP returns, and the ONTAP data LIF
+lives on the storage network, so the presigned endpoint has to be published
+through the gateway.
+
+Choices below that are deliberate:
+  - discovery.k8s.io/v1 EndpointSlice rather than the deprecated core/v1 Endpoints.
+  - everything in the edp namespace, so no ReferenceGrant is needed.
+  - upstream TLS through an envoy-gateway Backend, or a BackendTLSPolicy when a CA
+    is supplied; there are no sidecars on the gateway path here.
+  - tls.alpnProtocols: [http/1.1] on the Backend. Envoy Gateway builds the upstream
+    cluster with auto_config, so a TLS backend that advertises h2 in ALPN gets
+    HTTP/2, and ONTAP S3 breaks under that upgrade. Plaintext upstreams stay
+    HTTP/1.1 by default, and neither a Backend appProtocols entry nor a Service
+    appProtocol of h2c is set below.
+
+Two rules below are load-bearing for SigV4 and must not be "improved":
+  - no URLRewrite hostname filter: the Host header is part of the signature.
+  - in path mode the PathPrefix must equal edp_s3_path_prefix, because
+    src/edp/app/utils.py re-injects that prefix after signing and the gateway
+    has to strip it again.
+
+They are necessary but not sufficient: the listener also runs with normalize_path,
+merge_slashes and path_with_escaped_slashes_action, which rewrite a signed path before
+it reaches ONTAP and produce SignatureDoesNotMatch. This template cannot fix that -
+the first two are per-listener (ClientTrafficPolicy on the core installer's Gateway)
+and normalize_path has no Gateway API knob at all. /api/presignedUrl rejects object
+names that would be rewritten (src/edp/app/utils.py::gateway_unsafe_object_name_segments),
+and tasks/ontap_s3_validate.yaml reports whether the listener carries the policy.
+#}
+{% set _svc = edp_ontap_s3_backend_name %}
+{% set _port = _edp_ontap_s3_port | int %}
+{% set _tls_mode = _edp_ontap_s3_tls_mode %}
+{% set _lif = _edp_ontap_s3_lif | string | trim %}
+{% set _port_name = 'http' if _tls_mode == 'plaintext' else 'https' %}
+{% set _path_mode = _edp_s3_path_mode | bool %}
+{% set _path_prefix = edp_s3_path_prefix | default(edp_default_s3_path_prefix, true) %}
+{# Compared as text so the expression holds for a real boolean and for the string an
+   Ansible fact may carry. #}
+{% set _lif_is_ipv4 = (_edp_ontap_s3_lif_is_ipv4 | string | lower) == 'true' %}
+{% if _tls_mode != 'insecure' %}
+{# Only the ca and plaintext modes route through the Service; the insecure mode
+   points backendRefs at the envoy-gateway Backend, which carries its own
+   endpoint, so emitting these two objects there would leave dead ones behind. #}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ _svc }}"
+  namespace: "{{ edp_namespace }}"
+  labels:
+    app.kubernetes.io/name: "{{ _svc }}"
+    app.kubernetes.io/managed-by: ansible
+spec:
+  type: ClusterIP
+  # Selectorless: the endpoints are maintained by the EndpointSlice below.
+  ports:
+    - name: "{{ _port_name }}"
+      protocol: TCP
+      port: {{ _port }}
+      targetPort: {{ _port }}
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: "{{ _svc }}"
+  namespace: "{{ edp_namespace }}"
+  labels:
+    kubernetes.io/service-name: "{{ _svc }}"
+    app.kubernetes.io/managed-by: ansible
+addressType: IPv4
+endpoints:
+  - addresses:
+      - "{{ _lif }}"
+    conditions:
+      ready: true
+ports:
+  - name: "{{ _port_name }}"
+    protocol: TCP
+    port: {{ _port }}
+{% endif %}
+{% if _tls_mode == 'insecure' %}
+---
+# ONTAP serves the S3 endpoint with its own certificate, which is normally
+# self-signed and issued to the SVM rather than to the data LIF address.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: "{{ _svc }}"
+  namespace: "{{ edp_namespace }}"
+  labels:
+    app.kubernetes.io/managed-by: ansible
+spec:
+  endpoints:
+{% if _lif_is_ipv4 %}
+    - ip:
+        address: "{{ _lif }}"
+        port: {{ _port }}
+{% else %}
+    # The Backend API resolves a name itself, so this mode also accepts the
+    # hostname form of a data LIF that the core installer passes through verbatim.
+    - fqdn:
+        hostname: "{{ _lif }}"
+        port: {{ _port }}
+{% endif %}
+  tls:
+    insecureSkipVerify: true
+    # Envoy Gateway defaults a Backend to ALPN [h2, http/1.1] and the cluster is
+    # built with auto_config, so an upstream advertising h2 gets HTTP/2. ONTAP S3
+    # breaks under that upgrade; offering only http/1.1 is the Gateway API
+    # equivalent of Istio's h2UpgradePolicy: DO_NOT_UPGRADE.
+    alpnProtocols:
+      - "http/1.1"
+{% elif _tls_mode == 'ca' %}
+---
+# v1alpha3 is the version every Gateway API release that has this kind serves:
+# 1.2 offers it in the experimental channel only, 1.3 promoted it to standard and
+# 1.4 added a v1 alias. tasks/ontap_s3_proxy.yaml checks the CRD before applying.
+#
+# Gateway API has no ALPN control, so this mode cannot pin the upstream to
+# HTTP/1.1 the way the Backend above does. Use edp_ontap_s3_tls_mode: insecure or
+# plaintext if the ONTAP S3 server negotiates h2 and then misbehaves.
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: "{{ _svc }}-tls"
+  namespace: "{{ edp_namespace }}"
+  labels:
+    app.kubernetes.io/managed-by: ansible
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: "{{ _svc }}"
+  validation:
+    hostname: "{{ edp_ontap_s3_sni_hostname | default('', true) or _lif }}"
+    caCertificateRefs:
+      - group: ""
+        kind: ConfigMap
+        name: "{{ edp_ontap_s3_ca_configmap_name }}"
+{% endif %}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: "{{ edp_ontap_s3_route_name }}"
+  namespace: "{{ edp_namespace }}"
+  labels:
+    app.kubernetes.io/name: "{{ _svc }}"
+    app.kubernetes.io/managed-by: ansible
+spec:
+  parentRefs:
+    - name: "{{ gateway_name }}"
+      namespace: "{{ gateway_namespace }}"
+      # tasks/s3_listener_section.yaml picks the listener whose hostname is exactly
+      # this route's hostname: the core installer's dedicated S3 listener in
+      # subdomain mode, the apex listener in path mode, the wildcard listener when
+      # neither claims the name. Getting this wrong leaves the route Accepted=False
+      # with reason NoMatchingListenerHostname. The default below is the same
+      # decision without a cluster to ask.
+      sectionName: "{{ _edp_s3_section | default('https-apex' if _path_mode else gateway_s3_listener_name) }}"
+  hostnames:
+    - "{{ _edp_s3_host }}"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+{% if _path_mode %}
+            value: "{{ _path_prefix }}"
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: "/"
+{% else %}
+            value: "/"
+{% endif %}
+      timeouts:
+        request: "{{ edp_ontap_s3_request_timeout }}"
+        backendRequest: "{{ edp_ontap_s3_request_timeout }}"
+      backendRefs:
+{% if _tls_mode == 'insecure' %}
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: "{{ _svc }}"
+{% else %}
+        - name: "{{ _svc }}"
+          port: {{ _port }}
+{% endif %}
+---
+# Bypass the gateway-level JWT policy for the S3 API route. The core installer
+# attaches SecurityPolicy/gateway-auth to the whole Gateway
+# (roles/envoy_gateway/templates/security-policy.yaml.j2 targets kind: Gateway),
+# and S3 clients present SigV4 signatures, not OIDC tokens. Without this every
+# upload returns 401. Empty spec = no authentication for this route.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: "{{ _svc }}-no-auth"
+  namespace: "{{ edp_namespace }}"
+  labels:
+    app.kubernetes.io/managed-by: ansible
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: "{{ edp_ontap_s3_route_name }}"
+{% if not _path_mode and edp_ontap_s3_cors_allow_origins %}
+  # ONTAP S3 has no CORS configuration and answers the browser's preflight without
+  # Access-Control-* headers, so the gateway supplies them and terminates the OPTIONS
+  # here. Not needed in routing_mode: path, where uploads are same-origin.
+  # Presigned URLs carry the signature in the query string, so the browser only sends
+  # the content headers it computes itself. ETag has to be exposed for the browser to
+  # confirm each part of a multipart upload.
+  cors:
+    allowOrigins:
+{% for _origin in edp_ontap_s3_cors_allow_origins %}
+      - "{{ _origin }}"
+{% endfor %}
+    allowMethods: [GET, PUT, POST, DELETE, HEAD, OPTIONS]
+    allowHeaders: [content-type, content-md5, x-amz-content-sha256, x-amz-date, x-amz-user-agent]
+    exposeHeaders: [ETag, x-amz-request-id, x-amz-version-id]
+    maxAge: "1h"
+{% endif %}

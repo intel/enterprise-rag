@@ -1,0 +1,27 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_post_install Role Defaults
+# =============================================================================
+
+# --- Health-check behavior ---
+post_install_role_retries: 10
+post_install_no_wait: false
+post_install_no_fail: false
+post_install_store_result: false
+
+# --- Data consistency behavior ---
+# data_consistency_no_fail lets an upgrade finish despite a store that lost data.
+# data_consistency_install_report turns off the install-time report, which costs
+# one query Job per active store. Reporting never fails an install either way.
+data_consistency_no_fail: false
+data_consistency_install_report: true
+
+# --- Cross-role shared defaults - Owned by other roles; declared here so this role is standalone-runnable. ---
+edp_minio_domain_name: "seaweedfs.{{ base_domain_name | default('solutions.ai') }}"     # app_edp
+erag_keycloak_domain_name: "auth.solutions.ai"  # app_keycloak_config
+ui_domain_name: "solutions.ai"            # app_ui
+rag_tmp_dir: "{{ tmp_dir }}/rag"          # app_pre_install (derived from tmp_dir)
+rag_log_dir: "{{ log_dir }}/rag"

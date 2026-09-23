@@ -1,0 +1,209 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# V0-V7 for the ONTAP S3 reverse proxy. Every failure names the object to
+# look at and the effect the operator would otherwise see in the UI.
+
+- name: "app_edp | ONTAP S3 | Resolve the gateway listener to bind"
+  ansible.builtin.include_tasks:
+    file: s3_listener_section.yaml
+
+- name: "app_edp | ONTAP S3 | V0-V3 Check the proxy attached to the gateway"
+  ansible.builtin.include_tasks:
+    file: ontap_s3_attach.yaml
+
+- name: "app_edp | ONTAP S3 | Read the EndpointSlice"
+  kubernetes.core.k8s_info:
+    api_version: discovery.k8s.io/v1
+    kind: EndpointSlice
+    name: "{{ edp_ontap_s3_backend_name }}"
+    namespace: "{{ edp_namespace }}"
+  register: _edp_ontap_eps
+  check_mode: false
+  changed_when: false
+  # In 'insecure' mode backendRefs points at the envoy-gateway Backend, which carries
+  # its own endpoint, so no Service or EndpointSlice is rendered at all.
+  when: _edp_ontap_s3_tls_mode != 'insecure'
+
+- name: "app_edp | ONTAP S3 | V2 Assert the EndpointSlice has a ready endpoint"
+  ansible.builtin.assert:
+    that:
+      - _edp_ontap_eps.resources | default([]) | length > 0
+      - _ready_addresses | length > 0
+      - _edp_ontap_s3_lif in _ready_addresses
+    fail_msg: >-
+      EndpointSlice {{ edp_namespace }}/{{ edp_ontap_s3_backend_name }} has no ready
+      endpoint for {{ _edp_ontap_s3_lif }} (found {{ _ready_addresses | default([]) }}).
+      Service/{{ edp_ontap_s3_backend_name }} is selectorless, so nothing repopulates it:
+      the gateway answers 503 on every upload instead of failing loudly.
+      Re-run: ./es_auto_installer.sh install app_edp --only --env <name>
+    success_msg: "app_edp: ONTAP S3 endpoint {{ _edp_ontap_s3_lif }}:{{ _edp_ontap_s3_port }} present"
+    quiet: true
+  vars:
+    _ready_addresses: >-
+      {{ (_edp_ontap_eps.resources | default([{}]) | first).endpoints | default([])
+         | selectattr('conditions.ready', 'defined') | selectattr('conditions.ready')
+         | map(attribute='addresses') | flatten }}
+  when: _edp_ontap_s3_tls_mode != 'insecure'
+
+- name: "app_edp | ONTAP S3 | V6 Assert the SigV4 host and prefix contract still holds"
+  ansible.builtin.assert:
+    that:
+      - _route_rewrite_hostnames | length == 0
+      - (not _edp_s3_path_mode | bool) or
+        (_route_path_prefixes | unique == [edp_s3_path_prefix | default(edp_default_s3_path_prefix, true)])
+    fail_msg: >-
+      HTTPRoute {{ edp_ontap_s3_route_name }} breaks SigV4.
+      URLRewrite hostnames found: {{ _route_rewrite_hostnames }} (must be empty - the Host
+      header is signed, so rewriting it yields SignatureDoesNotMatch).
+      Path prefixes: {{ _route_path_prefixes }}, edp_s3_path_prefix:
+      '{{ edp_s3_path_prefix | default(edp_default_s3_path_prefix, true) }}' (must match -
+      src/edp/app/utils.py re-injects that prefix after signing and the gateway has to
+      strip exactly the same prefix).
+    success_msg: "app_edp: ONTAP S3 route preserves Host and the signed path prefix"
+    quiet: true
+  vars:
+    _route_spec: "{{ (_edp_ontap_route.resources | default([{}]) | first).spec | default({}) }}"
+    _route_rewrite_hostnames: >-
+      {{ _route_spec.rules | default([]) | map(attribute='filters', default=[]) | flatten
+         | selectattr('type', 'eq', 'URLRewrite') | map(attribute='urlRewrite')
+         | map(attribute='hostname', default='') | select | list }}
+    _route_path_prefixes: >-
+      {{ _route_spec.rules | default([]) | map(attribute='matches', default=[]) | flatten
+         | map(attribute='path.value', default='') | select | list }}
+
+- name: "app_edp | ONTAP S3 | Read the ClientTrafficPolicies on the gateway"
+  kubernetes.core.k8s_info:
+    api_version: gateway.envoyproxy.io/v1alpha1
+    kind: ClientTrafficPolicy
+    namespace: "{{ gateway_namespace }}"
+  register: _edp_ontap_ctp
+  check_mode: false
+  changed_when: false
+
+# V7 reports rather than asserts: the proxy works for every object name that survives
+# path normalization, and EDP refuses to presign the ones that do not
+# (utils.py gateway_unsafe_object_name_segments). It cannot be fixed from this role -
+# the listener belongs to the core installer's Gateway.
+- name: "app_edp | ONTAP S3 | V7 Report the path normalization exposure"
+  ansible.builtin.debug:
+    msg: "{{ _ok | bool | ternary(_msg_ok, _msg_warning) }}"
+  vars:
+    _section: >-
+      {{ _edp_s3_section | default('https-apex' if _edp_s3_path_mode | bool else 'https', true) }}
+    # targetRefs of every policy that keeps both tunable settings off. A ref without a
+    # sectionName covers the whole Gateway, so it covers this listener too.
+    _refs: >-
+      {{ _edp_ontap_ctp.resources | default([])
+         | json_query("[?spec.path.disableMergeSlashes==`true` && spec.path.escapedSlashesAction=='KeepUnchanged'].spec.targetRefs[]")
+         | selectattr('kind', 'eq', 'Gateway')
+         | selectattr('name', 'eq', gateway_name) | list }}
+    _ok: >-
+      {{ (_refs | selectattr('sectionName', 'defined') | selectattr('sectionName', 'eq', _section) | list | length > 0)
+         or (_refs | rejectattr('sectionName', 'defined') | list | length > 0) }}
+    _gw: "{{ gateway_namespace ~ '/' ~ gateway_name }}"
+    _msg_ok: "Listener {{ _section }} of Gateway {{ _gw }} keeps signed paths intact (ClientTrafficPolicy)."
+    _msg_warning: >-
+      WARNING: listener {{ _section }} of Gateway {{ _gw }} normalizes request paths, so a
+      signed path holding '//', '/../' or '%2F' reaches ONTAP rewritten and ONTAP answers
+      SignatureDoesNotMatch. EDP refuses to presign such object names, so UI uploads are
+      unaffected; keys created by other tools cannot be served through the gateway. The
+      core installer owns the listener and reports the same at install time.
+
+- name: "app_edp | ONTAP S3 | Read the gateway load balancer address"
+  kubernetes.core.k8s_info:
+    api_version: gateway.networking.k8s.io/v1
+    kind: Gateway
+    name: "{{ gateway_name }}"
+    namespace: "{{ gateway_namespace }}"
+  register: _edp_gateway
+  check_mode: false
+  changed_when: false
+
+- name: "app_edp | ONTAP S3 | Set reachability facts"
+  ansible.builtin.set_fact:
+    _edp_gateway_ip: >-
+      {{ (_edp_gateway.resources | default([{}]) | first).status.addresses | default([])
+         | map(attribute='value') | list | first | default('', true) }}
+    _edp_s3_host: >-
+      {{ _edp_s3_host }}
+    _edp_s3_probe_path: >-
+      {{ (edp_s3_path_prefix | default(edp_default_s3_path_prefix, true)) ~ '/'
+         if _edp_s3_path_mode | bool else '/' }}
+
+- name: "app_edp | ONTAP S3 | V4 Probe the S3 endpoint through the gateway"
+  when:
+    - edp_ontap_s3_validate_reachability | bool
+    - _edp_gateway_ip | length > 0
+  block:
+    # --resolve pins the hostname to the load balancer address, so the check needs
+    # no DNS record and no /etc/hosts entry on the installer host. --noproxy is
+    # required as well: a corporate https_proxy in the installer environment
+    # otherwise answers for the gateway address (504) and the probe reports a
+    # failure that has nothing to do with the cluster.
+    - name: "app_edp | ONTAP S3 | Request https://{{ _edp_s3_host }}{{ _edp_s3_probe_path }}"
+      ansible.builtin.command:
+        argv:
+          - curl
+          - -sk
+          - --max-time
+          - "20"
+          - --noproxy
+          - "{{ _edp_s3_host }}"
+          - --resolve
+          - "{{ _edp_s3_host }}:443:{{ _edp_gateway_ip }}"
+          - "https://{{ _edp_s3_host }}{{ _edp_s3_probe_path }}"
+          - -o
+          - /dev/null
+          - -w
+          - "%{http_code}"
+      register: _edp_s3_probe
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: "app_edp | ONTAP S3 | V4 Assert the endpoint answers as an S3 service"
+      ansible.builtin.assert:
+        # 400/403 are the normal answers to an unsigned request: the proxy reached
+        # ONTAP S3 and ONTAP S3 replied. 200 happens on anonymous-list configs.
+        that: _code in ['200', '400', '403']
+        fail_msg: >-
+          https://{{ _edp_s3_host }}{{ _edp_s3_probe_path }} via {{ _edp_gateway_ip }}
+          returned {{ _code | default('no code') }}.
+          {{ _edp_s3_probe_diagnosis[_code] | default('Unexpected status; inspect the envoy access log: kubectl -n ' ~ gateway_namespace ~ ' logs deploy/envoy-' ~ gateway_namespace ~ '-' ~ gateway_name ~ ' --tail=50') }}
+        success_msg: "app_edp: ONTAP S3 reachable through the gateway (HTTP {{ _code }})"
+        quiet: true
+      vars:
+        _code: "{{ _edp_s3_probe.stdout | default('') | trim }}"
+        _edp_s3_probe_diagnosis:
+          "000": >-
+            The gateway address did not accept the connection. Check that
+            {{ _edp_gateway_ip }} is the MetalLB address of the gateway Service and is
+            reachable from this host.
+          "401": >-
+            The gateway JWT policy is still applied to this route: SecurityPolicy
+            {{ edp_ontap_s3_backend_name }}-no-auth exists but is not effective. Check
+            'kubectl -n {{ edp_namespace }} describe securitypolicy {{ edp_ontap_s3_backend_name }}-no-auth'
+            for an Accepted=False condition or an overlapping policy.
+          "404": >-
+            No route matched the request. The Host header
+            ({{ _edp_s3_host }}) or the path prefix must match the HTTPRoute hostnames and
+            PathPrefix exactly.
+          "503": >-
+            No healthy upstream. In '{{ _edp_ontap_s3_tls_mode }}' mode the traffic goes to
+            {{ 'Backend/' ~ edp_ontap_s3_backend_name if _edp_ontap_s3_tls_mode == 'insecure' else 'Service/' ~ edp_ontap_s3_backend_name }};
+            verify the endpoint {{ _edp_ontap_s3_lif }}:{{ _edp_ontap_s3_port }} and, for a
+            TLS upstream, that ONTAP S3 really listens with HTTPS on that port.
+          "504": >-
+            Upstream timeout. {{ _edp_ontap_s3_lif }}:{{ _edp_ontap_s3_port }} is not
+            answering from inside the cluster - typically the storage VLAN or the ONTAP
+            firewall policy on the data LIF.
+
+- name: "app_edp | ONTAP S3 | V5 Client DNS advisory"
+  ansible.builtin.debug:
+    msg:
+      - "Browser uploads need {{ _edp_s3_host }} to resolve to the gateway address {{ _edp_gateway_ip | default('unknown') }}."
+      - "Workstation hosts file: {{ _edp_gateway_ip | default('<gateway-ip>') }}  {{ base_domain_name }} {{ _edp_s3_host }}"
+      - "or create a wildcard record: *.{{ base_domain_name }} -> {{ _edp_gateway_ip | default('<gateway-ip>') }}"
+      - "The EDP pods use {{ edp_s3_compatible_internal_url }} and do not depend on this."

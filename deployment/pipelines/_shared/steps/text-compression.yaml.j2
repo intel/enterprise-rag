@@ -1,0 +1,22 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# Text Compression step - Compress extracted text #}
+step:
+  name: TextCompression
+  dependency: Hard
+  data: $response
+  internalService:
+    serviceName: text-compression-svc
+    config:
+      endpoint: /v1/text_compression
+resources:
+  text-compression-usvc:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 0.5
+        memory: 64Mi
+      limits:
+        cpu: 2
+        memory: 1Gi

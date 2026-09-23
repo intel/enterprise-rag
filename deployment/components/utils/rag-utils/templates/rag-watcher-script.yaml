@@ -1,0 +1,743 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rag-utils.fullname" . }}-watcher-script
+  namespace: {{ .Release.Namespace }}
+data:
+  watcher.sh: |
+    #!/bin/bash
+    set -euo pipefail
+
+    echo "=== RAG Watcher starting at $(date) ==="
+
+    # Function: Collect workload replica information and save to ConfigMap
+    # Args: $1=namespace
+    # Returns: List of "ns:kind:name:replicas" to stdout
+    collect_workload_info() {
+      local target_ns="$1"
+      local workload_info=""
+      local skipped_workloads=""
+
+      echo "Collecting workload information in namespace: $target_ns" >&2
+
+      # Get list of workloads to skip if skip_workload_selector is defined
+      if [ -n "$SKIP_WORKLOAD_SELECTOR" ]; then
+        echo "  Finding workloads to skip with selector: $SKIP_WORKLOAD_SELECTOR" >&2
+        skipped_workloads=$(kubectl get deployments,statefulsets,daemonsets -n "$target_ns" -l "$SKIP_WORKLOAD_SELECTOR" -o jsonpath='{range .items[*]}{.kind}:{.metadata.name}{" "}{end}' 2>/dev/null || echo "")
+        if [ -n "$skipped_workloads" ]; then
+          echo "  Skipping workloads: $skipped_workloads" >&2
+        fi
+      fi
+
+      # Get deployments with replica count
+      local deploys
+      deploys=$(kubectl get deployments -n "$target_ns" -o json 2>/dev/null || echo '{"items":[]}')
+
+      for deploy in $(echo "$deploys" | jq -r '.items[] | select(.spec.replicas > 0) | .metadata.name'); do
+        if echo "$skipped_workloads" | grep -q "Deployment:$deploy"; then
+          echo "  Skipping deployment/$deploy" >&2
+          continue
+        fi
+        local replicas=$(echo "$deploys" | jq -r --arg name "$deploy" '.items[] | select(.metadata.name == $name) | .spec.replicas')
+        workload_info="$workload_info $target_ns:deployment:$deploy:$replicas"
+      done
+
+      # Get statefulsets with replica count
+      local stss
+      stss=$(kubectl get statefulsets -n "$target_ns" -o json 2>/dev/null || echo '{"items":[]}')
+
+      for sts in $(echo "$stss" | jq -r '.items[] | select(.spec.replicas > 0) | .metadata.name'); do
+        if echo "$skipped_workloads" | grep -q "StatefulSet:$sts"; then
+          echo "  Skipping statefulset/$sts" >&2
+          continue
+        fi
+        local replicas=$(echo "$stss" | jq -r --arg name "$sts" '.items[] | select(.metadata.name == $name) | .spec.replicas')
+        workload_info="$workload_info $target_ns:statefulset:$sts:$replicas"
+      done
+
+      # Get daemonsets (all with replicas=1 for consistency)
+      local dss
+      dss=$(kubectl get daemonsets -n "$target_ns" -o json 2>/dev/null || echo '{"items":[]}')
+
+      for ds in $(echo "$dss" | jq -r '.items[] | .metadata.name'); do
+        if echo "$skipped_workloads" | grep -q "DaemonSet:$ds"; then
+          echo "  Skipping daemonset/$ds" >&2
+          continue
+        fi
+        workload_info="$workload_info $target_ns:daemonset:$ds:1"
+      done
+
+      echo "$workload_info"
+    }
+
+    # Function: Downscale workloads to 0 replicas
+    # Args: $1=workload_list (space-separated ns:kind:name:replicas)
+    downscale_workloads() {
+      local workload_list="$1"
+
+      echo "Downscaling workloads..."
+
+      # First, add node selector to DaemonSets to prevent operator reconciliation
+      for workload in $workload_list; do
+        IFS=':' read -r ns kind name replicas <<< "$workload"
+
+        if [ "$kind" = "daemonset" ]; then
+          echo "  Adding node selector to $kind/$name in $ns"
+          kubectl patch daemonset "$name" -n "$ns" --type=json -p='[{"op":"add","path":"/spec/template/spec/nodeSelector/rag-watcher-disabled","value":"true"}]' 2>/dev/null || \
+            kubectl patch daemonset "$name" -n "$ns" --type=json -p='[{"op":"replace","path":"/spec/template/spec/nodeSelector","value":{"rag-watcher-disabled":"true"}}]'
+        fi
+      done
+
+      # Build lists of workloads to scale by namespace
+      declare -A ns_deployments
+      declare -A ns_statefulsets
+
+      for workload in $workload_list; do
+        IFS=':' read -r ns kind name replicas <<< "$workload"
+
+        if [ "$kind" = "deployment" ]; then
+          ns_deployments[$ns]="${ns_deployments[$ns]:-}${ns_deployments[$ns]:+ }$name"
+        elif [ "$kind" = "statefulset" ]; then
+          ns_statefulsets[$ns]="${ns_statefulsets[$ns]:-}${ns_statefulsets[$ns]:+ }$name"
+        fi
+      done
+
+      # Scale down deployments per namespace with one kubectl call
+      for ns in "${!ns_deployments[@]}"; do
+        echo "  Scaling down deployments in $ns: ${ns_deployments[$ns]}"
+        kubectl scale deployment ${ns_deployments[$ns]} -n "$ns" --replicas=0
+      done
+
+      # Scale down statefulsets per namespace with one kubectl call
+      for ns in "${!ns_statefulsets[@]}"; do
+        echo "  Scaling down statefulsets in $ns: ${ns_statefulsets[$ns]}"
+        kubectl scale statefulset ${ns_statefulsets[$ns]} -n "$ns" --replicas=0
+      done
+    }
+
+    # Function: Wait for workloads to be completely scaled down
+    # Args: $1=workload_list (ns:kind:name:replicas), $2=timeout (default 600)
+    wait_for_downscale() {
+      local workload_list="$1"
+      local timeout=${2:-600}
+      local interval=15
+      local elapsed=0
+
+      echo "Waiting for all workloads to downscale (max $timeout seconds)..."
+
+      # Verified unconditionally: scaling to 0 and back without confirming termination
+      # would leave the pods running and the refresh a silent no-op.
+
+      while [ $elapsed -lt $timeout ]; do
+        local all_down=true
+        local workloads_to_pop=""
+        for workload in $workload_list; do
+          # Skip empty entries from list manipulation
+          [ -z "$workload" ] && continue
+
+          IFS=':' read -r ns kind name replicas <<< "$workload"
+
+          # Skip if parsing failed (empty ns, kind, or name)
+          [ -z "$ns" ] || [ -z "$kind" ] || [ -z "$name" ] && continue
+
+          # Use the correct status field based on workload type
+          local ready
+          if [ "$kind" = "daemonset" ]; then
+            ready=$(kubectl get "$kind/$name" -n "$ns" -o jsonpath='{.status.numberReady}' 2>/dev/null || echo "0")
+          else
+            ready=$(kubectl get "$kind/$name" -n "$ns" -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+          fi
+          # Handle empty string as zero
+          ready=${ready:-0}
+
+          if [ "$ready" != "0" ]; then
+            echo "  $kind/$name in $ns still has $ready ready pods"
+            all_down=false
+          else
+            workloads_to_pop="${workloads_to_pop:-}${workloads_to_pop:+ }$workload"
+          fi
+        done
+        for workload in $workloads_to_pop; do
+          workload_list="${workload_list//$workload/ }"
+        done
+        workload_list="$(echo "$workload_list" | xargs)"
+        if [ "$all_down" = true ]; then
+          echo "All workloads are down."
+          return 0
+        fi
+
+        echo "Waiting... ($elapsed/$timeout seconds elapsed)"
+        sleep $interval
+        elapsed=$((elapsed + interval))
+      done
+
+      echo "WARNING: Timeout waiting for workloads to downscale."
+      return 1
+    }
+
+    # Function: Upscale workloads back to their original replica count
+    # Reads workload info from ConfigMap instead of labels
+    # Returns: List of "ns:kind:name:replicas" to stdout
+    upscale_workloads() {
+      echo "Upscaling workloads..." >&2
+
+      # Read saved workload list from ConfigMap
+      local saved_workloads=$(kubectl get configmap "$CONFIG_NAME" -n "$CONFIG_NS" -o jsonpath='{.data.saved-workloads}' 2>/dev/null || echo "")
+
+      if [ -z "$saved_workloads" ]; then
+        echo "WARNING: No saved workload information found in ConfigMap" >&2
+        return 0
+      fi
+
+      echo "  Found saved workload information" >&2
+
+      # Build lists of workloads grouped by namespace, kind, and replica count
+      declare -A ns_daemonsets
+      declare -A ns_deployments_by_replicas    # Key: "ns:replicas", Value: "name1 name2"
+      declare -A ns_statefulsets_by_replicas   # Key: "ns:replicas", Value: "name1 name2"
+
+      for workload in $saved_workloads; do
+        # Skip empty entries
+        [ -z "$workload" ] && continue
+
+        IFS=':' read -r ns kind name replicas <<< "$workload"
+
+        # Skip if parsing failed
+        [ -z "$ns" ] || [ -z "$kind" ] || [ -z "$name" ] || [ -z "$replicas" ] && continue
+
+        # Group resources by namespace, kind, and replica count
+        if [ "$kind" = "daemonset" ]; then
+          ns_daemonsets[$ns]="${ns_daemonsets[$ns]:-}${ns_daemonsets[$ns]:+ }$name"
+        elif [ "$kind" = "deployment" ]; then
+          local key="$ns:$replicas"
+          ns_deployments_by_replicas[$key]="${ns_deployments_by_replicas[$key]:-}${ns_deployments_by_replicas[$key]:+ }$name"
+        elif [ "$kind" = "statefulset" ]; then
+          local key="$ns:$replicas"
+          ns_statefulsets_by_replicas[$key]="${ns_statefulsets_by_replicas[$key]:-}${ns_statefulsets_by_replicas[$key]:+ }$name"
+        fi
+      done
+
+      # Remove node selector from DaemonSets (batch per namespace)
+      for ns in "${!ns_daemonsets[@]}"; do
+        for ds in ${ns_daemonsets[$ns]}; do
+          echo "  Removing node selector from daemonset/$ds in $ns" >&2
+          kubectl patch daemonset "$ds" -n "$ns" --type=json -p='[{"op":"remove","path":"/spec/template/spec/nodeSelector/rag-watcher-disabled"}]' 2>/dev/null || true
+        done
+      done
+
+      # Scale up deployments grouped by namespace and replica count (batch operations)
+      for key in "${!ns_deployments_by_replicas[@]}"; do
+        IFS=':' read -r ns replicas <<< "$key"
+        local deploy_names="${ns_deployments_by_replicas[$key]}"
+        echo "  Scaling up deployments in $ns to $replicas replicas: $deploy_names" >&2
+        kubectl scale deployment $deploy_names -n "$ns" --replicas="$replicas"
+      done
+
+      # Scale up statefulsets grouped by namespace and replica count (batch operations)
+      for key in "${!ns_statefulsets_by_replicas[@]}"; do
+        IFS=':' read -r ns replicas <<< "$key"
+        local sts_names="${ns_statefulsets_by_replicas[$key]}"
+        echo "  Scaling up statefulsets in $ns to $replicas replicas: $sts_names" >&2
+        kubectl scale statefulset $sts_names -n "$ns" --replicas="$replicas"
+      done
+
+      echo "$saved_workloads"
+    }
+
+    # Function: Wait for workloads to be fully restored
+    # Args: $1=workload_list (format: "ns:kind:name:replicas"), $2=timeout (default 600)
+    wait_for_upscale() {
+      local workload_list="$1"
+      local timeout=${2:-600}
+      local interval=15
+      local elapsed=0
+
+      echo "Waiting for all workloads to restore (max $timeout seconds)..." >&2
+
+      # Pre-load skip-verify workload list (one kubectl call instead of one per workload)
+      # Note: Istio workloads (istio-system namespace) are ALWAYS verified regardless of settings
+      local skip_verify_list=""
+      if [ -n "$SKIP_VERIFY_SELECTOR" ]; then
+        skip_verify_list=$(kubectl get deployments,statefulsets,daemonsets -A -l "$SKIP_VERIFY_SELECTOR" -o json 2>/dev/null | jq -r '.items[] | "\(.metadata.namespace):\(.kind | ascii_downcase):\(.metadata.name)"')
+      fi
+
+      while [ $elapsed -lt $timeout ]; do
+        local all_up=true
+        local total_count=0
+        local ready_count=0
+        local not_ready_list=""
+        local workloads_to_pop=""
+
+        for workload in $workload_list; do
+          # Skip empty entries from list manipulation
+          [ -z "$workload" ] && continue
+
+          IFS=':' read -r ns kind name desired <<< "$workload"
+
+          # Skip if parsing failed (empty ns, kind, or name)
+          [ -z "$ns" ] || [ -z "$kind" ] || [ -z "$name" ] && continue
+
+          # Only skip_verify_selector exempts a workload; there is no blanket opt-out.
+          local should_skip_verify=false
+          if [ -n "$skip_verify_list" ] && echo "$skip_verify_list" | grep -q "^$ns:$kind:$name$"; then
+            should_skip_verify=true
+          fi
+
+          # Skip verification if determined (pop it immediately since we don't wait for it)
+          if [ "$should_skip_verify" = "true" ]; then
+            workloads_to_pop="${workloads_to_pop:-}${workloads_to_pop:+ }$workload"
+            continue
+          fi
+
+          total_count=$((total_count + 1))
+
+          local ready available terminating
+          if [ "$kind" = "daemonset" ]; then
+            desired=$(kubectl get "$kind/$name" -n "$ns" -o jsonpath='{.status.desiredNumberScheduled}' 2>/dev/null || echo "0")
+            ready=$(kubectl get "$kind/$name" -n "$ns" -o jsonpath='{.status.numberReady}' 2>/dev/null || echo "0")
+            available=$(kubectl get "$kind/$name" -n "$ns" -o jsonpath='{.status.numberAvailable}' 2>/dev/null || echo "0")
+          else
+            # For deployments/statefulsets, use the original replica count from the label
+            ready=$(kubectl get "$kind/$name" -n "$ns" -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+            available=$(kubectl get "$kind/$name" -n "$ns" -o jsonpath='{.status.availableReplicas}' 2>/dev/null || echo "0")
+          fi
+
+          # Check for terminating pods
+          terminating=$(kubectl get pods -n "$ns" -l "$(kubectl get "$kind/$name" -n "$ns" -o jsonpath='{.spec.selector.matchLabels}' | jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")')" --field-selector status.phase=Running -o json 2>/dev/null | jq '[.items[] | select(.metadata.deletionTimestamp != null)] | length')
+
+          # Handle empty strings as zero
+          desired=${desired:-0}
+          ready=${ready:-0}
+          available=${available:-0}
+          terminating=${terminating:-0}
+
+          # Workload is ready if: ready == desired AND available == desired AND no terminating pods
+          if [ "$ready" = "$desired" ] && [ "$available" = "$desired" ] && [ "$terminating" = "0" ]; then
+            ready_count=$((ready_count + 1))
+            workloads_to_pop="${workloads_to_pop:-}${workloads_to_pop:+ }$workload"
+          else
+            not_ready_list="$not_ready_list\n  $kind/$name in $ns: $ready/$desired ready, $available available, $terminating terminating"
+            all_up=false
+          fi
+        done
+
+        if [ "$all_up" = true ]; then
+          echo "All workloads are restored ($ready_count/$total_count ready)." >&2
+          return 0
+        fi
+        for workload in $workloads_to_pop; do
+          workload_list="${workload_list//$workload/ }"
+        done
+        workload_list="$(echo "$workload_list" | xargs)"
+
+        echo "Progress: $ready_count/$total_count workloads ready ($elapsed/$timeout seconds elapsed)" >&2
+        if [ -n "$not_ready_list" ]; then
+          echo -e "Not ready:$not_ready_list" >&2
+        fi
+
+        sleep $interval
+        elapsed=$((elapsed + interval))
+      done
+
+      echo "WARNING: Not all workloads were restored within timeout."
+      return 1
+    }
+
+    # Function: Apply downscale-upscale refresh strategy to a list of namespaces
+    # Args: $1=namespace_list (space-separated)
+    refresh_namespaces_downscale_upscale() {
+      local namespace_list="$1"
+
+      echo "Applying downscale-upscale strategy to namespaces: $namespace_list"
+
+      # Phase 1: Label all workloads in all namespaces
+      echo ""
+      echo "=== Phase 1: Collecting workload information ==="
+      local all_workloads=""
+      for ns in $namespace_list; do
+        local ns_workloads=$(collect_workload_info "$ns")
+        all_workloads="$all_workloads $ns_workloads"
+      done
+
+      # Trim leading/trailing spaces
+      all_workloads=$(echo "$all_workloads" | xargs)
+
+      if [ -z "$all_workloads" ]; then
+        echo "No workloads found to refresh."
+        return 0
+      fi
+
+      echo "Total workloads to refresh: $(echo "$all_workloads" | wc -w)"
+
+      # Save workload information to ConfigMap
+      echo "Saving workload information to ConfigMap..."
+      kubectl patch configmap "$CONFIG_NAME" -n "$CONFIG_NS" --type merge -p "{\"data\":{\"saved-workloads\":\"$all_workloads\"}}"
+
+      # Phase 2: Downscale all workloads
+      echo ""
+      echo "=== Phase 2: Downscaling workloads ==="
+      downscale_workloads "$all_workloads"
+
+      # Wait for downscale to complete
+      wait_for_downscale "$all_workloads" 600
+
+      # Phase 3: Upscale all workloads
+      echo ""
+      echo "=== Phase 3: Upscaling workloads ==="
+      local upscaled_workloads=$(upscale_workloads)
+
+      # Wait for upscale to complete
+      echo ""
+      echo "=== Phase 4: Waiting for workloads to be ready ==="
+      if wait_for_upscale "$upscaled_workloads" 600; then
+        echo "SUCCESS: All namespaces refreshed successfully."
+
+        # Clear saved workload information from ConfigMap
+        echo "Clearing saved workload information from ConfigMap..."
+        kubectl patch configmap "$CONFIG_NAME" -n "$CONFIG_NS" --type merge -p '{"data":{"saved-workloads":""}}'
+
+        return 0
+      else
+        echo "WARNING: Some workloads did not fully restore within timeout."
+
+        # Clear saved workload information even on timeout
+        echo "Clearing saved workload information from ConfigMap..."
+        kubectl patch configmap "$CONFIG_NAME" -n "$CONFIG_NS" --type merge -p '{"data":{"saved-workloads":""}}'
+
+        return 1
+      fi
+    }
+
+    # Function: Enumerate Running pods eligible for ambient capture in a namespace
+    # Columns: name, hostNetwork, ambient.istio.io/redirection
+    # Args: $1=namespace
+    list_capturable_pods() {
+      # startedAt, not .status.startTime: the latter survives a reboot unchanged.
+      kubectl get pods -n "$1" \
+        --field-selector status.phase=Running \
+        -l 'istio.io/dataplane-mode!=none' \
+        --no-headers \
+        -o custom-columns='A:.metadata.name,B:.spec.hostNetwork,C:.metadata.annotations.ambient\.istio\.io/redirection,D:.status.containerStatuses[0].state.running.startedAt,E:.metadata.ownerReferences[0].kind,F:.metadata.ownerReferences[0].name'
+    }
+
+    # Function: Bounded wait for one owner's pods to be Ready. Scoped to the owner,
+    # not the namespace, which after a reboot holds Unknown pods that never go Ready.
+    # Args: $1=namespace, $2=owner name
+    wait_for_owner_ready() {
+      local ns="$1" owner="$2" waited=0 out total ready
+      local limit="${POD_READY_TIMEOUT%s}"
+
+      while [ "$waited" -lt "$limit" ]; do
+        out=$(kubectl get pods -n "$ns" \
+          -o jsonpath="{range .items[?(@.metadata.ownerReferences[0].name=='$owner')]}{.metadata.name}{'='}{.status.conditions[?(@.type=='Ready')].status}{'\n'}{end}" 2>/dev/null || true)
+        total=$(printf '%s' "$out" | grep -c . || true)
+        ready=$(printf '%s' "$out" | grep -c '=True' || true)
+        if [ "${total:-0}" -gt 0 ] && [ "${total:-0}" -eq "${ready:-0}" ]; then
+          echo "    $ns/$owner ready again (${ready}/${total})"
+          return 0
+        fi
+        sleep 10
+        waited=$((waited + 10))
+      done
+
+      echo "    WARNING: $ns/$owner not ready within ${limit}s - continuing"
+      return 0
+    }
+
+    # Function: Block until the ambient data plane and its CA are serving. Istio's
+    # own pods are dataplane-mode=none so they cannot drift; they only need readiness.
+    # Args: $1=timeout (kubectl duration, e.g. 600s)
+    wait_for_mesh_ready() {
+      local timeout="${1:-600s}"
+      local deploy
+
+      echo "Waiting for ambient data plane in $ISTIO_NS..."
+      kubectl -n "$ISTIO_NS" rollout status ds/istio-cni-node --timeout="$timeout"
+      kubectl -n "$ISTIO_NS" rollout status ds/ztunnel        --timeout="$timeout"
+      kubectl -n "$ISTIO_NS" rollout status deploy/istiod     --timeout="$timeout"
+
+      echo "Waiting for CA in $CA_NS..."
+      # Enumerated, so webhook/cainjector/istio-csr need no hardcoded release names.
+      for deploy in $(kubectl get deploy -n "$CA_NS" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'); do
+        kubectl -n "$CA_NS" rollout status "deploy/$deploy" --timeout="$timeout"
+      done
+
+      # Latest of the two; a pod is only meshed once both serve. RFC3339 sorts as text.
+      local cni_ready zt_ready
+      cni_ready=$(kubectl -n "$ISTIO_NS" get pods -l k8s-app=istio-cni-node \
+        -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].lastTransitionTime}' 2>/dev/null || true)
+      zt_ready=$(kubectl -n "$ISTIO_NS" get pods -l app=ztunnel \
+        -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].lastTransitionTime}' 2>/dev/null || true)
+      MESH_READY_AT="$cni_ready"
+      if [ -n "$zt_ready" ] && { [ -z "$MESH_READY_AT" ] || [ "$zt_ready" \> "$MESH_READY_AT" ]; }; then
+        MESH_READY_AT="$zt_ready"
+      fi
+
+      echo "Ambient data plane and CA are ready (istio-cni $cni_ready, ztunnel $zt_ready)."
+    }
+
+    # Function: Improperly meshed? Never annotated, or annotated retroactively at
+    # CNI-agent startup after the container already connected outside the mesh.
+    # Args: $1=redirection annotation, $2=container startedAt
+    pod_is_drifted() {
+      local redir="$1" started="$2"
+
+      if [ "$redir" = "<none>" ]; then return 0; fi
+      if [ -n "${MESH_READY_AT:-}" ] && [ "$started" != "<none>" ] && [ "$started" \< "$MESH_READY_AT" ]; then
+        return 0
+      fi
+      return 1
+    }
+
+    # Function: Why a pod counts as drifted, for logging.
+    drift_reason() {
+      if [ "$1" = "<none>" ]; then
+        echo "never enrolled"
+      else
+        echo "enrolled, but started $2 before data plane at $MESH_READY_AT"
+      fi
+    }
+
+    # Function: Namespaces holding at least one drifted pod.
+    # Args: $1=namespace_list
+    # Returns: space-separated subset of namespaces on stdout
+    find_drifted_namespaces() {
+      local namespace_list="$1"
+      local ns pod hostnet redir started out=""
+
+      for ns in $namespace_list; do
+        while read -r pod hostnet redir started kind owner; do
+          [ -z "${pod:-}" ] && continue
+          [ "$hostnet" = "true" ] && continue    # host netns is never captured
+          if ! pod_is_drifted "$redir" "$started"; then continue; fi
+          echo "  DRIFT $ns/$pod: $(drift_reason "$redir" "$started")" >&2
+          case " $out " in
+            *" $ns "*) ;;
+            *) out="$out $ns" ;;
+          esac
+        done < <(list_capturable_pods "$ns")
+      done
+
+      echo "$out" | xargs
+    }
+
+    # Function: Restart pods scaling cannot reach — CRD-managed (CNPG Cluster) and
+    # bare pods, which collect_workload_info never sees. One at a time.
+    # Args: $1=namespace_list (space-separated)
+    sweep_unenrolled_pods() {
+      local namespace_list="$1"
+      local ns pod hostnet redir started kind owner swept=0 ns_swept
+
+      echo "Restarting pods that scaling cannot reach..."
+      for ns in $namespace_list; do
+        ns_swept=0
+        while read -r pod hostnet redir started kind owner; do
+          [ -z "${pod:-}" ] && continue
+          [ "$hostnet" = "true" ] && continue    # host netns is never captured
+          # Scalable owners are recreated by the refresh phase; deleting here duplicates it.
+          case "$kind" in
+            ReplicaSet|StatefulSet|DaemonSet|Job|Node) continue ;;
+          esac
+          echo "  deleting $ns/$pod (owner $kind/$owner)"
+          kubectl -n "$ns" delete pod "$pod" --wait=false
+          ns_swept=$((ns_swept + 1))
+          swept=$((swept + 1))
+          # Rolls a multi-instance database instead of losing every instance at once.
+          wait_for_owner_ready "$ns" "$owner"
+        done < <(list_capturable_pods "$ns")
+        if [ "$ns_swept" -gt 0 ]; then
+          echo "  $ns: restarted $ns_swept pod(s)"
+        fi
+      done
+
+      echo "Restarted $swept pod(s) that scaling cannot reach."
+    }
+
+    # Function: Report drift in gate namespaces; bouncing the mesh or its CA risks a
+    # bootstrap deadlock, so it is surfaced rather than repaired.
+    report_gate_drift() {
+      local ns pod hostnet redir found=0
+
+      echo "Checking gate namespaces for drift (report only)..."
+      for ns in $GATE_NAMESPACES; do
+        while read -r pod hostnet redir started kind owner; do
+          [ -z "${pod:-}" ] && continue
+          [ "$hostnet" = "true" ] && continue
+          if ! pod_is_drifted "$redir" "$started"; then continue; fi
+          echo "  WARNING: $ns/$pod $(drift_reason "$redir" "$started") - not auto-repaired"
+          found=$((found + 1))
+        done < <(list_capturable_pods "$ns")
+      done
+
+      if [ "$found" -eq 0 ]; then
+        echo "  gate namespaces clean"
+      else
+        echo "  $found unenrolled pod(s) in gate namespaces need manual attention"
+      fi
+    }
+
+    # Function: jq prints "null" for a missing key; never hand that to kubectl.
+    # Args: $1=value, $2=fallback
+    cfg_or() {
+      if [ -z "$1" ] || [ "$1" = "null" ]; then echo "$2"; else echo "$1"; fi
+    }
+
+    # Main script starts here
+    echo "=== RAG Watcher starting at $(date) ==="
+
+    # Load configuration from ConfigMap
+    CONFIG_NS="{{ .Release.Namespace }}"
+    CONFIG_NAME="{{ include "rag-utils.fullname" . }}-watcher-config"
+
+    echo "Loading configuration from ConfigMap $CONFIG_NS/$CONFIG_NAME"
+    CONFIG_JSON=$(kubectl get configmap "$CONFIG_NAME" -n "$CONFIG_NS" -o json)
+
+    WATCHER_ENABLED=$(echo "$CONFIG_JSON" | jq -r '.data.watcher_enabled')
+    NODE_SELECTOR=$(echo "$CONFIG_JSON" | jq -r '.data.node_selector')
+    SKIP_WORKLOAD_SELECTOR=$(echo "$CONFIG_JSON" | jq -r '.data.skip_workload_selector')
+    SKIP_VERIFY_SELECTOR=$(echo "$CONFIG_JSON" | jq -r '.data.skip_verify_selector')
+    AMBIENT_LABEL=$(cfg_or "$(echo "$CONFIG_JSON" | jq -r '.data.ambient_label')" "istio.io/dataplane-mode=ambient")
+    GATE_NAMESPACES=$(cfg_or "$(echo "$CONFIG_JSON" | jq -r '.data.gate_namespaces')" "istio-system cert-manager")
+    ISTIO_NS=$(cfg_or "$(echo "$CONFIG_JSON" | jq -r '.data.istio_namespace')" "istio-system")
+    CA_NS=$(cfg_or "$(echo "$CONFIG_JSON" | jq -r '.data.ca_namespace')" "cert-manager")
+    MESH_READY_TIMEOUT=$(cfg_or "$(echo "$CONFIG_JSON" | jq -r '.data.mesh_ready_timeout')" "600s")
+    POD_READY_TIMEOUT=$(cfg_or "$(echo "$CONFIG_JSON" | jq -r '.data.pod_ready_timeout')" "300s")
+    NODE_BOOT_IDS=$(echo "$CONFIG_JSON" | jq -r '.data.node_boot_ids')
+
+    echo "Configuration loaded:"
+    echo "  WATCHER_ENABLED: '$WATCHER_ENABLED'"
+    echo "  NODE_SELECTOR: '$NODE_SELECTOR'"
+    echo "  SKIP_WORKLOAD_SELECTOR: '$SKIP_WORKLOAD_SELECTOR'"
+    echo "  SKIP_VERIFY_SELECTOR: '$SKIP_VERIFY_SELECTOR'"
+    echo "  AMBIENT_LABEL: '$AMBIENT_LABEL'"
+    echo "  GATE_NAMESPACES: '$GATE_NAMESPACES'"
+    echo "  ISTIO_NS: '$ISTIO_NS'  CA_NS: '$CA_NS'"
+    echo "  MESH_READY_TIMEOUT: '$MESH_READY_TIMEOUT'  POD_READY_TIMEOUT: '$POD_READY_TIMEOUT'"
+
+    if [ ! "$WATCHER_ENABLED" = "true" ]; then
+      echo "Watcher operation disabled. Skipping this run."
+      exit 0
+    fi
+
+    # Build node selector for kubectl
+    if [ -z "$NODE_SELECTOR" ]; then
+      NODE_SELECTOR_ARG=""
+    else
+      NODE_SELECTOR_ARG="-l $NODE_SELECTOR"
+    fi
+
+    # Check if all selected nodes are Ready
+    echo "Checking if all selected nodes are Ready..."
+    NOT_READY_COUNT=$(kubectl get nodes $NODE_SELECTOR_ARG -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}' | grep -c "False" || true)
+
+    if [ "$NOT_READY_COUNT" -gt 0 ]; then
+      echo "ERROR: $NOT_READY_COUNT node(s) are not Ready. Skipping this run."
+      kubectl get nodes $NODE_SELECTOR_ARG -o wide
+      exit 0
+    fi
+
+    echo "All selected nodes are Ready."
+
+    # Get current boot IDs for all selected nodes
+    echo "Fetching current boot IDs..."
+    CURRENT_BOOT_IDS=$(kubectl get nodes $NODE_SELECTOR_ARG -o json | \
+      jq -c '.items | map({(.metadata.name): .status.nodeInfo.bootID}) | add')
+
+    echo "Current boot IDs: $CURRENT_BOOT_IDS"
+    echo "Stored boot IDs: $NODE_BOOT_IDS"
+
+    # Detect reboots: check if any node has a different non-null boot ID
+    REBOOTED_NODES=""
+
+    # Parse stored boot IDs (handle empty/null case)
+    if [ -z "$NODE_BOOT_IDS" ] || [ "$NODE_BOOT_IDS" = "{}" ]; then
+      echo "No stored boot IDs found. Initializing..."
+      STORED_BOOT_IDS="{}"
+    else
+      STORED_BOOT_IDS="$NODE_BOOT_IDS"
+    fi
+
+    # Compare boot IDs
+    for node in $(echo "$CURRENT_BOOT_IDS" | jq -r 'keys[]'); do
+      CURRENT_BOOT_ID=$(echo "$CURRENT_BOOT_IDS" | jq -r --arg node "$node" '.[$node]')
+      STORED_BOOT_ID=$(echo "$STORED_BOOT_IDS" | jq -r --arg node "$node" '.[$node] // "null"')
+
+      echo "Node $node: stored=$STORED_BOOT_ID, current=$CURRENT_BOOT_ID"
+
+      # Detect reboot: stored is not null AND current is different
+      if [ "$STORED_BOOT_ID" != "null" ] && [ "$STORED_BOOT_ID" != "$CURRENT_BOOT_ID" ]; then
+        echo "REBOOT DETECTED on node $node (boot ID changed from $STORED_BOOT_ID to $CURRENT_BOOT_ID)"
+        REBOOTED_NODES="$REBOOTED_NODES $node"
+      fi
+    done
+
+    # If no reboots detected, finish this run
+    if [ -z "$REBOOTED_NODES" ]; then
+      echo "No reboots detected. Updating boot IDs and finishing."
+      # Update ConfigMap with current boot IDs
+      kubectl patch configmap "$CONFIG_NAME" -n "$CONFIG_NS" --type merge -p "{\"data\":{\"node_boot_ids\":\"$(echo "$CURRENT_BOOT_IDS" | sed 's/"/\\"/g')\"}}"
+      echo "=== RAG Watcher completed at $(date) ==="
+      exit 0
+    fi
+
+    echo "Rebooted nodes detected:$REBOOTED_NODES"
+
+    # Nothing below is meaningful until pods can actually be enrolled.
+    echo ""
+    echo "=== Gate: ambient data plane and CA ==="
+    wait_for_mesh_ready "$MESH_READY_TIMEOUT"
+
+    # After the gate, so a run that times out retries instead of losing the reboot.
+    echo "Updating boot IDs in ConfigMap..."
+    kubectl patch configmap "$CONFIG_NAME" -n "$CONFIG_NS" --type merge -p "{\"data\":{\"node_boot_ids\":\"$(echo "$CURRENT_BOOT_IDS" | sed 's/"/\\"/g')\"}}"
+
+    # The label defines what can drift, so this tracks other layers without knowing them.
+    echo ""
+    echo "=== Discovering ambient namespaces ==="
+    ALL_AMBIENT=$(kubectl get namespaces -l "$AMBIENT_LABEL" -o jsonpath='{.items[*].metadata.name}')
+
+    if [ -z "$ALL_AMBIENT" ]; then
+      echo "ERROR: no namespaces matched '$AMBIENT_LABEL' - verify the label."
+      exit 1
+    fi
+
+    NAMESPACES=""
+    for ns in $ALL_AMBIENT; do
+      case " $GATE_NAMESPACES " in
+        *" $ns "*) echo "  $ns (gate - readiness checked, never refreshed)" ;;
+        *)         echo "  $ns (refresh target)"; NAMESPACES="$NAMESPACES $ns" ;;
+      esac
+    done
+    NAMESPACES=$(echo "$NAMESPACES" | xargs)
+
+    if [ -z "$NAMESPACES" ]; then
+      echo "No refresh targets found. Nothing to do."
+      report_gate_drift
+      echo "=== RAG Watcher completed at $(date) ==="
+      exit 0
+    fi
+
+    # Logged for diagnosis only. The refresh is unconditional: nothing guarantees a
+    # reboot brings ~70 pods up after ztunnel and in dependency order, and a caller
+    # of a drifted service is not itself drifted while its connections are stale.
+    echo ""
+    echo "=== Enrollment drift (informational) ==="
+    find_drifted_namespaces "$NAMESPACES" >/dev/null
+
+    # Data tier first: re-enrolling it after the refresh would leave dependants such
+    # as Keycloak holding a pool to a database pod that then gets deleted.
+    echo ""
+    echo "=== Restarting CRD-managed and bare pods ==="
+    sweep_unenrolled_pods "$NAMESPACES"
+
+    echo ""
+    echo "=== Refreshing all namespaces ==="
+    refresh_namespaces_downscale_upscale "$NAMESPACES"
+
+    echo ""
+    report_gate_drift
+
+    echo "=== RAG Watcher completed at $(date) ==="

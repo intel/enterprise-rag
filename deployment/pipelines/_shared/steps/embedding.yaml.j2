@@ -1,0 +1,30 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# Embedding step - Text to vector conversion via external endpoint          #}
+{#                                                                           #}
+{# EMBEDDING_MODEL_SERVER_ENDPOINT / EMBEDDING_MODEL_SERVER are deliberately  #}
+{# NOT set here. app_pipeline/templates/values.yaml.j2 already renders them   #}
+{# into the embedding-usvc-config ConfigMap - behind an `embedding_endpoint`  #}
+{# guard - and both the deployment and its wait-for-embedding init container  #}
+{# read that ConfigMap via envFrom. Repeating them in this step's config:     #}
+{# would duplicate the same Ansible facts, and for an empty endpoint GMC      #}
+{# would read "" as a downstream service name and fail reconcile.            #}
+step:
+  name: Embedding
+  data: $response
+  dependency: Hard
+  internalService:
+    serviceName: embedding-svc
+    config:
+      endpoint: /v1/embeddings
+resources:
+  embedding-usvc:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 4
+        memory: 4Gi

@@ -1,0 +1,32 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+{{ include "rag-utils.validateNamespace" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rag-utils.fullname" . }}-watcher-config
+  namespace: {{ .Release.Namespace }}
+data:
+  # Map from node id to node boot id; null represents unknown/initial state
+  node_boot_ids: '{}'
+  # Temporary storage for workload information during refresh (format: "ns:kind:name:replicas")
+  saved-workloads: ''
+  # Enable operation of rag watcher
+  watcher_enabled: {{ .Values.rag_watcher.data.watcher_enabled | quote }}
+  # Label selector for nodes to watch (empty = all nodes)
+  node_selector: {{ .Values.rag_watcher.data.node_selector | quote }}
+  # Label selector for workloads to be skipped (not refreshed)
+  skip_workload_selector: {{ .Values.rag_watcher.data.skip_workload_selector | quote }}
+  # Label selector for workloads to skip verification (but still refresh)
+  skip_verify_selector: {{ .Values.rag_watcher.data.skip_verify_selector | quote }}
+  # Namespace label that defines a refresh target
+  ambient_label: {{ .Values.rag_watcher.data.ambient_label | quote }}
+  # Readiness-gated, never refreshed; drift here is reported only
+  gate_namespaces: {{ .Values.rag_watcher.data.gate_namespaces | quote }}
+  istio_namespace: {{ .Values.rag_watcher.data.istio_namespace | quote }}
+  ca_namespace: {{ .Values.rag_watcher.data.ca_namespace | quote }}
+  # Per-workload timeout for the readiness gate
+  mesh_ready_timeout: {{ .Values.rag_watcher.data.mesh_ready_timeout | quote }}
+  # Per-namespace recovery timeout after deleting an unenrolled pod
+  pod_ready_timeout: {{ .Values.rag_watcher.data.pod_ready_timeout | quote }}

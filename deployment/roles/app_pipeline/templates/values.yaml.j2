@@ -1,0 +1,219 @@
+{#
+Copyright (C) 2024-2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+#}
+
+namespace: {{ pipeline_namespace }}
+
+proxy:
+  http_proxy: "{{ http_proxy | default('') }}"
+  https_proxy: "{{ https_proxy | default('') }}"
+  no_proxy: "{{ no_proxy | default('') }}"
+{% if (hugging_token is defined) and (hugging_token != "") %}
+tokens:
+  hug_token: {{ hugging_token }}
+{% endif %}
+common_tag: &tag "{{ tag }}"
+common_registry: &repo "{{ registry }}"
+
+{# Resolve solution language: explicit value or auto-detect from LLM model name #}
+{% if solution_language is defined and solution_language != "auto" %}
+{%   set resolved_language = solution_language %}
+{% elif 'PLLuM' in llm_model_name or 'Bielik' in llm_model_name %}
+{%   set resolved_language = 'pl' %}
+{% else %}
+{%   set resolved_language = 'en' %}
+{% endif %}
+
+embedding_model_name: &embedding_model_name {{ embedding_model_name }}
+reranking_model_name: &reranking_model_name {{ reranking_model_name }}
+ner_model_name: &ner_model_name "tanaos/tanaos-NER-v1"
+
+chat_history:
+  enabled: {{ chat_history_enabled }}
+
+nats:
+  # The router falls back to the fingerprint HTTP read when it cannot reach NATS.
+  url: "{{ nats_url }}"
+  auth:
+    existingSecret: "{{ nats_auth_secret_name }}"
+
+fingerprint:
+  url: "{{ fingerprint_service_url }}"
+  postgres:
+    host: "{{ fingerprint_postgres_host }}"
+    port: {{ fingerprint_postgres_port }}
+    database: "{{ fingerprint_postgres_database }}"
+    username: "{{ fingerprint_postgres_user }}"
+    existingSecret: "{{ fingerprint_postgres_secret_name }}"
+    secretKey: "{{ fingerprint_postgres_secret_key }}"
+
+{% if hpa_enabled is defined %}
+hpa_enabled: {{ hpa_enabled }}
+{% endif %}
+
+images:
+  gmcManager:
+    image: "enterprise-rag-gmcmanager"
+    repository: *repo
+    tag: *tag
+  gmcRouter:
+    image: "enterprise-rag-gmcrouter"
+    repository: *repo
+    tag: *tag
+  text-extractor-usvc:
+    image: "enterprise-rag-text-extractor"
+    repository: *repo
+    tag: *tag
+{% if audio_enabled is defined and audio_enabled %}
+    envs:
+      ASR_MODEL_SERVER_ENDPOINT: "http://asr-svc.{{ audio_namespace }}.svc:9009"
+{% endif %}
+  text-compression-usvc:
+    image: "enterprise-rag-text-compression"
+    repository: *repo
+    tag: *tag
+  text-splitter-usvc:
+    image: "enterprise-rag-text-splitter"
+    repository: *repo
+    tag: *tag
+    envs:
+{# The splitter only calls an embedding service for semantic chunking, via the #}
+{# in-cluster embedding-usvc wrapper — which exists only when the graph has an #}
+{# Embedding node, i.e. when embedding_endpoint is set. No embedding (docsum): #}
+{# leave empty and the wait-for-embedding-svc init container skips.            #}
+{% if embedding_endpoint %}
+      EMBEDDING_SERVICE_ENDPOINT: "http://embedding-usvc:6000/v1/embeddings"
+{% else %}
+      EMBEDDING_SERVICE_ENDPOINT: ""
+{% endif %}
+  embedding-usvc:
+    image: "enterprise-rag-embedding"
+    repository: *repo
+    tag: *tag
+    envs:
+      EMBEDDING_MODEL_NAME: *embedding_model_name
+{% if embedding_endpoint %}
+      EMBEDDING_MODEL_SERVER_ENDPOINT: "{{ embedding_endpoint }}"
+      EMBEDDING_MODEL_SERVER: "vllm"
+{% endif %}
+  reranking-usvc:
+    image: "enterprise-rag-reranking"
+    repository: *repo
+    tag: *tag
+    envs:
+      RERANKING_MODEL_NAME: *reranking_model_name
+{% if reranking_endpoint %}
+      RERANKING_SERVICE_ENDPOINT: "{{ reranking_endpoint }}"
+      RERANKING_MODEL_SERVER: "vllm"
+{% endif %}
+{% if edp_late_chunking_enabled is true %}
+      RERANKING_LATE_CHUNKING_ENABLED: "True"
+{% else %}
+      RERANKING_LATE_CHUNKING_ENABLED: "False"
+{% endif %}
+  prompt-template-usvc:
+    image: "enterprise-rag-prompt_template"
+    repository: *repo
+    tag: *tag
+    envs:
+      PROMPT_TEMPLATE_LANGUAGE: "{{ resolved_language }}"
+  retriever-usvc:
+    image: "enterprise-rag-retriever"
+    repository: *repo
+    tag: *tag
+{% if vector_databases_enabled %}
+    vector_store: {{ vector_databases_vector_store }}
+{% endif %}
+    envs:
+      EMBEDDING_MODEL_NAME: *embedding_model_name
+      METADATA_LANGUAGE: "{{ resolved_language }}"
+{% if ner is defined and ner.enabled is defined and ner.enabled is true %}
+      METADATA_EXTRACTION_MODE: "hybrid"
+      NER_ENDPOINT: "http://retriever-ner-ovms-svc:9001"
+{% else %}
+      METADATA_EXTRACTION_MODE: "off"
+{% endif %}
+{% if edp_rbac_enabled is true  %}
+      VECTOR_DB_RBAC: "true"
+{% endif %}
+{% if vector_databases_enabled %}
+      VECTOR_STORE: {{ vector_databases_vector_store }}
+      VECTOR_DATATYPE: {{ vector_databases_vector_datatype }}
+      VECTOR_DIMS: {{ vector_databases_vector_dims }}
+{% endif %}
+  llm-usvc:
+    image: "enterprise-rag-llm"
+    repository: *repo
+    tag: *tag
+{# All models are served by KServe (solutions-poc.inference) — wire llm-usvc   #}
+{# to the endpoint app_inference_models computed.                              #}
+    envs:
+      LLM_MODEL_SERVER_ENDPOINT: "{{ llm_endpoint }}"
+      LLM_MODEL_NAME: "{{ llm_model_name }}"
+      LLM_MODEL_SERVER: "vllm"
+{% if pipeline_variant == 'output_guard' %}
+      LLM_OUTPUT_GUARD_EXISTS: "True"
+{% endif %}
+  in-guard-usvc:
+    image: "enterprise-rag-in-guard"
+    repository: *repo
+    tag: *tag
+  out-guard-usvc:
+    image: "enterprise-rag-out-guard"
+    repository: *repo
+    tag: *tag
+  ui-usvc:
+    image: "enterprise-rag-chatqna-conversation-ui"
+    repository: *repo
+    tag: *tag
+  langdtct-usvc:
+    image: "enterprise-rag-language-detection"
+    repository: *repo
+    tag: *tag
+  chat-history-usvc:
+    image: "enterprise-rag-chat-history"
+    repository: *repo
+    tag: *tag
+  docsum-usvc:
+    image: "enterprise-rag-docsum"
+    repository: *repo
+    tag: *tag
+{% if llm_max_model_len is defined and llm_max_model_len | string | length > 0 %}
+{# The AI gateway's /v1/models omits max_model_len, so DocSum takes the context #}
+{# length app_inference_models read from the model server.                      #}
+    envs:
+      DOCSUM_MODEL_CONTEXT_LENGTH: "{{ llm_max_model_len }}"
+{% endif %}
+  query-rewrite-usvc:
+    image: "enterprise-rag-query-rewrite"
+    repository: *repo
+    tag: *tag
+  init-container:
+    image: "enterprise-rag-init-container"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+  late-chunking-usvc:
+    image: "enterprise-rag-late-chunking"
+    repository: *repo
+    tag: *tag
+    envs:
+      EMBEDDING_MODEL_NAME: *embedding_model_name
+      EMBEDDING_ENDPOINT: "http://embedding-usvc:6000/v1/embeddings"
+  ovms_ner:
+    image: "enterprise-rag-ovms_ner"
+    repository: *repo
+    tag: *tag
+    pullPolicy: Always
+    envs:
+      NER_MODEL_NAME: *ner_model_name
+      NER_WEIGHT_FORMAT: "int8"
+      OVMS_INTERNAL_PORT: "9000"
+      GATEWAY_PORT: "9001"
+
+# APISIX routes are no longer rendered by the GMC chart — app_pipeline applies
+# them (templates/apisix-routes.yaml.j2) after router-service is Available.
+
+monitoring:
+  enabled: {{ observability_enabled | default(true) | bool | string | lower }}

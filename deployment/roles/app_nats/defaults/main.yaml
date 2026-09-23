@@ -1,0 +1,51 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_nats Role Defaults
+# =============================================================================
+
+# --- Deployment target ---
+nats_namespace: "nats"
+
+# --- Helm ---
+nats_helm_version: "{{ helm_version }}"
+nats_helm_chart_version: "0.1.0"
+nats_helm_release_name: "nats"
+nats_helm_chart_directory: "{{ deployment_dir }}/components/nats"
+nats_helm_default_values_file: "{{ deployment_dir }}/components/nats/values.yaml"
+
+# --- Auth ---
+# Client NKey pair generated once and stored in the nats-auth secret; the seed is
+# mirrored to the consumer namespaces below so the controller and router can
+# mount it. NKey authorization is always on: it keeps the leader-elected
+# controller the sole KV writer. Transport encryption is left to the Istio
+# ambient mesh when Istio is enabled and is otherwise absent.
+nats_auth_secret_name: "nats-auth"
+# Keys every valid nats-auth secret must carry and populate; a secret missing or
+# empty in any of these is treated as incomplete and regenerated.
+nats_auth_required_keys:
+  - "user.nk"
+  - "user.pub"
+nats_client_namespaces:
+  - "{{ gmc_namespace }}"        # gmc controller (Postgres->KV bridge)
+  - "{{ pipeline_namespace }}"   # pipeline namespace (router)
+
+# --- Clustering (off by default; single-server suits single-node clusters) ---
+nats_cluster_enabled: false
+nats_replicas: 3
+
+# --- KV bucket the controller's Postgres->KV bridge maintains ---
+nats_kv_bucket: "fingerprint"
+
+# --- User-supplied Helm values append-block (fed to to_nice_yaml). ---
+nats_additional_values: {}
+
+# --- Cross-role shared defaults - Owned by other roles; declared here so this role is standalone-runnable. ---
+rag_tmp_dir: "{{ tmp_dir }}/rag"                   # app_pre_install (derived from tmp_dir)
+gmc_namespace: "system"                            # app_pipeline
+pipeline_type: "chatqna"                           # app_pipeline
+pipeline_namespace: "{{ pipeline_type | default('chatqna') }}"   # app_pipeline
+secure_logs: true                                  # global
+istio_enabled: false                               # global

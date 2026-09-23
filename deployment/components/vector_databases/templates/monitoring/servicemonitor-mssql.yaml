@@ -1,0 +1,21 @@
+{{- if and (index .Values "mssql" "enabled") (index .Values "mssql" "metrics" "enabled") }}
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mssql-metrics
+  labels:
+    release: {{ .Release.Name }}
+spec:
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mssql-metrics
+  endpoints:
+  - port: "metrics"
+    path: /metrics
+    interval: 30s
+{{- end }}

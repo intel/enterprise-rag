@@ -1,0 +1,50 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# Symmetric to ontap_s3_proxy.yaml. Deleting the edp namespace removes these too,
+# but they are also removed explicitly so a teardown that keeps the namespace
+# (or a switch back to seaweedfs) does not leave a route claiming the S3
+# hostname. Route first, so no request is proxied to a backend that is going away.
+#
+# install.yaml calls this on every run where the proxy is inactive, which is every
+# non-ONTAP deployment, so it is gated on the route existing: without that gate the
+# sweep below issues seven no-op API calls on a cluster that never used ONTAP.
+
+- name: "app_edp | ONTAP S3 | Look for a leftover reverse proxy route"
+  kubernetes.core.k8s_info:
+    api_version: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    name: "{{ edp_ontap_s3_route_name }}"
+    namespace: "{{ edp_namespace }}"
+  register: _edp_ontap_td_route
+  check_mode: false
+  changed_when: false
+
+- name: "app_edp | ONTAP S3 | Remove the reverse proxy objects"
+  when: _edp_ontap_td_route.resources | default([]) | length > 0
+  kubernetes.core.k8s:
+    state: absent
+    api_version: "{{ item.api }}"
+    kind: "{{ item.kind }}"
+    name: "{{ item.name }}"
+    namespace: "{{ edp_namespace }}"
+  loop:
+    - {api: gateway.envoyproxy.io/v1alpha1, kind: SecurityPolicy, name: "{{ edp_ontap_s3_backend_name }}-no-auth"}
+    - {api: gateway.networking.k8s.io/v1, kind: HTTPRoute, name: "{{ edp_ontap_s3_route_name }}"}
+    - {api: gateway.networking.k8s.io/v1alpha3, kind: BackendTLSPolicy, name: "{{ edp_ontap_s3_backend_name }}-tls"}
+    - {api: gateway.envoyproxy.io/v1alpha1, kind: Backend, name: "{{ edp_ontap_s3_backend_name }}"}
+    - {api: discovery.k8s.io/v1, kind: EndpointSlice, name: "{{ edp_ontap_s3_backend_name }}"}
+    - {api: v1, kind: Service, name: "{{ edp_ontap_s3_backend_name }}"}
+    - {api: v1, kind: ConfigMap, name: "{{ edp_ontap_s3_ca_configmap_name }}"}
+  loop_control:
+    label: "{{ item.kind }}/{{ item.name }}"
+  register: _edp_ontap_td
+  # An absent object is already a successful deletion, and the three extension kinds
+  # do not exist at all when envoy-gateway or the Gateway API experimental channel is
+  # not installed. Everything else - RBAC, a webhook, an unreachable apiserver - must
+  # fail: this task runs on every install where the proxy is inactive, and a route
+  # left claiming s3.<domain> silently swallows the browser uploads.
+  failed_when: >-
+    _edp_ontap_td is failed
+    and 'Failed to find exact match' not in (_edp_ontap_td.msg | default(''))

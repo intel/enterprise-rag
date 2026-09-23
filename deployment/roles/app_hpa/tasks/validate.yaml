@@ -1,0 +1,18 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: "app_hpa | Validate — check EDP custom metric"
+  when: edp_enabled | default(false) | bool
+  ansible.builtin.command:
+    cmd: >-
+      kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/edp/services/edp-backend/edp_backend_files_to_upload
+  environment:
+    KUBECONFIG: "{{ kubeconfig | default(lookup('env', 'KUBECONFIG')) }}"
+  register: hpa_edp_check
+  changed_when: false
+  failed_when: hpa_edp_check.rc != 0
+
+- name: "app_hpa | Validate — display EDP metric value"
+  when: edp_enabled | default(false) | bool
+  ansible.builtin.debug:
+    msg: "Custom metric edp_backend_files_to_upload is available: {{ hpa_edp_check.stdout }}"

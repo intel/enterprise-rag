@@ -1,0 +1,75 @@
+---
+- name: "app_post_install | Check pod health after installation"
+  ansible.builtin.include_role:
+    name: app_check_pods
+    tasks_from: install.yaml
+  vars:
+    check_pods_retries: "{{ post_install_role_retries }}"
+    check_pods_no_wait: "{{ post_install_no_wait }}"
+    check_pods_no_fail: "{{ post_install_no_fail }}"
+    check_pods_store_result: "{{ post_install_store_result }}"
+
+- name: "app_post_install | Print deployment summary"
+  ansible.builtin.debug:
+    msg: |
+      ======================================================
+       RAG Deployment — INSTALL {{ 'SUCCEEDED' if check_pods_healthy | default(false) | bool else 'COMPLETED' }}
+      ======================================================
+      UI:        https://{{ ui_domain_name | default('solutions.ai') }}
+      Keycloak:  https://{{ erag_keycloak_domain_name | default('keycloak.solutions.ai') }}
+      {% if telemetry_enabled | default(false) %}
+      Grafana:   https://{{ telemetry_domain_name | default('grafana.solutions.ai') }}
+      {% endif %}
+
+      Namespaces: {{ enabled_namespaces | unique | join(', ') }}
+      Total pods: {{ all_pods | default([]) | length }}
+      ======================================================
+  when: check_pods_healthy | default(false) | bool
+
+- name: "app_post_install | Finalize deployment manifest"
+  ansible.builtin.include_role:
+    name: app_deployment_manifest
+    tasks_from: finalize.yaml
+
+# After the health check, because counting rows in a database that has not
+# finished starting either fails or returns a number nobody can interpret, and
+# before the work directory is removed, because the query Job manifests are
+# rendered into it. Reporting can never fail the install: a rescue turns any
+# problem here into a warning, so a good deployment is not reported as a bad one
+# on account of a count.
+#
+# Install only. upgrade.yaml delegates here for the health check and the manifest
+# finalization, and takes its own pre- and post-snapshots around the whole upgrade —
+# running this one as well would count every store a third time and leave a snapshot
+# report beside the comparison report, claiming an install in the middle of an upgrade.
+- name: "app_post_install | Report what each data store holds"
+  when:
+    - component_action | default('install') == 'install'
+    - data_consistency_install_report | bool
+  block:
+    - name: "app_post_install | Collect the data snapshot"
+      ansible.builtin.include_role:
+        name: app_data_consistency
+        tasks_from: snapshot.yaml
+
+    - name: "app_post_install | Write the data report"
+      ansible.builtin.include_role:
+        name: app_data_consistency
+        tasks_from: report.yaml
+      vars:
+        data_consistency_report_kind: "snapshot"
+  rescue:
+    - name: "app_post_install | Data report could not be produced"
+      ansible.builtin.debug:
+        msg: >-
+          [DATA CONSISTENCY] The install is unaffected, but no data report was
+          written: {{ ansible_failed_result.msg | default('see the task above') }}
+
+# Install only: on an upgrade the snapshot Jobs that run after this delegation render
+# their manifests here, so upgrade.yaml removes the directory itself once the comparison
+# is done.
+- name: "app_post_install | Remove RAG temporary work directory"
+  ansible.builtin.file:
+    path: "{{ rag_tmp_dir }}"
+    state: absent
+  when: component_action | default('install') == 'install'

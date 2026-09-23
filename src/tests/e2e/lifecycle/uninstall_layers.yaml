@@ -1,0 +1,89 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+#
+# Expected cluster state after an es_auto_installer.sh layered teardown.
+# Consumed by test_uninstall.py, selected via the CLUSTER_STATE env var
+# (erag | inference | platform | all). Driven by run_scenario.py from
+# scenarios.yaml (SCENARIO=uninstall, CLUSTER_STATE=<layer>).
+#
+# Per layer:
+#   removed_namespaces  - MUST be absent after the teardown (also flags stuck Terminating)
+#   removed_crd_groups  - CRD API groups owned by the layer that MUST be gone
+#                         (helm does NOT delete CRDs on uninstall; a leftover here is an
+#                          incomplete teardown the roles should clean up explicitly)
+#   retained_namespaces - lower layers that MUST still exist (single-layer teardown in CI:
+#                         full install, then tear down one layer top-down)
+#   allowed_namespaces  - ('all' only) the only namespaces permitted after a full teardown
+#
+# NOTE: the map is intentionally strict — it asserts the *fully clean* end-state.
+
+layers:
+
+  erag:
+    removed_namespaces:
+      - auth-apisix
+      - chat-history
+      - chatqna
+      - edp
+      - fingerprint
+      - mcp-gateway
+      - nats
+      - rag-ui
+      - seaweedfs
+      - vdb
+      - system
+    removed_crd_groups:
+      - apisix.apache.org
+    retained_namespaces:      # inference + platform still installed below erag
+      - kserve
+      - istio-system
+
+  inference:
+    removed_namespaces:
+      - kserve
+      - litellm
+      - langfuse
+      - llm-inference
+      - envoy-ai-gateway-system
+      - node-feature-discovery
+      - lws-system
+    removed_crd_groups:
+      - serving.kserve.io
+      - aigateway.envoyproxy.io
+      - nfd.k8s-sigs.io
+      - config.nri
+      - leaderworkerset.x-k8s.io
+    retained_namespaces:      # platform still installed below inference
+      - istio-system
+      - cert-manager
+
+  platform:
+    removed_namespaces:
+      - cert-manager
+      - cnpg-system
+      - envoy-gateway-system
+      - istio-system
+      - keycloak
+      - metallb-system
+      - minio
+      - monitoring
+      - postgresql
+    removed_crd_groups:
+      - cert-manager.io
+      - monitoring.coreos.com
+      - metallb.io
+      - postgresql.cnpg.io
+      - gateway.envoyproxy.io
+      - networking.istio.io
+      - security.istio.io
+      - telemetry.istio.io
+    retained_namespaces: []   # only infrastructure (bare cluster) remains
+
+  all:
+    # Full teardown (teardown --all): only base Kubernetes / node namespaces may remain.
+    allowed_namespaces:
+      - default
+      - kube-system
+      - kube-public
+      - kube-node-lease
+      - local-path-storage

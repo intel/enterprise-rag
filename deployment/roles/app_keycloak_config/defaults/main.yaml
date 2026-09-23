@@ -1,0 +1,84 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_keycloak_config Role Defaults
+# =============================================================================
+# Configuration overlay for the Keycloak instance deployed by core/keycloak.
+# This role does NOT deploy Keycloak; it only configures realm/clients/users
+# inside an already-running Keycloak (via an in-cluster Job for upgrade
+# safety).
+#
+# Variable ownership:
+#   erag_keycloak_* — this role's own realm/client/domain/OIDC/federation
+#     config. Prefixed to avoid shadowing core/keycloak and inference's
+#     keycloak_realm / keycloak_client_id when they share a playbook.
+#   keycloak_*     — shared, owned by core/keycloak (namespace, admin user,
+#     admin secret). This role reads them; it does not define their meaning.
+
+# --- Realm + domain ---
+erag_keycloak_realm: "EnterpriseRAG"
+erag_keycloak_domain_name: "auth.solutions.ai"
+# erag_keycloak_path_prefix is '' in subdomain mode; set to erag_keycloak_default_path_prefix
+# in path mode by app_pre_install/tasks/solution_config.yaml.
+erag_keycloak_path_prefix: ""
+erag_keycloak_default_path_prefix: "/auth"
+
+# --- Client registration (used by get_secret_id.yaml) ---
+erag_keycloak_client_id: "EnterpriseRAG-oidc-backend"
+
+# --- MCP gateway caller identity (service account, client_credentials only) ---
+mcp_keycloak_client_id: "mcp-client"
+mcp_jwt_audience: "mcp-gateway"
+mcp_access_token_lifespan: 900
+
+# --- Admin secret + namespace fallbacks (core/keycloak owns these at
+#     the playbook level; values default to the core defaults for
+#     standalone use). ---
+keycloak_admin_secret_name: "keycloak-admin-secret"
+
+keycloak_namespace: "keycloak"
+keycloak_admin_user: "admin"
+
+erag_keycloak_oidc_endpoint: ""
+erag_keycloak_oidc_alias: "enterprise-sso"
+erag_keycloak_oidc_client_id: ""
+erag_keycloak_oidc_client_secret: ""
+erag_keycloak_oidc_admin_gid: ""
+erag_keycloak_oidc_maintainer_gid: ""
+erag_keycloak_oidc_user_gid: ""
+erag_keycloak_oidc_tenant_id: ""
+
+# --- LDAP federation (optional; all-empty = disabled) ---
+erag_keycloak_federation_endpoint: ""
+erag_keycloak_federation_bind_dn: ""
+erag_keycloak_federation_bind_password: ""
+erag_keycloak_federation_users_dn: ""
+erag_keycloak_federation_user_attribute: "sAMAccountName"
+erag_keycloak_federation_groups_dn: ""
+erag_keycloak_federation_user_group_ldap_filter: "(cn=erag-user-group)"
+erag_keycloak_federation_maintainer_group_ldap_filter: "(cn=erag-maintainer-group)"
+erag_keycloak_federation_admin_group_ldap_filter: "(cn=erag-admin-group)"
+
+# --- Cross-role shared defaults - Owned by other roles; declared here so this role is standalone-runnable. ---
+edp_minio_domain_name: "seaweedfs.{{ base_domain_name | default('solutions.ai') }}"      # app_edp
+edp_seaweedfs_path_prefix: ""  # app_edp
+ui_domain_name: "{{ base_domain_name | default('solutions.ai') }}"      # app_ui
+telemetry_domain_name: "grafana.{{ base_domain_name | default('solutions.ai') }}"
+telemetry_path_prefix: ""                          # app_pre_install (solution_config);
+rag_log_dir: "{{ log_dir }}/rag"                   # app_pre_install (derived from log_dir)
+rag_tmp_dir: "{{ tmp_dir }}/rag"                   # app_pre_install (derived from tmp_dir)
+secure_logs: true                                  # global
+mcp_enabled: false                                 # pipelines/<flavour>/config.yaml
+
+# --- Grafana OAuth SSO ---
+grafana_oauth_domain: "{{ telemetry_domain_name }}"
+grafana_oauth_path_prefix: "{{ telemetry_path_prefix | default('') }}"
+# Pinned to the realm the configurator Job creates the grafana-oauth client in.
+grafana_oauth_realm: "EnterpriseRAG"
+grafana_oauth_client_secret: ""  # generated/reused at runtime
+grafana_oauth_namespace: "{{ observability_namespace | default('monitoring') }}"
+grafana_oauth_deployment: "kube-prometheus-stack-grafana"
+grafana_oauth_secret_name: "grafana-sso-env"
+grafana_oauth_keycloak_internal_url: "http://keycloak-service.{{ keycloak_namespace | default('keycloak') }}.svc.cluster.local:8080"

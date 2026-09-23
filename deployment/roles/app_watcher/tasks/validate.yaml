@@ -1,0 +1,18 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "app_watcher | Check if watcher CronJob exists"
+  kubernetes.core.k8s_info:
+    api_version: batch/v1
+    kind: CronJob
+    name: "{{ watcher_helm_release_name }}-watcher"
+    namespace: "{{ watcher_namespace }}"
+  register: _watcher_cronjob
+
+- name: "app_watcher | Validate watcher CronJob is present"
+  ansible.builtin.assert:
+    that:
+      - _watcher_cronjob.resources | length > 0
+    fail_msg: "Watcher CronJob not found"
+    success_msg: "Watcher CronJob is present"

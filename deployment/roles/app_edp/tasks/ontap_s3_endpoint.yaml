@@ -1,0 +1,28 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# The storage backend and the ONTAP S3 endpoint, from operator-supplied values only.
+# Shared by ontap_s3_derive.yaml (which runs in app_pre_install, before edp_storage_type
+# is read anywhere) and ontap_s3_resolve.yaml, so the two cannot drift.
+#
+# _resolved_storage_backend is the core storage resolver's normalized output and the
+# documented contract; the fallback keeps this role runnable on its own.
+#
+# ontap_s3_data_lif is the ONTAP object-store endpoint and nothing else. ontap_data_lif is
+# the NFS LIF, so it is only reused as the S3 endpoint when the operator asks for that
+# explicitly with edp_ontap_s3_reverse_proxy: true.
+
+- name: "app_edp | ONTAP S3 | Resolve the storage backend and the S3 endpoint"
+  ansible.builtin.set_fact:
+    _edp_storage_backend: >-
+      {{ _resolved_storage_backend | default(storage_backend | default('local-path'))
+         | string | trim | lower }}
+    _edp_ontap_s3_lif: >-
+      {{ ontap_s3_data_lif | default('', true) | string | trim
+         if (ontap_s3_data_lif | default('', true) | string | trim | length > 0)
+         else (ontap_data_lif | default('', true) | string | trim if _edp_ontap_s3_opted_in else '') }}
+  vars:
+    _edp_ontap_s3_opted_in: >-
+      {{ (edp_ontap_s3_reverse_proxy | string | trim | length > 0)
+         and (edp_ontap_s3_reverse_proxy | bool) }}

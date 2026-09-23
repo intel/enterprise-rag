@@ -1,0 +1,13 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "app_watcher | Uninstall Helm chart"
+  kubernetes.core.helm:
+    name: "{{ watcher_helm_release_name }}"
+    namespace: "{{ watcher_namespace }}"
+    state: absent
+  register: helm_uninstall_result
+  until: helm_uninstall_result is succeeded
+  retries: "{{ helm_retries }}"
+  delay: 15

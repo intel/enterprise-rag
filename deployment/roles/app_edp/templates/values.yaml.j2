@@ -1,0 +1,207 @@
+{#
+Copyright (C) 2024-2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+#}
+
+proxy:
+  http_proxy: "{{ http_proxy | default('') }}"
+  https_proxy: "{{ https_proxy | default('') }}"
+  no_proxy: "{{ no_proxy | default('') }}"
+
+balloonsEnabled: {{ balloons_enabled | default(false) }}
+pipelineNamespace: {{ pipeline_namespace }}
+{# _deploy_overrides is only set when app_inference_models ran with an embedding role #}
+embeddingReplicas: {{ _deploy_overrides.embedding.replicas | default(1) | int }}
+{% if (minimal_configuration | default(false) | bool) or (edp_minimal_configuration | default(false) | bool) %}
+minimalConfiguration: true
+celery:
+  resources:
+    requests:
+      cpu: "100m"
+textExtractor:
+  resources:
+    requests:
+      cpu: "1"
+{% endif %}
+
+embedding_model_name: &embedding_model_name {{ embedding_model_name }}
+
+{% set base_domain_name = base_domain_name | default('solutions.ai') %}
+{% set s3_prefix = edp_s3_domain_prefix if edp_s3_domain_prefix is defined else 's3' %}
+{% set ui_prefix = edp_ui_browser_domain_prefix if edp_ui_browser_domain_prefix is defined else 'seaweedfs' %}
+{% if routing_mode | default('subdomain') == 'path' %}
+{% set s3_api_domain = base_domain_name %}
+{% set ui_browser_domain = base_domain_name %}
+{% set s3_path_prefix = edp_s3_path_prefix | default('/s3') %}
+{% set seaweedfs_path_prefix = edp_seaweedfs_path_prefix | default('/seaweedfs') %}
+{% else %}
+{% set s3_api_domain = edp_s3_api_domain if edp_s3_api_domain is defined else s3_prefix ~ '.' ~ base_domain_name %}
+{% set ui_browser_domain = edp_ui_browser_domain if edp_ui_browser_domain is defined else ui_prefix ~ '.' ~ base_domain_name %}
+{% set s3_path_prefix = '' %}
+{% set seaweedfs_path_prefix = '' %}
+{% endif %}
+
+s3ApiDomain: "{{ s3_api_domain }}"
+uiBrowserDomain: "{{ ui_browser_domain }}"
+{% if s3_path_prefix %}
+seaweedfsPathPrefix: "{{ seaweedfs_path_prefix }}"
+s3PathPrefix: "{{ s3_path_prefix }}"
+{% endif %}
+
+{% set storage = lookup('env', 'edp_storage_type') or edp_storage_type if edp_storage_type is defined else "seaweedfs" %}
+{% if storage == "seaweedfs" %}
+edpAccessKey: {{ EDP_MINIO_ACCESS_KEY }}
+edpSecretKey: {{ EDP_MINIO_SECRET_KEY }}
+edpExternalUrl: "https://{{ s3_api_domain }}{{ s3_path_prefix }}"
+{% if hpa_enabled is defined %}
+hpa_enabled: {{ hpa_enabled }}
+{% endif %}
+{% if edp_rbac_enabled | default(false) | bool %}
+useBearerTokenAuth: true
+{% else %}
+presignedUrlCredentialsSystemFallback: {{ edp_presigned_url_credentials_system_fallback | bool | string | lower }}
+{% endif %}
+edpExternalCertVerify: false
+edpInternalCertVerify: false
+edpOidcClientSecret: {{ edp_client_secret_id }}
+minioBrowserDomain: "{{ ui_browser_domain }}"
+bucketNameRegexFilter: {{ edp_bucket_name_regex_filter | default('.*', true) }}
+{% elif storage == "s3" %}
+edpBaseRegion: "{{ lookup('env', 's3_region') or edp_s3_region }}"
+edpAccessKey: "{{ lookup('env', 's3_access_key') or edp_s3_access_key_id }}"
+edpSecretKey: "{{ lookup('env', 's3_secret_key') or edp_s3_secret_access_key }}"
+edpExternalUrl: "https://s3.amazonaws.com"
+edpInternalUrl: "https://s3.amazonaws.com"
+edpSqsEventQueueUrl: "{{ lookup('env', 's3_sqs_queue') or edp_s3_sqs_event_queue_url }}"
+bucketNameRegexFilter: {{ lookup('env', 's3_bucket_name_regex_filter') or edp_s3_bucket_name_regex_filter | default('.*', true) }}
+presignedUrlCredentialsSystemFallback: {{ edp_presigned_url_credentials_system_fallback | bool | string | lower }}
+{% elif storage == "s3compatible" %}
+edpBaseRegion: "{{ lookup('env', 's3_region') or edp_s3_compatible_region }}"
+edpAccessKey: "{{ lookup('env', 's3_access_key') or edp_s3_compatible_access_key_id }}"
+edpSecretKey: "{{ lookup('env', 's3_secret_key') or edp_s3_compatible_secret_access_key }}"
+edpExternalUrl: "{{ lookup('env', 's3_compatible_endpoint') or edp_s3_compatible_external_url }}"
+edpInternalUrl: "{{ lookup('env', 's3_compatible_endpoint') or edp_s3_compatible_internal_url }}"
+edpExternalCertVerify: "{{ lookup('env', 's3_cert_verify') or edp_s3_compatible_external_cert_verify }}"
+edpInternalCertVerify: "{{ lookup('env', 's3_cert_verify') or edp_s3_compatible_internal_cert_verify }}"
+bucketNameRegexFilter: {{ lookup('env', 's3_bucket_name_regex_filter') or edp_s3_compatible_bucket_name_regex_filter | default('.*', true) }}
+{# External S3 endpoints have no STS, so the presigned-URL path must be allowed to
+   fall back to the system credentials (main.py:252-296). #}
+presignedUrlCredentialsSystemFallback: {{ edp_presigned_url_credentials_system_fallback | bool | string | lower }}
+{% endif %}
+
+edpOidcConfigUrl: "http://keycloak-service.{{ keycloak_namespace | default('keycloak') }}.svc:8080/realms/{{ ui_keycloak_realm | default('EnterpriseRAG') }}/.well-known/openid-configuration"
+
+# Use external Redis Operator cluster in same namespace
+redisHost: "edp-redis"
+redisPort: "6379"
+redisUsername: {{ edp_redis_username }}
+redisPassword: "{{ EDP_REDIS_PASSWORD }}"
+
+postgresDatabasePassword: {{ EDP_POSTGRESQL_PASSWORD }}
+postgresAdminPassword: {{ EDP_POSTGRESQL_ADMIN_PASSWORD }}
+
+{% if erag_keycloak_oidc_tenant_id | default('', true) | string | trim | length > 0 %}
+sharepointTenantId: {{ erag_keycloak_oidc_tenant_id | default('', true) | string | to_json }}
+sharepointClientId: {{ erag_keycloak_oidc_client_id | default('', true) | string | to_json }}
+sharepointClientSecret: {{ erag_keycloak_oidc_client_secret | default('', true) | string | to_json }}
+keycloakBrokerIdpAlias: {{ erag_keycloak_oidc_alias | default('', true) | string | to_json }}
+{% endif %}
+sharepointSyncLockTtlSeconds: "{{ edp_sp_sync_lock_ttl_seconds }}"
+
+celery:
+  tag: "{{ tag }}"
+  repository: "{{ registry }}"
+{% if edp_scheduled_sync_enabled | default(false) | bool %}
+  config:
+    scheduledSync:
+      enabled: true
+      syncPeriodSeconds: "{{ edp_scheduled_sync_period_seconds | default('60') }}"
+      sharepointSyncPeriodSeconds: "{{ edp_scheduled_sync_sharepoint_period_seconds | default(edp_scheduled_sync_period_seconds | default('60')) }}"
+{% endif %}
+flower:
+  tag: "{{ tag }}"
+  repository: "{{ registry }}"
+backend:
+  tag: "{{ tag }}"
+  repository: "{{ registry }}"
+{% if edp_rbac_enabled | default(false) | bool %}
+  config:
+    rbac:
+      enabled: true
+      validationType: "{{ edp_rbac_validation_type | default('ALWAYS') }}"
+      cacheExpiration: "{{ edp_rbac_cache_expiration | default('600') }}"
+      staticConfig: {{ edp_rbac_static_config | default('["default"]') | to_json }}
+{% endif %}
+{% if edp_late_chunking_enabled is true %}
+lateChunking:
+  enabled: {{ edp_late_chunking_enabled }}
+  tag: "{{ tag }}"
+  repository: "{{ registry }}"
+  name: "enterprise-rag-late-chunking"
+  config:
+    chunk_size: "{{ edp_late_chunking_chunk_size | default('512') }}"
+    chunk_overlap: "{{ edp_late_chunking_chunk_overlap | default('0') }}"
+    embedding_service_endpoint: "http://embedding-svc.{{ pipeline_namespace }}.svc:6000/v1/embeddings"
+    model_name: "{{ edp_late_chunking_model_name }}"
+{% else %}
+textExtractor:
+  tag: "{{ tag }}"
+  repository: "{{ registry }}"
+{% if audio_enabled is defined and audio_enabled %}
+  config:
+    asr_model_server_endpoint: "http://asr-svc.{{ audio_namespace }}.svc:9009"
+{% endif %}
+textCompression:
+  tag: "{{ tag }}"
+  repository: "{{ registry }}"
+textSplitter:
+  tag: "{{ tag }}"
+  repository: "{{ registry }}"
+  config:
+    embedding_service_endpoint: "http://embedding-svc.{{ pipeline_namespace }}.svc:6000/v1/embeddings"
+{% if edp_semantic_chunking_enabled is true %}
+    use_semantic_chunking: "True"
+{% endif %}
+{% endif %}
+ingestion:
+  tag: "{{ tag }}"
+  repository: "{{ registry }}"
+  config:
+{% if edp_ingestion_config is defined and edp_ingestion_config %}
+{{ edp_ingestion_config | to_nice_yaml | indent(4, true) }}
+{% endif %}
+    embedding_model_name: *embedding_model_name
+    vector_dims: {{ vector_databases_vector_dims }}
+    vector_datatype: {{ vector_databases_vector_datatype }}
+{% if edp_late_chunking_enabled is true %}
+    use_late_chunking: "True"
+{% endif %}
+embedding:
+  enabled: false
+  remoteEmbeddingUri: "http://embedding-svc.{{ pipeline_namespace }}.svc:6000/v1/embeddings"
+  repository: "{{ registry }}"
+dpguard:
+  enabled: {{ edp_dp_guard_enabled }}
+  tag: "{{ tag }}"
+  repository: "{{ registry }}"
+awsSqs:
+  enabled: {{ "true" if storage == "s3" else "false" }}
+  tag: {{ tag }}
+  repository: {{ registry }}
+
+# --- APISIX route wiring (consumed by templates/apisix-routes.yaml in this chart) ---
+{% set _apisix_kc_ns = keycloak_namespace | default('keycloak') %}
+{% set _apisix_realm = (ui_keycloak_realm if (ui_keycloak_realm | default("") | length > 0) else erag_keycloak_realm | default("EnterpriseRAG")) %}
+{% set _apisix_kc_base = 'http://keycloak-service.' ~ _apisix_kc_ns ~ '.svc:8080' %}
+apisix:
+  enabled: {{ (apisix_enabled | default(false)) | bool | string | lower }}
+  ingressClassName: apisix
+  routeHost: "{{ (ui_domain_name if ui_domain_name is defined else '') }}"
+  auth:
+    realm: "{{ _apisix_realm }}"
+    client_id: "{{ apisix_oidc_client_id | default('EnterpriseRAG-oidc-backend') }}"
+    resource_registration_endpoint: "{{ _apisix_kc_base }}/realms/{{ _apisix_realm }}/authz/protection/resource_set"
+    token_endpoint: "{{ _apisix_kc_base }}/realms/{{ _apisix_realm }}/protocol/openid-connect/token"
+
+monitoring:
+  enabled: {{ observability_enabled | default(true) | bool | string | lower }}

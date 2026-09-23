@@ -1,0 +1,144 @@
+# https://github.com/apache/apisix-helm-chart/blob/master/charts/
+
+# APISIX Helm chart configs
+apisix:
+  serviceAccount:
+    create: true
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 636
+    runAsGroup: 636
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    runAsNonRoot: true
+    runAsUser: 636
+    seccompProfile:
+      type: RuntimeDefault
+  ingress-controller:
+    enabled: true
+    rbac:
+      create: true
+    serviceAccount:
+      create: true
+    deployment:
+      podSecurityContext:
+        fsGroup: 2000
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+    # Controller 2.1.0 (via apisix chart 2.14.1) is required: 2.0.1 wrongly gated
+    # startup readiness on status-only ApisixUpstream/ApisixPluginConfig that never
+    # mark done, so the provider blocked on a hardcoded 5m WaitReady timeout before
+    # its first sync
+    gatewayProxy:
+      createDefault: true
+      provider:
+        type: ControlPlane
+        controlPlane:
+          service:
+            name: auth-apisix-admin
+            port: 9180
+  # Disable built-in etcd subchart (we deploy our own via templates/etcd.yaml)
+  etcd:
+    enabled: false
+  # Configure external etcd (no auth - Istio mTLS handles security)
+  externalEtcd:
+    host:
+      - http://auth-apisix-etcd-client:2379
+    user: "" # Empty for disabled auth, security handled by Istio mTLS
+  extraInitContainers:
+    - name: wait-for-etcd
+      image: alpine/curl
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        runAsUser: 636
+        seccompProfile:
+          type: RuntimeDefault
+      command:
+        - sh
+        - -c
+        - |
+          echo "Waiting for etcd to be ready..."
+          until curl -sf http://auth-apisix-etcd-client:2379/health | grep -q '"health":"true"'; do
+            echo "etcd not ready, waiting..."
+            sleep 3
+          done
+          echo "etcd is ready!"
+  apisix:
+    nginx:
+      configurationSnippet:
+        httpStart: |
+          proxy_read_timeout 3600s;
+          proxy_send_timeout 3600s;
+
+# Custom etcd deployment (CoreOS etcd without auth - Istio mTLS for security)
+etcd:
+  enabled: true
+  image:
+    repository: quay.io/coreos/etcd
+    tag: v3.5.15
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 8Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  # Cluster configuration
+  clusterToken: "apisix-etcd-cluster"
+  # Security context
+  securityContext:
+    fsGroup: 1000
+    runAsUser: 1000
+    runAsNonRoot: true
+  # Probes configuration
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+
+# Cluster-level APISIX resources owned by this chart (one-time, gateway-scoped):
+#   - ApisixUpstream in `default` ns pointing at kubernetes.default.svc
+#   - ClusterRole/Binding granting the APISIX SA read-only access to K8s
+# Per-pipeline watcher ApisixRoutes are emitted by the gmc chart.
+k8sApi:
+  enabled: true
+  upstreamName: kubernetes-api-upstream
+  ingressClassName: apisix
+  rbac:
+    enabled: true
+    clusterRoleName: auth-apisix-k8s-api-reader
+    clusterRoleBindingName: auth-apisix-k8s-api-reader-binding
+    serviceAccountName: auth-apisix
+    serviceAccountNamespace: auth-apisix

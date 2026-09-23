@@ -1,0 +1,198 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if .Values.serviceAccount.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "gmc.serviceAccountName" . }}
+  labels:
+    {{- include "gmc.labels" . | nindent 4 }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+{{- end }}
+---
+{{- $clusterRoleName := printf "%s-manager-role-%s" (include "gmc.fullname" .) .Release.Namespace }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $clusterRoleName }}
+rules:
+# The controller renders and applies these across pipeline namespaces
+# (chatqna/docsum/...), so the role is cluster-scoped. Secrets are intentionally
+# absent: the webhook certificate is generated in memory and the NATS/Postgres
+# secrets are mounted by the kubelet, never read through the API.
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - configmaps
+  - serviceaccounts
+  - persistentvolumeclaims
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+# The controller records Events on a GMConnector.
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - gmc.erag.intel.com
+  resources:
+  - gmconnectors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - gmc.erag.intel.com
+  resources:
+  - gmconnectors/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - gmc.erag.intel.com
+  resources:
+  - gmconnectors/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+    - admissionregistration.k8s.io
+  resources:
+    - validatingwebhookconfigurations
+  verbs:
+    - create
+    - get
+    - update
+    - list
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+  - get
+  - update
+# The controller records Events for a skipped step and a missing monitoring CRD,
+# and leader election records one on the Lease. The recorder aggregates repeats
+# into an existing Event, so it patches as well as creates.
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  - podmonitors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    {{- include "gmc.labels" . | nindent 4 }}
+  name: {{ include "gmc.fullname" . }}-manager-rolebinding-{{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $clusterRoleName }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "gmc.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+{{- if .Values.balloons.enabled }}
+---
+{{- $balloonsClusterRoleName := "nri-readiness-reader" }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $balloonsClusterRoleName }}
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $balloonsClusterRoleName }}-binding-{{ .Values.namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $balloonsClusterRoleName }}
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: {{ .Values.namespace }}
+{{- end }}

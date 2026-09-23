@@ -1,0 +1,16 @@
+---
+- name: "app_audio | Uninstall Audio Helm chart"
+  kubernetes.core.helm:
+    name: "{{ audio_helm_release_name }}"
+    release_namespace: "{{ audio_namespace }}"
+    state: absent
+    wait: true
+    wait_timeout: "300s"
+  ignore_errors: true
+
+- name: "app_audio | Delete namespace"
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Namespace
+    name: "{{ audio_namespace }}"
+    state: absent

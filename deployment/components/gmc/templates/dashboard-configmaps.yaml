@@ -1,0 +1,20 @@
+{{- if .Values.monitoring.enabled }}
+{{- $files := .Files.Glob "files/dashboards/*.json" }}
+{{- range $path, $_ := $files }}
+{{- $name := regexReplaceAll "(^.*/)(.*)\\.json$" $path "${2}" }}
+{{- if or (ne $name "hpa") ($.Values.hpa_enabled | default false) }}
+---
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "rag-dashboard-%s" $name | trunc 63 | trimSuffix "-" }}
+  namespace: {{ $.Values.monitoring.dashboardNamespace }}
+  labels:
+    grafana_dashboard: "1"
+data:
+  {{ $name }}.json: {{ $.Files.Get $path | toJson }}
+{{- end }}
+{{- end }}
+{{- end }}

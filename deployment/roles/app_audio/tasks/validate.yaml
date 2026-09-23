@@ -1,0 +1,4 @@
+---
+- name: "app_audio | validate — no-op"
+  ansible.builtin.debug:
+    msg: 'app_audio validate: nothing to do'

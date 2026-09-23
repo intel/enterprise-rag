@@ -1,0 +1,330 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Collect a data consistency snapshot from every active data store.
+# Sets fact: _data_snapshot (dict of per-store count, status, method, reason)
+#
+# Every store is optional. A namespace that is absent, a component that is
+# disabled, a toggle the operator switched off, or a vector store this role
+# cannot count is recorded as skipped together with the reason, never treated as
+# empty. A store that is counted is counted by an in-cluster Job whose failure
+# fails the run — a count is either measured or absent, never assumed.
+
+- name: "app_data_consistency | Snapshot — initialize"
+  ansible.builtin.set_fact:
+    _data_snapshot: {}
+    _snapshot_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+    _snapshot_file_timestamp: "{{ lookup('pipe', 'date -u +%Y%m%dT%H%M%SZ') }}"
+
+# --- Vector store (Redis) ---
+- name: "app_data_consistency | Snapshot — vector store: check namespace"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Namespace
+    name: "{{ vector_databases_namespace }}"
+  register: _dc_vdb_ns
+  failed_when: false
+
+# Normalized first so the guard reads one value in every case. An environment
+# that leaves vector_databases_vector_store out of its configuration gets this
+# role's default; an environment that names the key but gives it no value gets
+# an empty string, which is a stated skip rather than a store called "None".
+- name: "app_data_consistency | Snapshot — vector store: resolve configured store"
+  ansible.builtin.set_fact:
+    _dc_vdb_store: "{{ vector_databases_vector_store | default('', true) | trim }}"
+
+- name: "app_data_consistency | Snapshot — vector store: resolve guards"
+  ansible.builtin.set_fact:
+    _dc_vdb_skip_reason: >-
+      {{ ('namespace ' ~ vector_databases_namespace ~ ' is not present')
+           if (_dc_vdb_ns.resources | length == 0)
+         else ('vector_databases_enabled is false')
+           if not (vector_databases_enabled | bool)
+         else ('data_consistency_check_vdb is false')
+           if not (data_consistency_check_vdb | bool)
+         else ('vector_databases_vector_store is set to no value')
+           if (_dc_vdb_store | length == 0)
+         else ('no counter for vector store ' ~ _dc_vdb_store)
+           if (_dc_vdb_store not in data_consistency_redis_stores)
+         else '' }}
+
+- name: "app_data_consistency | Snapshot — vector store: count keys"
+  when: _dc_vdb_skip_reason | trim | length == 0
+  block:
+    - name: "app_data_consistency | Snapshot — vector store: resolve workload"
+      ansible.builtin.include_tasks: resolve_workload.yaml
+      vars:
+        dcw_store: vdb
+        dcw_namespace: "{{ vector_databases_namespace }}"
+        dcw_workload: "{{ data_consistency_vdb_statefulset }}"
+        dcw_container: "{{ data_consistency_vdb_container }}"
+
+    - name: "app_data_consistency | Snapshot — vector store: run query Job"
+      ansible.builtin.include_tasks: query_job.yaml
+      vars:
+        dcj_store: vdb
+        dcj_label: vector-store
+        dcj_namespace: "{{ vector_databases_namespace }}"
+        dcj_image: "{{ _dcw_image }}"
+        dcj_script: query_vector_store.sh
+        dcj_env:
+          - name: REDISCLI_AUTH
+            secret: "{{ data_consistency_vdb_secret_name }}"
+            key: REDIS_PASSWORD
+          - name: NAMESPACE
+            value: "{{ vector_databases_namespace }}"
+          - name: POD_BASENAME
+            value: "{{ data_consistency_vdb_statefulset }}"
+          - name: HEADLESS_SERVICE
+            value: "{{ _dcw_service }}"
+          - name: CLUSTER_NODES
+            value: "{{ _dcw_replicas }}"
+          - name: REDIS_PORT
+            value: "{{ data_consistency_vdb_port }}"
+
+    - name: "app_data_consistency | Snapshot — vector store: record"
+      ansible.builtin.set_fact:
+        _data_snapshot: >-
+          {{ _data_snapshot | combine({'vdb': {
+               'count': _dcj_count | int, 'status': 'ok',
+               'method': 'redis DBSIZE summed over cluster masters'}}) }}
+
+- name: "app_data_consistency | Snapshot — vector store: record skip"
+  ansible.builtin.set_fact:
+    _data_snapshot: >-
+      {{ _data_snapshot | combine({'vdb': {
+           'count': 0, 'status': 'skipped', 'method': 'none',
+           'reason': _dc_vdb_skip_reason | trim}}) }}
+  when: _dc_vdb_skip_reason | trim | length > 0
+
+# --- Chat history (FerretDB on PostgreSQL documentdb) ---
+- name: "app_data_consistency | Snapshot — chat history: check namespace"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Namespace
+    name: "{{ chat_history_namespace }}"
+  register: _dc_ch_ns
+  failed_when: false
+
+- name: "app_data_consistency | Snapshot — chat history: resolve guards"
+  ansible.builtin.set_fact:
+    _dc_ch_skip_reason: >-
+      {{ ('namespace ' ~ chat_history_namespace ~ ' is not present')
+           if (_dc_ch_ns.resources | length == 0)
+         else ('chat_history_enabled is false')
+           if not (chat_history_enabled | bool)
+         else ('data_consistency_check_chat_history is false')
+           if not (data_consistency_check_chat_history | bool)
+         else '' }}
+
+- name: "app_data_consistency | Snapshot — chat history: count documents"
+  when: _dc_ch_skip_reason | trim | length == 0
+  block:
+    - name: "app_data_consistency | Snapshot — chat history: resolve workload"
+      ansible.builtin.include_tasks: resolve_workload.yaml
+      vars:
+        dcw_store: chat_history
+        dcw_namespace: "{{ chat_history_namespace }}"
+        dcw_workload: "{{ data_consistency_chat_history_statefulset }}"
+        dcw_container: "{{ data_consistency_postgresql_container }}"
+
+    - name: "app_data_consistency | Snapshot — chat history: run query Job"
+      ansible.builtin.include_tasks: query_job.yaml
+      vars:
+        dcj_store: chat_history
+        dcj_label: chat-history
+        dcj_namespace: "{{ chat_history_namespace }}"
+        dcj_image: "{{ _dcw_image }}"
+        dcj_script: query_postgresql.sh
+        dcj_env:
+          - name: PGHOST
+            value: "{{ _dcw_service }}"
+          - name: PGPORT
+            value: "{{ data_consistency_postgresql_port }}"
+          - name: PGUSER
+            secret: "{{ chat_history_db_password_secret_name }}"
+            key: POSTGRES_USER
+          - name: PGPASSWORD
+            secret: "{{ chat_history_db_password_secret_name }}"
+            key: POSTGRES_PASSWORD
+          - name: PGDATABASE
+            secret: "{{ chat_history_db_password_secret_name }}"
+            key: POSTGRES_DB
+          - name: COUNT_SQL
+            value: "{{ data_consistency_chat_history_count_sql }}"
+
+    - name: "app_data_consistency | Snapshot — chat history: record"
+      ansible.builtin.set_fact:
+        _data_snapshot: >-
+          {{ _data_snapshot | combine({'chat_history': {
+               'count': _dcj_count | int, 'status': 'ok',
+               'method': 'documentdb collection count'}}) }}
+
+- name: "app_data_consistency | Snapshot — chat history: record skip"
+  ansible.builtin.set_fact:
+    _data_snapshot: >-
+      {{ _data_snapshot | combine({'chat_history': {
+           'count': 0, 'status': 'skipped', 'method': 'none',
+           'reason': _dc_ch_skip_reason | trim}}) }}
+  when: _dc_ch_skip_reason | trim | length > 0
+
+# --- Enterprise data platform (file rows in PostgreSQL) ---
+- name: "app_data_consistency | Snapshot — data platform: check namespace"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Namespace
+    name: "{{ edp_namespace }}"
+  register: _dc_edp_ns
+  failed_when: false
+
+- name: "app_data_consistency | Snapshot — data platform: resolve guards"
+  ansible.builtin.set_fact:
+    _dc_edp_skip_reason: >-
+      {{ ('namespace ' ~ edp_namespace ~ ' is not present')
+           if (_dc_edp_ns.resources | length == 0)
+         else ('edp_enabled is false')
+           if not (edp_enabled | bool)
+         else ('data_consistency_check_edp is false')
+           if not (data_consistency_check_edp | bool)
+         else '' }}
+
+- name: "app_data_consistency | Snapshot — data platform: count files"
+  when: _dc_edp_skip_reason | trim | length == 0
+  block:
+    - name: "app_data_consistency | Snapshot — data platform: resolve workload"
+      ansible.builtin.include_tasks: resolve_workload.yaml
+      vars:
+        dcw_store: edp
+        dcw_namespace: "{{ edp_namespace }}"
+        dcw_workload: "{{ data_consistency_edp_statefulset }}"
+        dcw_container: "{{ data_consistency_postgresql_container }}"
+
+    - name: "app_data_consistency | Snapshot — data platform: run query Job"
+      ansible.builtin.include_tasks: query_job.yaml
+      vars:
+        dcj_store: edp
+        dcj_label: data-platform
+        dcj_namespace: "{{ edp_namespace }}"
+        dcj_image: "{{ _dcw_image }}"
+        dcj_script: query_postgresql.sh
+        dcj_env:
+          - name: PGHOST
+            secret: "{{ data_consistency_edp_secret_name }}"
+            key: DATABASE_HOST
+          - name: PGPORT
+            secret: "{{ data_consistency_edp_secret_name }}"
+            key: DATABASE_PORT
+          - name: PGUSER
+            secret: "{{ data_consistency_edp_secret_name }}"
+            key: DATABASE_USER
+          - name: PGPASSWORD
+            secret: "{{ data_consistency_edp_secret_name }}"
+            key: DATABASE_PASSWORD
+          - name: PGDATABASE
+            secret: "{{ data_consistency_edp_secret_name }}"
+            key: DATABASE_NAME
+          - name: COUNT_SQL
+            value: "{{ data_consistency_edp_count_sql }}"
+
+    - name: "app_data_consistency | Snapshot — data platform: record"
+      ansible.builtin.set_fact:
+        _data_snapshot: >-
+          {{ _data_snapshot | combine({'edp': {
+               'count': _dcj_count | int, 'status': 'ok',
+               'method': 'postgresql files table count'}}) }}
+
+- name: "app_data_consistency | Snapshot — data platform: record skip"
+  ansible.builtin.set_fact:
+    _data_snapshot: >-
+      {{ _data_snapshot | combine({'edp': {
+           'count': 0, 'status': 'skipped', 'method': 'none',
+           'reason': _dc_edp_skip_reason | trim}}) }}
+  when: _dc_edp_skip_reason | trim | length > 0
+
+# --- Identity provider (realm user count) ---
+- name: "app_data_consistency | Snapshot — identity: check namespace"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Namespace
+    name: "{{ keycloak_namespace }}"
+  register: _dc_kc_ns
+  failed_when: false
+
+- name: "app_data_consistency | Snapshot — identity: resolve guards"
+  ansible.builtin.set_fact:
+    _dc_kc_skip_reason: >-
+      {{ ('namespace ' ~ keycloak_namespace ~ ' is not present')
+           if (_dc_kc_ns.resources | length == 0)
+         else ('keycloak_enabled is false')
+           if not (keycloak_enabled | bool)
+         else ('data_consistency_check_keycloak is false')
+           if not (data_consistency_check_keycloak | bool)
+         else '' }}
+
+# No workload lookup here: the identity server's own image carries no HTTP
+# client, so the query runs the initialization image the identity configurator
+# Job already uses, which does.
+- name: "app_data_consistency | Snapshot — identity: count realm users"
+  when: _dc_kc_skip_reason | trim | length == 0
+  block:
+    - name: "app_data_consistency | Snapshot — identity: run query Job"
+      ansible.builtin.include_tasks: query_job.yaml
+      vars:
+        dcj_store: keycloak
+        dcj_label: identity
+        dcj_namespace: "{{ keycloak_namespace }}"
+        dcj_image: "{{ data_consistency_init_container_image }}"
+        dcj_script: query_identity.sh
+        dcj_shell: /bin/bash
+        dcj_env:
+          - name: KEYCLOAK_URL
+            value: "{{ data_consistency_keycloak_url }}"
+          - name: KEYCLOAK_REALM
+            value: "{{ erag_keycloak_realm }}"
+          - name: KEYCLOAK_ADMIN_USER
+            value: "{{ keycloak_admin_user }}"
+          - name: KEYCLOAK_ADMIN_PASSWORD
+            secret: "{{ keycloak_admin_secret_name }}"
+            key: password
+
+    - name: "app_data_consistency | Snapshot — identity: record"
+      ansible.builtin.set_fact:
+        _data_snapshot: >-
+          {{ _data_snapshot | combine({'keycloak': {
+               'count': _dcj_count | int, 'status': 'ok',
+               'method': 'admin API realm user count'}}) }}
+
+- name: "app_data_consistency | Snapshot — identity: record skip"
+  ansible.builtin.set_fact:
+    _data_snapshot: >-
+      {{ _data_snapshot | combine({'keycloak': {
+           'count': 0, 'status': 'skipped', 'method': 'none',
+           'reason': _dc_kc_skip_reason | trim}}) }}
+  when: _dc_kc_skip_reason | trim | length > 0
+
+- name: "app_data_consistency | Snapshot — summary"
+  ansible.builtin.debug:
+    msg: >-
+      [DATA SNAPSHOT] {{ _snapshot_timestamp }}:
+      {% for store, data in _data_snapshot.items() %}
+      {{ store }}={{ data.count }} ({{ data.status }}){{ ', ' if not loop.last else '' }}
+      {% endfor %}
+
+# The caller asks for the raw snapshot to be kept by setting a label; the file
+# name carries it, so a pre-upgrade snapshot and a post-upgrade one do not
+# collide.
+- name: "app_data_consistency | Snapshot — persist raw snapshot"
+  when: data_consistency_snapshot_label | length > 0
+  block:
+    - name: "app_data_consistency | Snapshot — ensure the report directory exists"
+      ansible.builtin.file:
+        path: "{{ data_consistency_report_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: "app_data_consistency | Snapshot — write raw snapshot file"
+      ansible.builtin.copy:
+        content: "{{ _data_snapshot | to_nice_yaml }}"
+        dest: >-
+          {{ data_consistency_report_dir }}/snapshot-{{ _snapshot_file_timestamp }}-{{ data_consistency_snapshot_label }}.yaml
+        mode: "0644"

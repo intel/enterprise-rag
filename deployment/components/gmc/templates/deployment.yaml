@@ -1,0 +1,156 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gmc.fullname" . }}-controller
+  labels:
+    {{- include "gmc.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.gmc.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "gmc.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.gmc.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "gmc.labels" . | nindent 8 }}
+        {{- with .Values.gmc.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "gmc.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: wait-for-fingerprint
+          image: alpine/curl
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - name: FINGERPRINT_SERVICE_URL
+              value: {{ .Values.fingerprint.url | quote }}
+          command:
+            - sh
+            - -c
+            - |
+                if [ -z "$FINGERPRINT_SERVICE_URL" ]; then
+                  echo "ERROR: FINGERPRINT_SERVICE_URL is not set.";
+                  exit 1;
+                fi;
+                HEALTH_URL="${FINGERPRINT_SERVICE_URL%/}/v1/health_check";
+                MAX_WAIT_SECONDS=300;
+                SLEEP_SECONDS=2;
+                ELAPSED=0;
+                echo "Waiting for fingerprint service at ${HEALTH_URL} ...";
+                until [ "$ELAPSED" -ge "$MAX_WAIT_SECONDS" ]; do
+                  if [ "$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 "$HEALTH_URL")" = "200" ]; then
+                    echo "Fingerprint service is ready.";
+                    exit 0;
+                  fi;
+                  echo "Fingerprint not ready yet (${ELAPSED}s/${MAX_WAIT_SECONDS}s). Retrying...";
+                  sleep "$SLEEP_SECONDS";
+                  ELAPSED=$((ELAPSED + SLEEP_SECONDS));
+                done;
+                echo "ERROR: Timed out waiting for fingerprint service readiness.";
+                exit 1;
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "manifest.image" (list "gmcManager" .Values) | quote }}
+          imagePullPolicy: {{ .Values.images.gmcManager.pullPolicy }}
+          env:
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: TARGET_NAMESPACE
+            value: {{ .Values.namespace | default "chatqna" | quote }}
+          - name: GMC_CONFIGMAP_NAME
+            value: {{ include "gmc.fullname" . }}-config
+          - name: SERVICE_NAME
+            value: {{ include "gmc.fullname" . }}-controller
+          - name: NATS_URL
+            value: {{ .Values.nats.url | quote }}
+          - name: FINGERPRINT_SERVICE_URL
+            value: {{ .Values.fingerprint.url | quote }}
+          # Postgres backs the KV bridge.
+          - name: POSTGRES_HOST
+            value: {{ .Values.fingerprint.postgres.host | quote }}
+          - name: POSTGRES_PORT
+            value: {{ .Values.fingerprint.postgres.port | quote }}
+          - name: POSTGRES_DB
+            value: {{ .Values.fingerprint.postgres.database | quote }}
+          - name: POSTGRES_USER
+            value: {{ .Values.fingerprint.postgres.username | quote }}
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.fingerprint.postgres.existingSecret | quote }}
+                key: {{ .Values.fingerprint.postgres.secretKey | quote }}
+          - name: POSTGRES_SSLMODE
+            value: {{ .Values.fingerprint.postgres.sslmode | quote }}
+          - name: NATS_NKEY_SEED_FILE
+            value: /etc/nats/auth/{{ .Values.nats.auth.userSeedKey }}
+          ports:
+            - name: metrics
+              containerPort: 8080
+              protocol: TCP
+            - name: gmc
+              containerPort: 8081
+              protocol: TCP
+            - name: webhook
+              containerPort: 9443
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.gmc.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.gmc.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.gmc.resources | nindent 12 }}
+          volumeMounts:
+            - name: yaml-file
+              mountPath: /tmp/microservices/yamls
+            - name: nats-auth
+              mountPath: /etc/nats/auth
+              readOnly: true
+          {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: yaml-file
+          configMap:
+            name: {{ include "gmc.fullname" . }}-config
+        - name: nats-auth
+          secret:
+            secretName: {{ .Values.nats.auth.existingSecret | quote }}
+            defaultMode: 0440
+            items:
+              - key: {{ .Values.nats.auth.userSeedKey }}
+                path: {{ .Values.nats.auth.userSeedKey }}
+      {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 10

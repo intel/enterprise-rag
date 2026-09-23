@@ -1,0 +1,148 @@
+---
+- name: "app_nats | Set role facts"
+  ansible.builtin.set_fact:
+    nats_helm_override_values_path: >-
+      {{ rag_tmp_dir }}/{{ nats_helm_release_name }}-override-values.yaml
+
+- name: "app_nats | Ensure namespace exists"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ nats_namespace }}"
+
+- name: "app_nats | Label namespace — Istio"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ nats_namespace }}"
+        labels:
+          istio.io/dataplane-mode: "ambient"
+          erag-istio-protected: "true"
+  when: istio_enabled | default(false) | bool
+
+- name: "app_nats | Label namespace — PSS"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ nats_namespace }}"
+        labels:
+          pod-security.kubernetes.io/enforce: "restricted"
+          pod-security.kubernetes.io/audit: "restricted"
+          pod-security.kubernetes.io/warn: "restricted"
+  when: enforce_pss | default(false) | bool
+
+# The auth secret carries the client NKey pair. It is generated once and reused
+# on upgrades so existing pods keep authenticating; a secret left incomplete or
+# empty by an earlier failed run is regenerated.
+- name: "app_nats | Check for existing auth secret"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: "{{ nats_auth_secret_name }}"
+    namespace: "{{ nats_namespace }}"
+  register: _nats_auth_secret
+
+- name: "app_nats | Generate and store NKey material"
+  when:
+    # Regenerate when the secret is absent, or when it exists but any required
+    # key is missing or empty. A complete secret leaves this False (no churn).
+    - (_nats_auth_secret.resources | default([]) | length == 0)
+      or (nats_auth_required_keys | difference(
+            _nats_auth_secret.resources[0].data | default({})
+            | dict2items | rejectattr('value', 'equalto', '')
+            | map(attribute='key') | list) | length > 0)
+  block:
+    - name: "app_nats | Generate client NKey pair"
+      ansible.builtin.command:
+        cmd: python3 {{ role_path }}/files/gen_nkey.py
+      register: _nats_nkey
+      changed_when: true
+      no_log: "{{ secure_logs }}"
+
+    - name: "app_nats | Create auth secret"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: "{{ nats_auth_secret_name }}"
+            namespace: "{{ nats_namespace }}"
+          data:
+            user.nk: "{{ _nats_nkey.stdout_lines[0] | b64encode }}"
+            user.pub: "{{ _nats_nkey.stdout_lines[1] | b64encode }}"
+      no_log: "{{ secure_logs }}"
+
+# The controller and router read the same NKey seed to authenticate to NATS, so
+# the secret is mirrored into their namespaces.
+- name: "app_nats | Mirror client NKey to consumer namespaces"
+  block:
+    - name: "app_nats | Read auth secret for mirroring"
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        name: "{{ nats_auth_secret_name }}"
+        namespace: "{{ nats_namespace }}"
+      register: _nats_auth_secret_full
+      no_log: "{{ secure_logs }}"
+
+    - name: "app_nats | Ensure consumer namespaces exist"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ item }}"
+      loop: "{{ nats_client_namespaces }}"
+
+    - name: "app_nats | Create client auth secret in consumer namespaces"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: "{{ nats_auth_secret_name }}"
+            namespace: "{{ item }}"
+          data:
+            user.nk: "{{ _nats_auth_secret_full.resources[0].data['user.nk'] }}"
+      no_log: "{{ secure_logs }}"
+      loop: "{{ nats_client_namespaces }}"
+
+- name: "app_nats | Generate override values file from template"
+  ansible.builtin.template:
+    src: "values.yaml.j2"
+    dest: "{{ nats_helm_override_values_path }}"
+    mode: '0644'
+
+- name: "app_nats | Set values_files list"
+  ansible.builtin.set_fact:
+    values_files: >
+      {{
+        [nats_helm_default_values_file] +
+        [nats_helm_override_values_path]
+      }}
+
+- name: "app_nats | Install or Upgrade Helm chart"
+  kubernetes.core.helm:
+    name: "{{ nats_helm_release_name }}"
+    chart_ref: "{{ nats_helm_chart_directory }}"
+    namespace: "{{ nats_namespace }}"
+    values_files: "{{ values_files }}"
+    state: present
+    create_namespace: true
+    timeout: "{{ helm_timeout }}"
+  register: helm_repo_install_result
+  until: helm_repo_install_result is succeeded
+  retries: "{{ helm_retries }}"
+  delay: 15

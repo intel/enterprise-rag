@@ -1,0 +1,21 @@
+{{- if .Values.monitoring.enabled }}
+{{- $path := "" }}
+{{- if eq .Values.vectorStore "redis-cluster" }}
+{{- $path = "files/dashboards/vectordb-redis.json" }}
+{{- else if eq .Values.vectorStore "mssql" }}
+{{- $path = "files/dashboards/vectordb-mssql.json" }}
+{{- end }}
+{{- if $path }}
+{{- $name := regexReplaceAll "(^.*/)(.*)\\.json$" $path "${2}" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "rag-dashboard-%s" $name | trunc 63 | trimSuffix "-" }}
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  {{ $name }}.json: {{ .Files.Get $path | toJson }}
+{{- end }}
+{{- end }}

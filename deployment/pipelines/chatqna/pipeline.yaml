@@ -1,0 +1,46 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# ChatQnA Pipeline Metadata
+# Modular pipeline definition with composable variants
+
+name: chatqna
+namespace: chatqna
+description: "Retrieval-augmented question answering through conversational interaction"
+
+# Base flow - ordered list of step IDs
+base_flow:
+  - embedding
+  - retriever
+  - reranking
+  - prompt-template
+  - llm-guard-input
+  - llm
+
+# External model endpoints (Jinja2 variables resolved by app_pipeline)
+#
+# Only what the step templates actually consume lives here. The model-server
+# wiring for embedding, reranking, and llm (EMBEDDING_MODEL_SERVER_ENDPOINT,
+# RERANKING_SERVICE_ENDPOINT, LLM_MODEL_SERVER_ENDPOINT, LLM_MODEL_NAME, ...) is
+# set once in app_pipeline/templates/values.yaml.j2, which renders it into each
+# usvc ConfigMap. The model catalog itself is inference_models in config.yaml.
+endpoints:
+  llm:
+    # Consumed by the query-rewrite variant (QUERY_REWRITE_LLM_ENDPOINT); the
+    # llm step itself reads the endpoint from the llm-usvc ConfigMap.
+    url: "{{ llm_endpoint }}"
+    # Recommended resources for the shared llm step (llm-usvc chart key)
+    resources:
+      replicas: 2
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 4
+        memory: 6Gi
+
+# GMC router configuration
+router:
+  name: router
+  service_name: router-service
+  type: Sequence

@@ -1,0 +1,40 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Render a report into the report directory.
+#
+# Two kinds, two file names, because they answer different questions and neither
+# should be mistaken for the other:
+#   data-report     — what each store holds now. Counts and method only.
+#   upgrade-report  — the two snapshots, the comparison and its verdict.
+#
+# Expects: data_consistency_report_kind, and _data_snapshot for the snapshot
+#          kind or _upgrade_pre_snapshot, _upgrade_post_snapshot and
+#          _upgrade_consistency_result for the upgrade kind.
+# Sets: _data_consistency_report_path
+
+- name: "app_data_consistency | Report — ensure the report directory exists"
+  ansible.builtin.file:
+    path: "{{ data_consistency_report_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: "app_data_consistency | Report — resolve timestamp and report name"
+  ansible.builtin.set_fact:
+    _report_timestamp: "{{ lookup('pipe', 'date -u +%Y%m%dT%H%M%SZ') }}"
+    _data_consistency_report_name: "{{ data_consistency_report_names[data_consistency_report_kind] }}"
+
+- name: "app_data_consistency | Report — set report path"
+  ansible.builtin.set_fact:
+    _data_consistency_report_path: >-
+      {{ data_consistency_report_dir }}/{{ _data_consistency_report_name }}-{{ _report_timestamp }}.yaml
+
+- name: "app_data_consistency | Report — render the {{ data_consistency_report_kind }} report"
+  ansible.builtin.template:
+    src: "{{ _data_consistency_report_name }}.yaml.j2"
+    dest: "{{ _data_consistency_report_path }}"
+    mode: "0644"
+
+- name: "app_data_consistency | Report — log report location"
+  ansible.builtin.debug:
+    msg: "[DATA CONSISTENCY] Report written to: {{ _data_consistency_report_path }}"

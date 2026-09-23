@@ -1,0 +1,96 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_mcp_gateway Role Defaults - Model Context Protocol gateway
+# =============================================================================
+
+# --- Deployment target ---
+mcp_namespace: "mcp-gateway"
+mcp_service_port: 8000
+
+# --- Helm ---
+mcp_helm_release_name: "mcp-gateway"
+mcp_helm_chart_directory: "{{ deployment_dir }}/components/mcp_gateway"
+mcp_helm_default_values_file: "{{ deployment_dir }}/components/mcp_gateway/values.yaml"
+
+# --- Edge route ---
+# "0s" disables the per-request timeout so a long-lived SSE stream is not cut at a fixed
+# age. The gateway-scoped BackendTrafficPolicy still applies connectionIdleTimeout
+# (gateway_request_timeout, 600s by default), which traffic on the stream resets.
+mcp_route_timeout: "0s"
+
+# --- Caller authentication (OAuth 2.0 resource server) ---
+# Agents fetch their own token from Keycloak and send it as a Bearer token. The route's
+# SecurityPolicy validates it at the edge and the service verifies it again against the
+# realm's JWKS, so a request that skips the gateway is held to the same standard. The
+# issuer must match the token's iss claim exactly, which is the externally reachable
+# realm URL, not the in-cluster Service address.
+mcp_jwt_issuer: >-
+  {{ 'https://' ~ erag_keycloak_domain_name ~ (erag_keycloak_path_prefix | default(''))
+     ~ '/realms/' ~ erag_keycloak_realm }}
+mcp_jwt_audience: "mcp-gateway"
+mcp_jwks_uri: >-
+  {{ 'http://keycloak-service.' ~ keycloak_namespace ~ '.svc.cluster.local:8080'
+     ~ (erag_keycloak_path_prefix | default('')) ~ '/realms/' ~ erag_keycloak_realm
+     ~ '/protocol/openid-connect/certs' }}
+# The realm signs with RS384; RS256 stays accepted for clients configured otherwise.
+mcp_jwks_cache_duration: "60s"
+mcp_jwt_algorithms: "RS256,RS384"
+mcp_jwt_client_header: "x-mcp-client"
+mcp_resource_url: "https://{{ ui_domain_name }}/api/v1/mcp"
+
+# --- Edge authentication check (install and validate) ---
+# Long enough to outlast one JWKS cache cycle (mcp_jwks_cache_duration) plus the time EG
+# needs to program the route, so a data plane holding keys from a previous realm is waited
+# out rather than restarted.
+mcp_edge_auth_retries: 10
+mcp_edge_auth_delay: 15
+
+# --- Edge rate limiting ---
+# Counters are per Envoy pod and the EnvoyProxy is a DaemonSet, so the cluster-wide
+# ceiling is these values multiplied by the number of gateway pods.
+mcp_rate_limit_enabled: true
+mcp_rate_limit_unit: "Minute"
+mcp_rate_limit_per_client_requests: 120
+mcp_rate_limit_route_requests: 600
+
+# --- Host header allow-list (MCP SDK DNS rebinding protection) ---
+mcp_allowed_hosts:
+  - "{{ ui_domain_name }}"
+  - "mcp-gateway-svc"
+  - "mcp-gateway-svc.{{ mcp_namespace }}.svc"
+  - "mcp-gateway-svc.{{ mcp_namespace }}.svc.cluster.local"
+
+# --- Reaching the S3 endpoint behind the presigned upload URL ---
+mcp_s3_tls_verify: true
+mcp_ca_secret_name: "mcp-gateway-ca"
+# EDP issues presigned upload URLs on the external hostname in every storage branch, so
+# the pod has to resolve those names itself (hostAliases) and must not send them to the
+# proxy. In "path" routing mode the S3 API shares the apex domain.
+mcp_edge_hostnames: >-
+  {{ [ui_domain_name] if routing_mode | default('subdomain') == 'path'
+     else [ui_domain_name,
+           edp_s3_api_domain | default((edp_s3_domain_prefix | default('s3')) ~ '.' ~ ui_domain_name)] }}
+
+# --- Cross-role shared defaults - Owned by other roles; declared here so this role is standalone-runnable. ---
+mcp_enabled: false                                 # pipelines/<flavour>/config.yaml
+edp_enabled: false                                 # app_edp
+edp_namespace: "edp"                               # app_edp
+routing_mode: "subdomain"                          # global
+ui_domain_name: "{{ base_domain_name | default('solutions.ai') }}"  # app_ui
+keycloak_namespace: "keycloak"                     # core/keycloak
+credentials_secret_name: "erag-credentials"        # app_keycloak_config
+erag_keycloak_realm: "EnterpriseRAG"               # app_keycloak_config
+erag_keycloak_domain_name: "auth.solutions.ai"     # app_keycloak_config
+erag_keycloak_path_prefix: ""                      # app_keycloak_config
+rag_tmp_dir: "{{ tmp_dir }}/rag"                   # app_pre_install (derived from tmp_dir)
+istio_enabled: false                               # global
+enforce_pss: false                                 # global
+secure_logs: true                                  # global
+envoy_gateway_namespace: "envoy-gateway-system"    # core/envoy_gateway
+gateway_name: "eg-gateway"                         # core/envoy_gateway
+gateway_namespace: "envoy-gateway-system"          # core/envoy_gateway
+gateway_tls_mode: "selfsigned"                     # core/envoy_gateway
+gateway_tls_secret_name: "gateway-tls"             # core/envoy_gateway

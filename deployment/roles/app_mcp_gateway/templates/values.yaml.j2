@@ -1,0 +1,71 @@
+{#
+Copyright (C) 2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+#}
+image:
+  repository: "{{ registry }}"
+{% if tag is defined %}
+  tag: "{{ tag }}"
+{% endif %}
+
+service:
+  port: {{ mcp_service_port }}
+
+proxy:
+  httpProxy: "{{ http_proxy | default('') }}"
+  httpsProxy: "{{ https_proxy | default('') }}"
+  noProxy: "{{ (((no_proxy | default('')).split(',') | map('trim') | reject('equalto', '') | list) + mcp_edge_hostnames) | unique | join(',') }}"
+
+tls:
+  secretName: "{{ mcp_ca_secret_name if gateway_tls_mode != 'none' else '' }}"
+
+hostAliases:
+  - ip: "{{ mcp_edge_ip }}"
+    hostnames:
+{% for host in mcp_edge_hostnames %}
+      - "{{ host }}"
+{% endfor %}
+
+config:
+  edpEndpoint: "http://edp-backend.{{ edp_namespace }}.svc:5000"
+  jwtIssuer: "{{ mcp_jwt_issuer }}"
+  jwtAudience: "{{ mcp_jwt_audience }}"
+  jwksUri: "{{ mcp_jwks_uri }}"
+  jwtAlgorithms: "{{ mcp_jwt_algorithms }}"
+  resourceUrl: "{{ mcp_resource_url }}"
+  s3TlsVerify: "{{ mcp_s3_tls_verify | default(true) | string | lower }}"
+  allowedHosts:
+{% for host in mcp_allowed_hosts %}
+    - "{{ host }}"
+    - "{{ host }}:*"
+{% endfor %}
+
+securityPolicy:
+  jwt:
+    issuer: "{{ mcp_jwt_issuer }}"
+    audiences:
+      - "{{ mcp_jwt_audience }}"
+    jwksUri: "{{ mcp_jwks_uri }}"
+    cacheDuration: "{{ mcp_jwks_cache_duration }}"
+    clientHeader: "{{ mcp_jwt_client_header }}"
+
+rateLimit:
+  enabled: {{ mcp_rate_limit_enabled | bool | lower }}
+  perClient:
+    requests: {{ mcp_rate_limit_per_client_requests }}
+    unit: {{ mcp_rate_limit_unit }}
+  route:
+    requests: {{ mcp_rate_limit_route_requests }}
+    unit: {{ mcp_rate_limit_unit }}
+
+httpRoute:
+  enabled: true
+  gatewayRef:
+    name: "{{ gateway_name }}"
+    namespace: "{{ gateway_namespace }}"
+    # ui_domain_name is the bare base_domain_name in both routing modes, and the
+    # wildcard 'https' listener only matches subdomains, so bind to https-apex.
+    sectionName: https-apex
+  hostnames:
+    - "{{ ui_domain_name }}"
+  timeout: "{{ mcp_route_timeout }}"

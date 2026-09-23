@@ -1,0 +1,8 @@
+# Tool binaries, compiled binaries and envtest control-plane assets (make build)
+bin/
+
+# controller-gen output: CRDs, RBAC and webhook manifests (make manifests)
+config/
+
+# Coverage profile (make test)
+cover.out

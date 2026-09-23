@@ -1,0 +1,13 @@
+---
+- name: "app_fingerprint | Check Helm release"
+  kubernetes.core.helm_info:
+    name: "{{ fingerprint_helm_release_name }}"
+    release_namespace: "{{ fingerprint_namespace }}"
+  register: _fingerprint_release
+
+- name: "app_fingerprint | Assert installed"
+  ansible.builtin.assert:
+    that: _fingerprint_release.status is defined
+    fail_msg: "Fingerprint Helm release '{{ fingerprint_helm_release_name }}' not found in {{ fingerprint_namespace }}"
+    success_msg: "app_fingerprint: OK"
+    quiet: true

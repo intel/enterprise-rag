@@ -1,0 +1,27 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# =============================================================================
+# app_hpa Role Defaults — Prometheus Adapter configuration
+# =============================================================================
+# Configures the already-installed prometheus-adapter with solution-specific
+# custom metric rules (EDP, vLLM, etc.) for HPA scaling.
+#
+# Multi-tenant design:
+#   - Each solution provides rules tagged with `_solution: <name>`
+#   - On install: existing rules from other solutions are preserved, new rules merged
+#   - On teardown: only rules matching this solution's name are removed
+
+# Unique identifier for this solution's rules (used to tag and filter)
+app_hpa_solution_name: "erag"
+
+# File containing this solution's prometheus-adapter values.
+# The role reads `.rules.custom` from it; other keys (prometheus:, rules.default,
+# rules.resources) are ignored because the role builds those wrappers itself.
+app_hpa_rules_file: "{{ deployment_dir }}/components/hpa/prometheus_adapter.yaml"
+
+app_hpa_adapter_release_name: "prometheus-adapter"
+app_hpa_adapter_namespace: "monitoring"
+app_hpa_adapter_prometheus_url: "http://kube-prometheus-stack-prometheus.{{ app_hpa_adapter_namespace }}.svc"
+app_hpa_helm_repo_name: "prometheus-community"
+app_hpa_helm_repo_url: "https://prometheus-community.github.io/helm-charts"

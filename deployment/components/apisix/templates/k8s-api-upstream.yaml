@@ -1,0 +1,30 @@
+{{- /*
+Copyright (C) 2024-2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+Cluster-default-namespace ApisixUpstream pointing at kubernetes.default.svc.
+Consumed by per-pipeline watcher ApisixRoutes emitted by the gmc chart.
+*/ -}}
+{{- if .Values.k8sApi.enabled }}
+---
+apiVersion: apisix.apache.org/v2
+kind: ApisixUpstream
+metadata:
+  name: {{ .Values.k8sApi.upstreamName | default "kubernetes-api-upstream" }}
+  namespace: default
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  ingressClassName: {{ .Values.k8sApi.ingressClassName | default "apisix" }}
+  scheme: https
+  loadbalancer:
+    type: roundrobin
+  externalNodes:
+    - type: Domain
+      name: kubernetes.default.svc
+      port: 443
+      weight: 1
+{{- end }}

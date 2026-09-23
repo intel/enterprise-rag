@@ -1,0 +1,38 @@
+{
+  "name": "@intel-enterprise-rag-ui/data-ingestion",
+  "private": true,
+  "version": "3.0.0",
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Data ingestion admin panel components for Intel Enterprise RAG UI",
+  "module": "./dist/intel-enterprise-rag-ui-data-ingestion.js",
+  "types": "./dist/index.d.ts",
+  "style": "./dist/style.css",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/intel-enterprise-rag-ui-data-ingestion.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@intel-enterprise-rag-ui/auth": "workspace:^",
+    "@intel-enterprise-rag-ui/components": "workspace:^",
+    "@intel-enterprise-rag-ui/icons": "workspace:^",
+    "@intel-enterprise-rag-ui/input-validation": "workspace:^",
+    "@intel-enterprise-rag-ui/utils": "workspace:^"
+  },
+  "peerDependencies": {
+    "@reduxjs/toolkit": ">=2.0.0",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "react-redux": ">=9.0.0"
+  }
+}

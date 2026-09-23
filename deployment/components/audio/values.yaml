@@ -1,0 +1,219 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+hfToken: ""
+
+proxy:
+  http_proxy: ""
+  https_proxy: ""
+  no_proxy: ""
+
+# ASR (Automatic Speech Recognition) service configuration
+asr:
+  enabled: true
+  config:
+    modelName: "openai/whisper-small"
+  replicaCount: 1
+  nameOverride: "asr"
+  fullnameOverride: "asr-svc"
+
+  image:
+    name: "enterprise-rag-asr"
+    repository: "docker.io/intel"
+    tag: "latest"
+    pullPolicy: Always
+
+  service:
+    targetPort: http
+    port: 9009
+    name: http
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: 2
+
+# vLLM ASR CPU Model Server configuration
+vllmAudioCpu:
+  enabled: true
+  config:
+    modelName: "openai/whisper-small"
+    cpuKvcacheSpace: "10"
+    dtype: "bfloat16"
+    maxNumSeqs: "256"
+    skipWarmup: "false"
+    tpSize: "1"
+    ppSize: "1"
+    maxModelLen: "448"
+  replicaCount: 1
+  environment:
+    - name: OMP_NUM_THREADS
+      valueFrom:
+        resourceFieldRef:
+          resource: limits.cpu
+  nameOverride: "vllm-audio-cpu"
+  fullnameOverride: "vllm-audio-cpu"
+
+  image:
+    name: "enterprise-rag-vllm-audio"
+    repository: "docker.io/intel"
+    tag: "latest"
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 8008
+    targetPort: 8008
+
+  resources:
+    requests:
+      memory: "20Gi"
+      cpu: "16"
+    limits:
+      memory: "20Gi"
+      cpu: "16"
+
+# TTS (Text-to-Speech) service configuration
+tts:
+  enabled: true
+  replicaCount: 1
+  nameOverride: "tts"
+  fullnameOverride: "tts-svc"
+
+  image:
+    name: "enterprise-rag-tts"
+    repository: "docker.io/intel"
+    tag: "latest"
+    pullPolicy: Always
+
+  service:
+    targetPort: http
+    port: 9009
+    name: http
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: 2
+
+# FastAPI TTS Model Server configuration
+ttsFastapiModelServer:
+  enabled: true
+  config:
+    modelName: "microsoft/speecht5_tts"
+  replicaCount: 1
+  environment:
+    - name: OMP_NUM_THREADS
+      valueFrom:
+        resourceFieldRef:
+          resource: limits.cpu
+  nameOverride: "tts-fastapi-model-server"
+  fullnameOverride: "tts-fastapi-model-server"
+
+  image:
+    name: "enterprise-rag-tts-fastapi-model-server"
+    repository: "docker.io/intel"
+    tag: "latest"
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 8008
+    targetPort: 8008
+
+  resources:
+    requests:
+      memory: "3Gi"
+      cpu: "8"
+    limits:
+      memory: "6Gi"
+      cpu: "16"
+
+# Namespace Status Watcher Monitor configuration
+namespaceStatusWatcher:
+  enabled: true
+  image:
+    name: "enterprise-rag-namespace-status-watcher"
+    repository: "docker.io/intel"
+    tag: "latest"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 3000
+  fsGroup: 2000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+
+podAnnotations: {}
+imagePullSecrets: []
+
+# APISIX routes for audio (ASR/TTS). Common values injected by app_apisix.
+# Routes are deployed when the chart is installed (i.e. when audio.enabled).
+apisix:
+  endpoints:
+    - name: asr
+      enabled: true
+      namespace: audio
+      path: /v1/audio/transcriptions
+      backend_service: asr-svc
+      service_port: 9009
+      service_path: /v1/audio/transcriptions
+      rate_limit_count: 30
+      permissions:
+        - admin#admin-access
+        - user#user-access
+        - maintainer#maintainer-access
+    - name: tts
+      enabled: true
+      namespace: audio
+      path: /v1/audio/speech
+      backend_service: tts-svc
+      service_port: 9009
+      service_path: /v1/audio/speech
+      rate_limit_count: 30
+      permissions:
+        - admin#admin-access
+        - user#user-access
+        - maintainer#maintainer-access
+    - name: audio-status
+      enabled: true
+      namespace: audio
+      path: /api/v1/audio/status
+      backend_service: namespace-status-watcher-svc
+      service_port: 9010
+      rate_limit_count: 30
+      service_regex:
+        - "^/api/v1/audio/status$"
+        - "/v1/audio/status"
+      permissions:
+        - admin#admin-access
+        - maintainer#maintainer-access
+
+monitoring:
+  enabled: true

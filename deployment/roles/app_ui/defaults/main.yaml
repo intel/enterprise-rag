@@ -1,0 +1,50 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_ui Role Defaults — ChatQA conversation UI
+# =============================================================================
+
+# --- Deployment target ---
+ui_namespace: "rag-ui"
+ui_domain_name: "solutions.ai"
+
+# --- Helm ---
+ui_helm_version: "{{ helm_version }}"
+ui_helm_chart_name: "chatqna-app"
+ui_helm_chart_version: "1.1.0"
+ui_helm_release_name: "chatqna-app"
+ui_helm_chart_directory: "{{ deployment_dir }}/components/ui"
+ui_helm_default_values_file: "{{ deployment_dir }}/components/ui/values.yaml"
+
+# --- UI runtime config (rendered into the chart's extraUiConfigVars block) ---
+ui_keycloak_realm: "EnterpriseRAG"
+ui_keycloak_client_id: "EnterpriseRAG-oidc"
+ui_admin_resource_role: "ERAG-admin"
+ui_maintainer_resource_role: "ERAG-maintainer"
+ui_chat_disclaimer_text: "Responses from this solution may require further verification. You are solely responsible for verifying the accuracy of the information provided and how you choose to use it."
+
+ui_no_llm_pipeline_variants:
+  - "retrieve-rerank"
+  - "upload"
+ui_chat_no_llm_pipeline: "{{ pipeline_variant | default('base') in ui_no_llm_pipeline_variants }}"
+# Set explicitly to force maintenance mode on (planned maintenance) or off.
+ui_chat_maintenance_mode: "{{ ui_chat_no_llm_pipeline }}"
+
+# --- Path-mode prefix (set dynamically by solution_config.yaml) ---
+ui_path_prefix: ""
+
+# --- Cross-role shared defaults - Owned by other roles; declared here so this role is standalone-runnable. ---
+edp_minio_api_domain_name: "s3.{{ base_domain_name | default('solutions.ai') }}"  # app_edp
+edp_storage_type: "seaweedfs"                   # app_edp — gates UI useBearerTokenAuth (S3_SEND_BEARER_TOKEN)
+edp_rbac_enabled: false                         # app_edp — gates UI useBearerTokenAuth (S3_SEND_BEARER_TOKEN)
+erag_keycloak_domain_name: "auth.solutions.ai"   # app_keycloak_config
+erag_keycloak_path_prefix: ""   # app_keycloak_config
+istio_enabled: false                               # global
+enforce_pss: false                                 # global
+telemetry_domain_name: "grafana.solutions.ai"      # app_pre_install (solution_config)
+telemetry_path_prefix: "/grafana"                  # app_pre_install (solution_config)
+edp_s3_path_prefix: "/s3"                         # app_pre_install (solution_config)
+rag_tmp_dir: "{{ tmp_dir }}/rag"                   # app_pre_install (derived from tmp_dir)
+pipeline_variant: "base"                           # app_pipeline

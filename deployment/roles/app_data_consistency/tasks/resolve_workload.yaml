@@ -1,0 +1,53 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Read one StatefulSet and take from it everything a query Job needs to reach
+# the store it fronts.
+#
+# The image comes from the workload rather than from a variable so the Job runs
+# the client that already ships with the store — the same tag, already pulled on
+# the node, already resolved through whatever registry mirror is configured. The
+# Service name and replica count come from the same object rather than being
+# restated, because the charts derive some of those names from the namespace and
+# some from the release, and the two only coincide in the default configuration.
+#
+# Expects: dcw_store, dcw_namespace, dcw_workload, dcw_container
+# Sets: _dcw_image, _dcw_service, _dcw_replicas
+
+- name: "app_data_consistency | Workload — read StatefulSet {{ dcw_workload }}"
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: StatefulSet
+    name: "{{ dcw_workload }}"
+    namespace: "{{ dcw_namespace }}"
+  register: _dcw_statefulset
+
+- name: "app_data_consistency | Workload — fail when {{ dcw_workload }} is absent"
+  ansible.builtin.fail:
+    msg: >-
+      Cannot count {{ dcw_store }}: StatefulSet {{ dcw_workload }} is not present
+      in namespace {{ dcw_namespace }}, so there is nothing to query. Set
+      -e data_consistency_check_{{ dcw_store }}=false if this store is not
+      expected to be counted.
+  when: (_dcw_statefulset.resources | default([])) | length == 0
+
+- name: "app_data_consistency | Workload — collect query image candidates"
+  ansible.builtin.set_fact:
+    _dcw_images: >-
+      {{ _dcw_statefulset.resources[0].spec.template.spec.containers
+         | selectattr('name', 'equalto', dcw_container)
+         | map(attribute='image') | list }}
+
+- name: "app_data_consistency | Workload — fail when container {{ dcw_container }} is absent"
+  ansible.builtin.fail:
+    msg: >-
+      Cannot count {{ dcw_store }}: StatefulSet {{ dcw_workload }} in namespace
+      {{ dcw_namespace }} has no container named {{ dcw_container }}, so the
+      query has no client image to run.
+  when: _dcw_images | length == 0
+
+- name: "app_data_consistency | Workload — resolve query target"
+  ansible.builtin.set_fact:
+    _dcw_image: "{{ _dcw_images | first }}"
+    _dcw_service: "{{ _dcw_statefulset.resources[0].spec.serviceName }}"
+    _dcw_replicas: "{{ _dcw_statefulset.resources[0].spec.replicas | default(1) }}"

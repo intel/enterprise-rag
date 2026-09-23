@@ -1,0 +1,45 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "app_keycloak_config | Assert external OIDC configuration is complete"
+  vars:
+    _erag_oidc_empty_vars: >-
+      {{ {'erag_keycloak_oidc_endpoint': erag_keycloak_oidc_endpoint | default('', true) | string | trim,
+          'erag_keycloak_oidc_alias': erag_keycloak_oidc_alias | default('', true) | string | trim,
+          'erag_keycloak_oidc_client_id': erag_keycloak_oidc_client_id | default('', true) | string | trim,
+          'erag_keycloak_oidc_client_secret': erag_keycloak_oidc_client_secret | default('', true) | string | trim}
+         | dict2items | selectattr('value', 'falsy') | map(attribute='key') | list }}
+  block:
+    - name: "app_keycloak_config | Assert Single Sign-On configuration is complete"
+      ansible.builtin.assert:
+        that: _erag_oidc_empty_vars | length == 0
+        fail_msg: >-
+          Incomplete Single Sign-On configuration: erag_keycloak_oidc_endpoint is set but
+          {{ _erag_oidc_empty_vars | join(', ') }}
+          {{ 'is' if _erag_oidc_empty_vars | length == 1 else 'are' }} empty.
+          Set them in env/<name>/config.rag.yaml, or clear erag_keycloak_oidc_endpoint
+          to disable Single Sign-On.
+        success_msg: "app_keycloak_config: Single Sign-On configuration complete"
+        quiet: true
+      when: erag_keycloak_oidc_endpoint | default('', true) | string | trim | length > 0
+
+    - name: "app_keycloak_config | Assert SharePoint configuration is complete"
+      ansible.builtin.assert:
+        that: _sp_missing | length == 0
+        fail_msg: >-
+          Incomplete SharePoint configuration: erag_keycloak_oidc_tenant_id is set but
+          {{ _sp_missing | join(', ') }} {{ 'is' if _sp_missing | length == 1 else 'are' }} empty.
+          SharePoint ingestion requires erag_keycloak_oidc_tenant_id,
+          erag_keycloak_oidc_client_id, erag_keycloak_oidc_client_secret and
+          erag_keycloak_oidc_endpoint together.
+          Set them in env/<name>/config.rag.yaml, or clear erag_keycloak_oidc_tenant_id
+          to disable SharePoint.
+        success_msg: "app_keycloak_config: SharePoint configuration complete"
+        quiet: true
+      vars:
+        _sp_missing: >-
+          {{ _erag_oidc_empty_vars | intersect(['erag_keycloak_oidc_endpoint',
+                                               'erag_keycloak_oidc_client_id',
+                                               'erag_keycloak_oidc_client_secret']) }}
+      when: erag_keycloak_oidc_tenant_id | default('', true) | string | trim | length > 0

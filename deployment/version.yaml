@@ -1,0 +1,6 @@
+solution_version: 3.0.0
+upgrade_base_version: ">=3.0.0"
+
+# Container image tag used when the configuration does not set one. Kept equal
+# to solution_version.
+default_image_tag: "3.0.0"

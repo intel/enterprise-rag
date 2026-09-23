@@ -1,0 +1,74 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# =============================================================================
+# Pipeline defaults - fetched via: ai-solutions installer init rag --chatqna
+# =============================================================================
+
+# --- Container images ---
+registry: "docker.io/intel"
+# tag: "3.0.0" # Omit to use the default tag matching the solution version (recommended). Must contain the solution version if set.
+
+# --- Pipeline (app_pipeline) ---
+pipeline_type: "chatqna"
+pipeline_variant: "base"
+# solution_language: "auto"                 # auto | en | pl
+
+# --- Components ---
+vector_databases_enabled: true
+chat_history_enabled: true
+edp_enabled: true
+hpa_enabled: true
+ui_enabled: true
+mcp_enabled: true
+
+# --- Inference models (app_inference_models - deployed via model-manager.sh) ---
+# Each entry maps to a model in solutions-poc.inference/model_manager/models.yaml.
+# The role deploys them, waits for readiness, and computes endpoints dynamically.
+inference_namespace: "llm-inference"
+inference_models:
+  - name: llama3-8b-awq
+    role: llm
+  - name: nomic-embed
+    role: embedding
+  - name: bge-reranker
+    role: reranking
+
+# --- Ansible settings ---
+#secure_logs: false
+#helm_timeout: "10m0s"
+#helm_retries: 3
+
+# --- UI (app_ui) ---
+# ui_chat_maintenance_mode: true
+
+# --- EDP (app_edp) ---
+# edp_namespace: "edp"
+# edp_storage_type: "seaweedfs"            # seaweedfs | s3 | s3compatible
+# edp_late_chunking_enabled: false
+# edp_rbac_enabled: false
+# edp_scheduled_sync_enabled: false
+#
+# External S3-compatible object store (for example ONTAP S3). See
+# docs/netapp_ontap_s3.md; the array-side ontap_* values go in global_config.yaml.
+# edp_s3_compatible_access_key_id: ""
+# edp_s3_compatible_secret_access_key: ""
+
+# --- Vector DB (app_vector_databases) ---
+# vector_databases_namespace: "vdb"
+# vector_databases_vector_store: "redis-cluster"    # redis-cluster | redis | mssql | pgvector
+# vector_databases_vector_datatype: "FLOAT32"
+# vector_databases_vector_dims: 768         # auto-detected; override for unknown models
+
+# --- Backup and restore (Velero) ---
+# Opt-in. Requires the core installer's velero component and CSI-snapshot-capable
+# storage (storage_backend: nfs or ceph) — see docs/operate/backup.md in this repository.
+# What is captured is declared in deployment/backup_profile.yaml.
+backup_enabled: false
+# upgrade_backup_max_age_hours: 6      # how fresh a backup the upgrade gate demands
+# allow_upgrade_without_backup: false  # true = upgrade without a restore point
+
+# --- Path overrides (paths inside the ext repo) ---
+deployment_dir: "{{ playbook_dir }}/../ext/enterprise.ai-erag/deployment"
+components_dir: "{{ deployment_dir }}/components"
+pipelines_dir: "{{ deployment_dir }}/pipelines/"

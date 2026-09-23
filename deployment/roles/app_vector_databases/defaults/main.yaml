@@ -1,0 +1,61 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_vector_databases Role Defaults
+# =============================================================================
+
+# --- Deployment target ---
+vector_databases_namespace: "vdb"
+
+# --- Vector-store selection ---
+vector_databases_vector_store: "redis-cluster"     # redis-cluster | mssql | pgvector
+vector_databases_vector_datatype: "FLOAT32"
+# vector_databases_vector_dims is auto-detected from the embedding model's
+# hidden_size. This default acts as a fallback when auto-detection fails
+# for unknown models. Override only when deploying a custom model that the
+# HuggingFace Hub API can't resolve.
+vector_databases_vector_dims: 768
+
+# --- Offline / air-gapped toggle (skip HF Hub probe) ---
+offline_model: false
+
+# --- Helm ---
+vector_databases_helm_release_name: "vdb"
+vector_databases_helm_chart_directory: "{{ deployment_dir }}/components/vector_databases"
+vector_databases_helm_default_values_file: "{{ deployment_dir }}/components/vector_databases/values.yaml"
+
+# --- Per-store Helm-values payloads ---
+# Fed into the Helm chart as nested YAML by templates/values.yaml.j2. The
+# sub-dicts ARE Helm values (cluster nodes, resources, image tags) — they
+# stay nested because the chart consumes them shaped this way. Selection
+# of which sub-dict applies is driven by vector_databases_vector_store.
+vector_databases_stores:
+  redis-cluster:
+    cluster:
+      nodes: 3
+      replicas: 0
+    image:
+      repository: "redis"
+      tag: "8.2.2"
+      pullPolicy: "IfNotPresent"
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+      limits:
+        cpu: "2000m"
+        memory: "4Gi"
+    persistence:
+      size: "8Gi"
+      storageClass: ""                     # empty → cluster default
+  mssql:
+    mssql_pid: "Express"
+
+# --- Cross-role shared defaults - Owned by other roles; declared here so this role is standalone-runnable. ---
+pipeline_namespace: "{{ pipeline_type | default('chatqna') }}"  # app_pipeline
+edp_enabled: false                                             # app_edp
+edp_namespace: "edp"                                           # app_edp
+rag_tmp_dir: "{{ tmp_dir }}/rag"                               # app_pre_install (derived from tmp_dir)
+istio_enabled: false                                           # global

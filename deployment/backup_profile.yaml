@@ -1,0 +1,213 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# =============================================================================
+# Backup profile
+# =============================================================================
+# The contract this file fills is documented in the core repo at
+# configs/backup.yaml. The engine (roles/backup in that repo) knows
+# nothing about this solution; everything specific to it is here.
+#
+# Rendered with Jinja before parsing, so it can read the merged config — that is,
+# the env's config.<layer>.yaml and global_config.yaml. Role defaults are NOT in
+# scope here (they are loaded per role, and this file is read by a playbook that
+# includes no roles), so every reference to one carries the same literal default
+# the role declares. Overriding such a value in the env config makes it take
+# effect here too.
+#
+# Driven by deployment/backup.yaml beside it; that playbook's header carries the
+# command.
+# =============================================================================
+
+name: "erag"
+layer: "erag"
+
+# Opt-in. Backup requires CSI-snapshot-capable storage (storage_backend: nfs or
+# ceph) and velero_enabled: true, so it cannot be on by default.
+enabled: "{{ backup_enabled | default(false) }}"
+
+# Recorded on every Backup, and what the pre-upgrade gate looks backups up by.
+# The engine resolves the value from version_file — without it every backup would
+# be labelled "unknown" and the gate would match all of them regardless of the
+# version actually running.
+version_label: "meta.erag/solution-version"
+version_file: "{{ backup_profile_dir }}/version.yaml"
+version_key: "solution_version"
+
+# -----------------------------------------------------------------------------
+# Namespaces
+# -----------------------------------------------------------------------------
+# Restore order, dependencies first: the operator before the pipeline it manages,
+# the data stores before the services that read them, the UI last.
+#
+# The identity realm is one of these namespaces, not an exception to them. It lives
+# in a database in the platform's managed PostgreSQL cluster, so the cluster's
+# volume is snapshotted like the volume of every other database here, and a restore
+# replays it the same way.
+#
+# Two consequences worth knowing before enabling this:
+#
+#   That volume holds every database in the shared cluster, not only the realm — on
+#   a stock deployment also the model proxy's and the tracing service's. A restore
+#   rolls those back to the same point in time. There is one volume, so there is no
+#   way to replay part of it.
+#
+#   The `keycloak` namespace carries no volume of its own. It is captured for its
+#   configuration and its database credentials, which have to match the ones inside
+#   the restored volume.
+#
+# One namespace is deliberately absent:
+#
+#   llm-inference — model serving. Weights are not user data and are re-pulled
+#     by the model catalogue; backing up tens of gigabytes of them per backup is
+#     not a trade anyone wants.
+namespace_order:
+  - default                                   # deployment manifest
+  - postgresql                                # postgresql_namespace — the shared database, realm included
+  - keycloak                                  # keycloak_namespace — identity service config and db credentials
+  - system                                    # gmc_namespace — pipeline operator
+  - nats                                      # nats_namespace
+  - fingerprint                               # fingerprint_namespace
+  - seaweedfs                                 # edp_seaweedfs_namespace — ingested documents
+  - vdb                                       # vector_databases_namespace — embeddings
+  - edp                                       # edp_namespace — ingestion metadata
+  - chat-history                              # chat_history_namespace — conversations
+  - auth-apisix                               # apisix_namespace — API gateway config
+  - "{{ pipeline_type | default('chatqna') }}"  # the pipeline's own namespace
+  - rag-ui                                    # ui_namespace — stateless, config only
+
+# -----------------------------------------------------------------------------
+# Selectors
+# -----------------------------------------------------------------------------
+# None. Everything in the namespaces above is solution state, and model serving —
+# the one thing worth excluding — lives in a namespace that is not in the list.
+#
+# The monorepo carried an `app.kubernetes.io/instance notin (...)` selector for
+# exactly that exclusion. Kubernetes NotIn also matches objects without the key,
+# so that selector matched practically everything: it was equivalent to no
+# selector while looking like a filter. Not reproducing it.
+or_label_selectors: []
+label_selector: {}
+
+# Never restored. Pods and ReplicaSets are recreated by their controllers;
+# webhook configurations and generated pipeline CRs are reconciled by their
+# operators and restoring stale copies fights them.
+exclude_resources:
+  - pods
+  - replicasets.apps
+  - events
+  - endpoints
+  # Both groups, while the gmc.opea.io to gmc.erag.intel.com rename is in flight —
+  # the same pair app_pipeline's teardown lists. A backup taken on one release and
+  # replayed on the other would otherwise carry a stale pipeline resource back.
+  - gmconnectors.gmc.erag.intel.com
+  - gmconnectors.gmc.opea.io
+  - validatingwebhookconfigurations.admissionregistration.k8s.io
+  - mutatingwebhookconfigurations.admissionregistration.k8s.io
+  - instrumentations.opentelemetry.io
+
+# -----------------------------------------------------------------------------
+# What must be gone before a restore replays
+# -----------------------------------------------------------------------------
+# Velero writes objects; it does not reconcile Helm. A release left in place owns
+# the objects being restored and its next reconcile undoes the restore, so the
+# release comes down first and the restore recreates it.
+#
+# Every Helm/<release> here must match a release name a role actually creates.
+# Nothing checks that automatically — it is why this list lives in this repo.
+cleanup:
+  default: []
+  # The database is not a Helm release — the platform's PostgreSQL operator owns it
+  # through this custom resource, and while the resource exists the operator
+  # recreates the volume the restore is about to replay. Deleting the resource takes
+  # its pod and its volume with it, and the restore brings both back.
+  postgresql:
+    - kind: Cluster
+      api_version: postgresql.cnpg.io/v1
+      name: "{{ postgresql_cluster_name | default('postgresql') }}"
+  # Nothing. The identity service is stateless; it reconnects to the restored
+  # database and its own objects are replayed over the running ones.
+  keycloak: []
+  system: [Helm/gmc]
+  nats: [Helm/nats]
+  fingerprint: [Helm/fingerprint]
+  seaweedfs: [Helm/seaweedfs]
+  vdb: [Helm/vdb, Secret/vector-database-config]
+  edp: [Helm/edp, Secret/vector-database-config]
+  chat-history: [Helm/chat-history]
+  # The API gateway's own store, and deliberately NOT Helm/auth-apisix.
+  # Uninstalling that release deletes its IngressClass, which is cluster-scoped and
+  # so outside every namespace this profile captures: the restore would remove it
+  # and never replay it. Without the IngressClass the ingress controller cannot bind
+  # a route to its GatewayProxy, stops reconciling at all, and the gateway keeps
+  # serving whatever its store happens to hold — the addresses that were live when
+  # the backup was taken. Naming the store's StatefulSet instead frees its volume
+  # for the replay while leaving the release, and the IngressClass, in place.
+  auth-apisix: [StatefulSet/auth-apisix-etcd]
+  "{{ pipeline_type | default('chatqna') }}":
+    - "Deployment/selector: app.kubernetes.io/managed-by=Helm"
+  rag-ui: [Helm/chatqna-app]
+
+# -----------------------------------------------------------------------------
+# Hooks
+# -----------------------------------------------------------------------------
+# None. Every store in this profile is captured as the volume it sits on, and a
+# snapshot of a single volume is a crash-consistent copy the database recovers from
+# by replaying its own write-ahead log when it starts.
+pre_backup: []
+
+post_restore:
+  # The identity service holds the realm it serves in a local cache. The replay
+  # changes the database underneath it without telling it, so it would keep
+  # answering from accounts that no longer exist. Restarting it is what makes it
+  # read the restored realm.
+  - kind: annotate
+    name: "make the identity service re-read the restored realm"
+    namespace: "{{ keycloak_namespace | default('keycloak') }}"
+    target:
+      api_version: apps/v1
+      kind: StatefulSet
+      # Named after the Keycloak custom resource, which the platform's keycloak
+      # role creates as `keycloak`. There is no variable for it on either side.
+      name: keycloak
+    annotation: "meta.erag/restore-resync"
+    ignore_errors: true
+
+  # Both halves of the API gateway have to be pushed after a replay, for different
+  # reasons. Tolerated if absent — the gateway is optional.
+  #
+  # The ingress controller reconciles on a timer anyway, but only once it can bind a
+  # route to its GatewayProxy; the annotation just brings the next pass forward
+  # instead of waiting out the interval.
+  - kind: annotate
+    name: "force the API gateway's controller to re-sync"
+    namespace: "{{ apisix_namespace | default('auth-apisix') }}"
+    target:
+      api_version: apps/v1
+      kind: Deployment
+      name: "{{ apisix_helm_release_name | default('auth-apisix') }}-ingress-controller"
+    annotation: "meta.erag/restore-resync"
+    ignore_errors: true
+
+  # The data plane reads its routing table from its store once, at startup. The
+  # replay hands it a different store, and nothing tells it to look again: it keeps
+  # serving the table it read before, so every route it holds answers 404 while the
+  # controller reports a healthy sync. Restarting it is the only way to make it
+  # re-read.
+  - kind: annotate
+    name: "make the API gateway re-read its routing table"
+    namespace: "{{ apisix_namespace | default('auth-apisix') }}"
+    target:
+      api_version: apps/v1
+      kind: Deployment
+      name: "{{ apisix_helm_release_name | default('auth-apisix') }}"
+    annotation: "meta.erag/restore-resync"
+    ignore_errors: true
+
+# -----------------------------------------------------------------------------
+# Timeouts and retention
+# -----------------------------------------------------------------------------
+# Snapshotting the vector store and the document store can take a while on NFS.
+ttl: "720h"
+item_operation_timeout: "2h0m0s"
+csi_snapshot_timeout: "2h0m0s"

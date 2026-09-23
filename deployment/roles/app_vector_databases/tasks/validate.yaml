@@ -1,0 +1,13 @@
+---
+- name: "app_vector_databases | Check Helm release"
+  kubernetes.core.helm_info:
+    name: "{{ vector_databases_helm_release_name }}"
+    release_namespace: "{{ vector_databases_namespace }}"
+  register: _vdb_release
+
+- name: "app_vector_databases | Assert installed"
+  ansible.builtin.assert:
+    that: _vdb_release.status is defined
+    fail_msg: "Vector DB Helm release '{{ vector_databases_helm_release_name }}' not found in {{ vector_databases_namespace }}"
+    success_msg: "app_vector_databases: OK"
+    quiet: true

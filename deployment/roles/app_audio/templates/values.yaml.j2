@@ -1,0 +1,57 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+proxy:
+  http_proxy: {{ http_proxy | default('') | quote }}
+  https_proxy: {{ https_proxy | default('') | quote }}
+  no_proxy: {{ no_proxy | default('') | quote }}
+
+hfToken: {{ hugging_token | quote }}
+
+asr:
+  image:
+    repository: "{{ registry }}"
+    tag: "{{ tag }}"
+    config:
+        modelName: {{ audio_asr_model | quote }}
+
+vllmAudioCpu:
+  image:
+    repository: "{{ registry }}"
+    tag: "{{ tag }}"
+  config:
+    modelName: {{ audio_asr_model | quote }}
+
+tts:
+  image:
+    repository: "{{ registry }}"
+    tag: "{{ tag }}"
+  config:
+    modelName: {{ audio_tts_model | quote }}
+
+ttsFastapiModelServer:
+  image:
+    repository: "{{ registry }}"
+    tag: "{{ tag }}"
+  config:
+    modelName: {{ audio_tts_model | quote }}
+
+namespaceStatusWatcher:
+  image:
+    repository: "{{ registry }}"
+    tag: "{{ tag }}"
+
+
+# --- APISIX route wiring (consumed by templates/apisix-routes.yaml in this chart) ---
+{% set _apisix_kc_ns = keycloak_namespace | default('keycloak') %}
+{% set _apisix_realm = (ui_keycloak_realm if (ui_keycloak_realm | default("") | length > 0) else erag_keycloak_realm | default("EnterpriseRAG")) %}
+{% set _apisix_kc_base = 'http://keycloak-service.' ~ _apisix_kc_ns ~ '.svc:8080' %}
+apisix:
+  enabled: {{ (apisix_enabled | default(false)) | bool | string | lower }}
+  ingressClassName: apisix
+  routeHost: "{{ (ui_domain_name if ui_domain_name is defined else '') }}"
+  auth:
+    realm: "{{ _apisix_realm }}"
+    client_id: "{{ apisix_oidc_client_id | default('EnterpriseRAG-oidc-backend') }}"
+    resource_registration_endpoint: "{{ _apisix_kc_base }}/realms/{{ _apisix_realm }}/authz/protection/resource_set"
+    token_endpoint: "{{ _apisix_kc_base }}/realms/{{ _apisix_realm }}/protocol/openid-connect/token"

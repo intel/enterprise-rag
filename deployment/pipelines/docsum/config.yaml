@@ -1,0 +1,44 @@
+---
+# =============================================================================
+# Pipeline defaults — fetched via: ai-solutions installer init rag --docsum
+# =============================================================================
+
+# --- Container images ---
+registry: "docker.io/intel"
+# tag: "3.0.0" # Omit to use the default tag matching the solution version (recommended). Must contain the solution version if set.
+
+# --- Pipeline (app_pipeline) ---
+pipeline_type: "docsum"
+# solution_language: "auto"                 # auto | en | pl
+
+# --- Components ---
+ui_enabled: true
+mcp_enabled: false
+
+# --- Inference models (app_inference_models — deployed via model-manager.sh) ---
+# Each entry maps to a model in solutions-poc.inference/model_manager/models.yaml.
+# The role deploys them, waits for readiness, and computes endpoints dynamically.
+inference_namespace: "llm-inference"
+inference_models:
+  - name: llama3-8b-awq
+    role: llm
+
+# The data-plane components (vdb, chat_history, edp) default OFF: docsum needs none.
+
+# --- Ansible settings ---
+#secure_logs: false
+#helm_timeout: "10m0s"
+#helm_retries: 3
+
+# --- Backup and restore (Velero) ---
+# Opt-in. Requires the core installer's velero component and CSI-snapshot-capable
+# storage (storage_backend: nfs or ceph) — see docs/operate/backup.md in this repository.
+# What is captured is declared in deployment/backup_profile.yaml.
+backup_enabled: false
+# upgrade_backup_max_age_hours: 6      # how fresh a backup the upgrade gate demands
+# allow_upgrade_without_backup: false  # true = upgrade without a restore point
+
+# --- Path overrides (paths inside the ext repo) ---
+deployment_dir: "{{ playbook_dir }}/../ext/enterprise.ai-erag/deployment"
+components_dir: "{{ deployment_dir }}/components"
+pipelines_dir: "{{ deployment_dir }}/pipelines/"

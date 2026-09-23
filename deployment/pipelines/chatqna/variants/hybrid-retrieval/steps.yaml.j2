@@ -1,0 +1,97 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# Hybrid Retrieval variant steps #}
+{# Replaces sequential retriever+reranking with parallel vector+BM25 #}
+
+{# Emits steps + __nodes__ (nested routers) + resources for the replaced span. #}
+steps:
+  - name: Retriever
+    data: $response
+    dependency: Hard
+    nodeName: parallel-retrieval-node
+
+  - name: RRF
+    data: $response
+    dependency: Hard
+    internalService:
+      serviceName: rrf-svc
+      config:
+        endpoint: /v1/rrf
+
+__nodes__:
+  # Ensemble node - parallel execution with merged response
+  # Both branches call same retriever-svc, search mode injected via data field
+  parallel-retrieval-node:
+    routerType: Ensemble
+    steps:
+      # Branch A: Vector search → Reranking (nested Sequence)
+      # Injects search_type: "similarity" for vector-only search
+      - name: VectorReranked
+        data: '{"search_type": "similarity"}'
+        nodeName: vector-rerank-node
+        dependency: Hard
+
+      # Branch B: BM25 search
+      # Injects search_type: "bm25" for keyword-only search
+      - name: BM25
+        data: '{"search_type": "bm25"}'
+        dependency: Hard
+        internalService:
+          serviceName: retriever-svc
+          config:
+            endpoint: /v1/retrieval
+
+  # Nested Sequence node for vector search + reranking
+  vector-rerank-node:
+    routerType: Sequence
+    steps:
+      # Retriever receives search_type: "similarity" from parent Ensemble step
+      - name: Retriever
+        dependency: Hard
+        internalService:
+          serviceName: retriever-svc
+          config:
+            endpoint: /v1/retrieval
+
+      {# RERANKING_* env comes from the reranking-usvc-config ConfigMap - see #}
+      {# _shared/steps/reranking.yaml.j2.                                    #}
+      - name: Reranking
+        data: $response
+        dependency: Hard
+        internalService:
+          serviceName: reranking-svc
+          config:
+            endpoint: /v1/reranking
+
+{# Resources for services used by this variant. It replaces the base retriever  #}
+{# and reranking steps, so their usvc resources are declared here too, alongside #}
+{# the fusion service (rrf-usvc). #}
+resources:
+  retriever-usvc:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 6
+        memory: 6Gi
+  reranking-usvc:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 4
+        memory: 2Gi
+  rrf-usvc:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 4
+        memory: 4Gi

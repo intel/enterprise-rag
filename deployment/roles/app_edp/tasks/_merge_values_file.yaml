@@ -1,0 +1,9 @@
+---
+- name: "app_edp | Load helm values file"
+  ansible.builtin.include_vars:
+    file: "{{ _values_file }}"
+    name: __tmp_values
+
+- name: "app_edp | Merge into edp_helm_values"
+  ansible.builtin.set_fact:
+    edp_helm_values: "{{ edp_helm_values | combine(__tmp_values, recursive=True) }}"

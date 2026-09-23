@@ -1,0 +1,13 @@
+---
+- name: "app_chat_history | Check Helm release"
+  kubernetes.core.helm_info:
+    name: "{{ chat_history_helm_release_name }}"
+    release_namespace: "{{ chat_history_namespace }}"
+  register: _chat_history_release
+
+- name: "app_chat_history | Assert installed"
+  ansible.builtin.assert:
+    that: _chat_history_release.status is defined
+    fail_msg: "Chat History Helm release '{{ chat_history_helm_release_name }}' not found in {{ chat_history_namespace }}"
+    success_msg: "app_chat_history: OK"
+    quiet: true

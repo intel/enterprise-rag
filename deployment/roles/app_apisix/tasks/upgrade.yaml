@@ -1,0 +1,3 @@
+---
+- name: "app_apisix | Upgrade — delegate to install (Helm handles upgrade)"
+  ansible.builtin.include_tasks: install.yaml

@@ -1,0 +1,21 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# Language Detection step - Detect input text language #}
+step:
+  name: LanguageDetection
+  internalService:
+    serviceName: langdtct-svc
+    config:
+      endpoint: /v1/language_detection
+      LANG_DETECT_STANDALONE: "True"
+resources:
+  langdtct-usvc:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 4
+        memory: 2Gi

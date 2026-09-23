@@ -1,0 +1,51 @@
+---
+- name: "app_apisix | Check Helm release"
+  kubernetes.core.helm_info:
+    name: "{{ apisix_helm_release_name }}"
+    release_namespace: "{{ apisix_namespace }}"
+  register: _apisix_release
+
+- name: "app_apisix | Assert installed"
+  ansible.builtin.assert:
+    that: _apisix_release.status is defined
+    fail_msg: "APISIX Helm release '{{ apisix_helm_release_name }}' not found in {{ apisix_namespace }}"
+    success_msg: "app_apisix: OK"
+    quiet: true
+
+- name: "app_apisix | Check APISIX pods"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ apisix_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/instance={{ apisix_helm_release_name }}"
+  register: _apisix_pods
+
+- name: "app_apisix | Display pod status"
+  ansible.builtin.debug:
+    msg: "{{ item.metadata.name }} — {{ item.status.phase }}"
+  loop: "{{ _apisix_pods.resources }}"
+  loop_control:
+    label: "{{ item.metadata.name }}"
+
+- name: "app_apisix | Assert pods are running"
+  ansible.builtin.assert:
+    that:
+      - _apisix_pods.resources | length > 0
+      - _apisix_pods.resources | selectattr('status.phase', 'eq', 'Running') | list | length == _apisix_pods.resources | length
+    fail_msg: "Not all APISIX pods are Running"
+    success_msg: "All {{ _apisix_pods.resources | length }} pod(s) Running"
+    quiet: true
+
+- name: "app_apisix | List ApisixRoutes"
+  kubernetes.core.k8s_info:
+    api_version: apisix.apache.org/v2
+    kind: ApisixRoute
+  register: _apisix_routes
+
+- name: "app_apisix | Display ApisixRoutes"
+  ansible.builtin.debug:
+    msg: "{{ item.metadata.namespace }}/{{ item.metadata.name }}"
+  loop: "{{ _apisix_routes.resources }}"
+  loop_control:
+    label: "{{ item.metadata.name }}"

@@ -1,0 +1,69 @@
+---
+- name: "app_pre_install | Initialize configuration issues list"
+  ansible.builtin.set_fact:
+    configuration_issues: []
+
+- name: "app_pre_install | Load hugging_token from HF_TOKEN environment variable if not set in config"
+  ansible.builtin.set_fact:
+    hugging_token: "{{ lookup('env', 'HF_TOKEN') }}"
+
+# Subdomain routing: each service lives at <prefix>.<base_domain_name>.
+- name: "app_pre_install | Set flat domain-name facts (subdomain routing)"
+  ansible.builtin.set_fact:
+    ui_domain_name: "{{ base_domain_name | default(ui_domain_name) }}"
+    erag_keycloak_domain_name: "keycloak.{{ base_domain_name | default(erag_keycloak_domain_name | regex_replace('^keycloak\\.', '')) }}"
+    telemetry_domain_name: "grafana.{{ base_domain_name | default(telemetry_domain_name | regex_replace('^grafana\\.', '')) }}"
+    edp_minio_domain_name: "minio.{{ base_domain_name | default(edp_minio_domain_name | regex_replace('^minio\\.', '') | regex_replace('^seaweedfs\\.', '')) }}"
+    edp_minio_api_domain_name: "s3.{{ base_domain_name | default(edp_minio_api_domain_name | regex_replace('^s3\\.', '')) }}"
+  when: routing_mode == 'subdomain'
+
+# Path routing: every service shares base_domain_name; a pathPrefix disambiguates.
+- name: "app_pre_install | Set flat domain-name + path-prefix facts (path-based routing)"
+  ansible.builtin.set_fact:
+    ui_domain_name: "{{ base_domain_name | default(ui_domain_name) }}"
+    erag_keycloak_domain_name: "{{ base_domain_name | default(ui_domain_name) }}"
+    erag_keycloak_path_prefix: "{{ erag_keycloak_default_path_prefix | default('/auth') }}"
+    telemetry_domain_name: "{{ base_domain_name | default(ui_domain_name) }}"
+    telemetry_path_prefix: "{{ telemetry_default_path_prefix | default('/grafana') }}"
+    edp_minio_domain_name: "{{ base_domain_name | default(ui_domain_name) }}"
+    edp_minio_api_domain_name: "{{ base_domain_name | default(ui_domain_name) }}"
+    edp_s3_path_prefix: "{{ edp_default_s3_path_prefix | default('/s3') }}"
+    edp_seaweedfs_path_prefix: "{{ edp_default_seaweedfs_path_prefix | default('/seaweedfs') }}"
+  when: routing_mode == 'path'
+
+- name: "app_pre_install | Add base_domain_name required field issue"
+  ansible.builtin.set_fact:
+    configuration_issues: >-
+      {{ configuration_issues + [
+        'base_domain_name is required but not set. Please provide a value in the configuration file.'
+      ] }}
+  when: base_domain_name | default('') | length == 0
+
+# Late chunking pools token-level embeddings client-side, so the embedding usvc
+# must be able to request them (return_pooling=True). Only the torchserve
+# connector implements that, and every model on this path is served by vLLM,
+# whose connector posts to /v1/embeddings — sequence-level only. Reject the flag
+# here rather than let EDP ingestion fail on "expected 2D token embeddings".
+- name: "app_pre_install | Reject late chunking (no token-level embedding path)"
+  ansible.builtin.set_fact:
+    configuration_issues: >-
+      {{ configuration_issues + [
+        'edp_late_chunking_enabled is true, but late chunking is not deployable:
+         it needs an embedding model server that returns token-level embeddings,
+         and models are served by vLLM via KServe, which exposes pooled
+         embeddings only. Set edp_late_chunking_enabled to false.'
+      ] }}
+  when:
+    - edp_enabled | default(false) | bool
+    - edp_late_chunking_enabled | default(false) | bool
+
+- name: "app_pre_install | Display HF_TOKEN warning if not set"
+  ansible.builtin.debug:
+    msg: |
+      WARNING: HF_TOKEN is not set!
+
+      If you're using gated models from Hugging Face, you'll need to set the HF_TOKEN
+      environment variable or provide hugging_token in your configuration file.
+
+      If you're only using publicly available models, you can ignore this warning.
+  when: hugging_token is not defined or hugging_token | length == 0

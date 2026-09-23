@@ -1,0 +1,67 @@
+{#
+Copyright (C) 2024-2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+#}
+
+{% if pipeline_type == "docsum" %}
+type: docsum
+{% elif pipeline_type == "chatqna" and audio_enabled is defined and audio_enabled %}
+type: audioqna
+{% endif %}
+
+domainName: &dname {{ ui_domain_name }}
+
+extraUiConfigVars:
+  keycloakDomainName: "{{ erag_keycloak_domain_name }}"
+{% if erag_keycloak_path_prefix | default("") | length > 0 %}
+  keycloakPathPrefix: "{{ erag_keycloak_path_prefix }}"
+{% endif %}
+  keycloakRealm: "{{ ui_keycloak_realm }}"
+  keycloakClientId: "{{ ui_keycloak_client_id }}"
+  adminResourceRole: "{{ ui_admin_resource_role }}"
+  maintainerResourceRole: "{{ ui_maintainer_resource_role }}"
+  grafanaDomainName: "{{ telemetry_domain_name }}"
+{% if telemetry_path_prefix is defined %}
+  grafanaPathPrefix: "{{ telemetry_path_prefix }}"
+{% endif %}
+  keycloakAdminPanelDomainName: "{{ erag_keycloak_domain_name }}"
+  s3DomainName: "{{ edp_minio_api_domain_name }}"
+{% if edp_s3_path_prefix is defined %}
+  s3PathPrefix: "{{ edp_s3_path_prefix }}"
+{% endif %}
+  chatDisclaimerText: "{{ ui_chat_disclaimer_text }}"
+  chatMaintenanceMode: "{{ ui_chat_maintenance_mode | bool | string | lower }}"
+  chatMaintenanceReason: "{{ 'no-llm' if (ui_chat_maintenance_mode | bool) and (ui_chat_no_llm_pipeline | bool) else '' }}"
+  audioEnabled: "{{ audio_enabled | default(false) }}"
+  asrModel: "{{ audio_asr_model | default('openai/whisper-small') }}"
+  useBearerTokenAuth: "{{ (edp_storage_type | default('') == 'seaweedfs') and (edp_rbac_enabled | default(false) | bool) }}"
+  nerEnabled: "{{ ner.enabled | default(false) }}"
+  embeddingModelMigrationRequired: "{{ embedding_migration_required | default('false') }}"
+  embeddingModelOldModel: "{{ embedding_migration_old_model | default('') }}"
+  embeddingModelNewModel: "{{ embedding_migration_new_model | default('') }}"
+
+service:
+  type: ClusterIP
+  name: &svcName "ui-chart"
+  port: &svcPort 4173
+
+image:
+  ui:
+{% if pipeline_type == "docsum" %}
+    name: enterprise-rag-docsum-ui
+{% elif pipeline_type == "chatqna" and audio_enabled is defined and audio_enabled %}
+    name: enterprise-rag-audioqna-ui
+{% endif %}
+    tag: "{{ tag }}"
+    repository: "{{ registry }}"
+
+httpRoute:
+  enabled: true
+  gatewayRef:
+    name: {{ gateway_name | default('eg-gateway') }}
+    namespace: {{ gateway_namespace | default('envoy-gateway-system') }}
+    # Bind to the apex listener (bare base_domain_name); the wildcard listener only
+    # matches subdomains, so sectionName must be https-apex for solutions.ai.
+    sectionName: https-apex
+  hostnames:
+    - *dname

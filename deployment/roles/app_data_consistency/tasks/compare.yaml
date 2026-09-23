@@ -1,0 +1,83 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Compare a pre-upgrade and a post-upgrade data snapshot.
+# Expects: _upgrade_pre_snapshot, _upgrade_post_snapshot (dicts produced by snapshot.yaml)
+# Sets fact: _upgrade_consistency_result
+
+- name: "app_data_consistency | Compare — initialize"
+  ansible.builtin.set_fact:
+    _dc_stores: {}
+    _dc_violations: []
+
+- name: "app_data_consistency | Compare — VDB"
+  ansible.builtin.set_fact:
+    _dc_stores: "{{ _dc_stores | combine({'vdb': {'pre': pre, 'post': post, 'delta': post - pre, 'verdict': verdict}}) }}"
+    _dc_violations: "{{ _dc_violations + ([('vdb: decreased from ' ~ pre ~ ' to ' ~ post)] if verdict == 'violation' else []) }}"
+  vars:
+    pre: "{{ (_upgrade_pre_snapshot.get('vdb', {}).get('count', 0)) | int }}"
+    post: "{{ (_upgrade_post_snapshot.get('vdb', {}).get('count', 0)) | int }}"
+    pre_status: "{{ _upgrade_pre_snapshot.get('vdb', {}).get('status', 'skipped') }}"
+    post_status: "{{ _upgrade_post_snapshot.get('vdb', {}).get('status', 'skipped') }}"
+    verdict: "{{ 'skipped' if (pre_status == 'skipped' or post_status == 'skipped') else ('baseline' if (pre | int == 0 and post | int == 0) else ('violation' if (post | int < pre | int) else 'pass')) }}"
+  when: "'vdb' in _upgrade_post_snapshot"
+
+- name: "app_data_consistency | Compare — Chat History"
+  ansible.builtin.set_fact:
+    _dc_stores: "{{ _dc_stores | combine({'chat_history': {'pre': pre, 'post': post, 'delta': post - pre, 'verdict': verdict}}) }}"
+    _dc_violations: "{{ _dc_violations + ([('chat_history: decreased from ' ~ pre ~ ' to ' ~ post)] if verdict == 'violation' else []) }}"
+  vars:
+    pre: "{{ (_upgrade_pre_snapshot.get('chat_history', {}).get('count', 0)) | int }}"
+    post: "{{ (_upgrade_post_snapshot.get('chat_history', {}).get('count', 0)) | int }}"
+    pre_status: "{{ _upgrade_pre_snapshot.get('chat_history', {}).get('status', 'skipped') }}"
+    post_status: "{{ _upgrade_post_snapshot.get('chat_history', {}).get('status', 'skipped') }}"
+    verdict: "{{ 'skipped' if (pre_status == 'skipped' or post_status == 'skipped') else ('baseline' if (pre | int == 0 and post | int == 0) else ('violation' if (post | int < pre | int) else 'pass')) }}"
+  when: "'chat_history' in _upgrade_post_snapshot"
+
+- name: "app_data_consistency | Compare — EDP"
+  ansible.builtin.set_fact:
+    _dc_stores: "{{ _dc_stores | combine({'edp': {'pre': pre, 'post': post, 'delta': post - pre, 'verdict': verdict}}) }}"
+    _dc_violations: "{{ _dc_violations + ([('edp: decreased from ' ~ pre ~ ' to ' ~ post)] if verdict == 'violation' else []) }}"
+  vars:
+    pre: "{{ (_upgrade_pre_snapshot.get('edp', {}).get('count', 0)) | int }}"
+    post: "{{ (_upgrade_post_snapshot.get('edp', {}).get('count', 0)) | int }}"
+    pre_status: "{{ _upgrade_pre_snapshot.get('edp', {}).get('status', 'skipped') }}"
+    post_status: "{{ _upgrade_post_snapshot.get('edp', {}).get('status', 'skipped') }}"
+    verdict: "{{ 'skipped' if (pre_status == 'skipped' or post_status == 'skipped') else ('baseline' if (pre | int == 0 and post | int == 0) else ('violation' if (post | int < pre | int) else 'pass')) }}"
+  when: "'edp' in _upgrade_post_snapshot"
+
+- name: "app_data_consistency | Compare — Keycloak"
+  ansible.builtin.set_fact:
+    _dc_stores: "{{ _dc_stores | combine({'keycloak': {'pre': pre, 'post': post, 'delta': post - pre, 'verdict': verdict}}) }}"
+    _dc_violations: "{{ _dc_violations + ([('keycloak: decreased from ' ~ pre ~ ' to ' ~ post)] if verdict == 'violation' else []) }}"
+  vars:
+    pre: "{{ (_upgrade_pre_snapshot.get('keycloak', {}).get('count', 0)) | int }}"
+    post: "{{ (_upgrade_post_snapshot.get('keycloak', {}).get('count', 0)) | int }}"
+    pre_status: "{{ _upgrade_pre_snapshot.get('keycloak', {}).get('status', 'skipped') }}"
+    post_status: "{{ _upgrade_post_snapshot.get('keycloak', {}).get('status', 'skipped') }}"
+    verdict: "{{ 'skipped' if (pre_status == 'skipped' or post_status == 'skipped') else ('baseline' if (pre | int == 0 and post | int == 0) else ('violation' if (post | int < pre | int) else 'pass')) }}"
+  when: "'keycloak' in _upgrade_post_snapshot"
+
+- name: "app_data_consistency | Compare — assemble result"
+  ansible.builtin.set_fact:
+    _upgrade_consistency_result:
+      stores: "{{ _dc_stores }}"
+      violations: "{{ _dc_violations }}"
+      verdict: "{{ 'fail' if (_dc_violations | length > 0) else 'pass' }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+- name: "app_data_consistency | Compare — log results"
+  ansible.builtin.debug:
+    msg: >-
+      [UPGRADE] Data consistency: {{ _upgrade_consistency_result.verdict | upper }}.
+      Stores: {{ _dc_stores.keys() | list | join(', ') }}.
+      {% if _dc_violations | length > 0 %}Violations: {{ _dc_violations | join('; ') }}{% endif %}
+
+- name: "app_data_consistency | Compare — warn on violations"
+  ansible.builtin.debug:
+    msg: >-
+      [UPGRADE WARNING] Data consistency violations detected:
+      {{ _dc_violations | join('; ') }}.
+      The upgrade fails once the report is written, unless
+      data_consistency_no_fail or force_install_mode is set.
+  when: _dc_violations | length > 0

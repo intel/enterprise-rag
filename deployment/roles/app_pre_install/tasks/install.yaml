@@ -1,0 +1,43 @@
+---
+# Runs before anything mutates, so a refused install leaves the deployment as it
+# was. Guarded on the action because upgrade.yaml already runs the check and then
+# delegates here — without the guard every upgrade would check twice.
+- name: "app_pre_install | Version check"
+  ansible.builtin.include_role:
+    name: app_deployment_manifest
+    tasks_from: check_version.yaml
+  when: component_action | default('install') == 'install'
+
+- name: "app_pre_install | Derive the EDP storage type from the ONTAP S3 parameters"
+  ansible.builtin.include_role:
+    name: app_edp
+    tasks_from: ontap_s3_derive.yaml
+
+- name: "app_pre_install | Load settings"
+  ansible.builtin.include_tasks:
+    file: load_settings.yaml
+
+- name: "app_pre_install | Create log and work directories if they do not exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '755'
+  loop:
+    - "{{ log_dir }}"
+    - "{{ tmp_dir }}"
+    - "{{ rag_log_dir }}"
+    - "{{ rag_tmp_dir }}"
+
+- name: "app_pre_install | Load credentials from password management"
+  ansible.builtin.include_role:
+    name: app_password_mgmt
+    tasks_from: lookup.yaml
+
+- name: "app_pre_install | Load init passwords"
+  ansible.builtin.include_role:
+    name: app_generate_password
+
+- name: "app_pre_install | Create deployment manifest stub"
+  ansible.builtin.include_role:
+    name: app_deployment_manifest
+    tasks_from: create_stub.yaml

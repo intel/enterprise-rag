@@ -1,0 +1,97 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_data_consistency Role Defaults
+# =============================================================================
+
+# --- Where snapshots and reports are written. Derived from env_dir, which the
+#     core playbook owns, so the role never reaches into the caller's tree. ---
+data_consistency_report_dir: "{{ env_dir }}/reports"
+
+# --- Which report tasks/report.yaml renders. The kind picks both the template
+#     and the file-name stem, so the two artefacts never share a name: a
+#     data-report is one snapshot, an upgrade-report is a comparison. ---
+data_consistency_report_kind: "snapshot"
+data_consistency_report_names:
+  snapshot: "data-report"
+  upgrade: "upgrade-report"
+
+# --- Set by the caller to keep the raw snapshot as a file; the value becomes
+#     the file-name suffix. Empty means the snapshot stays a fact. ---
+data_consistency_snapshot_label: ""
+
+# --- Per-store toggles. Switching one off records that store as skipped with
+#     that reason. Independent of the store's own <name>_enabled flag, which is
+#     checked separately: this one turns off the counting, not the store. ---
+data_consistency_check_vdb: true
+data_consistency_check_chat_history: true
+data_consistency_check_edp: true
+data_consistency_check_keycloak: true
+
+# --- Query Job behavior. Every count runs as a Job in the store's own namespace
+#     so credentials can be mounted from the Secret that is already there. The
+#     label is both the app.kubernetes.io/name value and the name prefix, so
+#     `kubectl get job -l app.kubernetes.io/name=data-consistency -A` lists them
+#     all. ---
+data_consistency_job_label: "data-consistency"
+data_consistency_job_backoff_limit: 2
+data_consistency_job_deadline_seconds: 120
+data_consistency_job_retries: 30
+data_consistency_job_delay: 5
+data_consistency_job_run_as_user: 1000
+
+# --- Vector stores this role knows how to count. Anything else is recorded as
+#     skipped, naming the store that was configured. ---
+data_consistency_redis_stores: ["redis", "redis-cluster"]
+
+# --- Vector store query target. The chart names the StatefulSet after the
+#     namespace rather than after the release, and its container after the store.
+#     The headless Service and the node count are read off that StatefulSet, so
+#     they are not restated here. ---
+data_consistency_vdb_statefulset: "{{ vector_databases_namespace }}-{{ vector_databases_vector_store }}"
+data_consistency_vdb_container: "redis"
+data_consistency_vdb_secret_name: "redis-cluster-secret"
+data_consistency_vdb_port: 6379
+
+# --- PostgreSQL-backed stores. Host, port, database, user and password all come
+#     from the Secret each chart already publishes; only the workload name and
+#     the counting query are stated here. ---
+data_consistency_postgresql_container: "postgresql"
+data_consistency_postgresql_port: 5432
+data_consistency_chat_history_statefulset: "{{ chat_history_helm_release_name }}-mongodb-postgresql"
+data_consistency_chat_history_count_sql: >-
+  SELECT count(*) FROM documentdb_api.collection('chat_history', 'messages');
+data_consistency_edp_statefulset: "{{ edp_helm_release_name }}-postgresql"
+data_consistency_edp_secret_name: "edp-postgresql-secret"
+data_consistency_edp_count_sql: "SELECT count(*) FROM files;"
+
+# --- Identity provider. The identity server's image carries no HTTP client, so
+#     the query runs the same initialization image the identity configurator Job
+#     uses. The endpoint is the in-cluster Service, so no proxy is involved. ---
+data_consistency_init_container_image: "{{ registry }}/enterprise-rag-init-container:{{ tag }}"
+data_consistency_keycloak_url: >-
+  http://{{ keycloak_service_name }}.{{ keycloak_namespace }}.svc:8080{{ erag_keycloak_path_prefix | default('') }}
+
+# --- Cross-role shared defaults - Owned by other roles; declared here so this role is standalone-runnable.
+#     The enable flags carry the same defaults as deployment/components.yaml, so
+#     a store the component registry would not have installed is not counted. ---
+vector_databases_enabled: false                        # app_vector_databases
+vector_databases_namespace: "vdb"                      # app_vector_databases
+vector_databases_vector_store: "redis-cluster"         # app_vector_databases (redis-cluster | mssql | pgvector)
+chat_history_enabled: false                            # app_chat_history
+chat_history_namespace: "chat-history"                 # app_chat_history
+chat_history_helm_release_name: "chat-history"         # app_chat_history
+chat_history_db_password_secret_name: "mongo-database-secret"  # app_chat_history
+edp_enabled: false                                     # app_edp
+edp_namespace: "edp"                                   # app_edp
+edp_helm_release_name: "edp"                           # app_edp
+keycloak_enabled: true                                 # core/keycloak
+keycloak_namespace: "keycloak"                         # app_keycloak_config
+keycloak_admin_secret_name: "keycloak-admin-secret"    # app_keycloak_config
+keycloak_admin_user: "admin"                           # app_keycloak_config
+keycloak_service_name: "keycloak-service"              # keycloak, platform layer
+erag_keycloak_realm: "EnterpriseRAG"                   # app_keycloak_config
+erag_keycloak_path_prefix: ""                          # app_keycloak_config
+rag_tmp_dir: "{{ tmp_dir }}/rag"                       # app_pre_install (derived from tmp_dir)

@@ -1,0 +1,40 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_fingerprint Role Defaults
+# =============================================================================
+
+# --- Deployment target ---
+fingerprint_namespace: "fingerprint"
+
+# --- Helm ---
+fingerprint_helm_version: "{{ helm_version }}"
+fingerprint_helm_chart_version: "1.1.0"
+fingerprint_helm_release_name: "fingerprint"
+fingerprint_helm_chart_directory: "{{ deployment_dir }}/components/fingerprint"
+fingerprint_helm_default_values_file: "{{ deployment_dir }}/components/fingerprint/values.yaml"
+
+# --- PostgreSQL backing store ---
+fingerprint_db_name: "system_fingerprint"
+fingerprint_db_password_secret_name: "fingerprint-postgresql-secret"
+fingerprint_db_user: "fingerprint"
+
+# --- User-supplied Helm values append-block (fed to to_nice_yaml). ---
+fingerprint_additional_values: {}
+
+# --- Cross-role shared defaults - Owned by other roles; declared here so this role is standalone-runnable. ---
+apisix_oidc_client_id: "EnterpriseRAG-oidc-backend"  # app_apisix
+keycloak_namespace: "keycloak"     # core/keycloak
+gmc_namespace: "system"            # app_pipeline — controller runs the fingerprint KV bridge here
+pipeline_namespace: "{{ pipeline_type | default('chatqna') }}"     # app_pipeline
+erag_keycloak_realm: "EnterpriseRAG"     # app_keycloak_config
+ui_domain_name: "solutions.ai"         # app_ui
+ui_keycloak_realm: "EnterpriseRAG"      # app_ui
+llm_model_name: ""                                 # app_pre_install (derived from inference_models)
+solution_language: "auto"                          # app_pipeline
+rag_tmp_dir: "{{ tmp_dir }}/rag"                   # app_pre_install (derived from tmp_dir)
+secure_logs: true                                  # global
+istio_enabled: false                               # global
+minimal_configuration: false                       # global

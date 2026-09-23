@@ -1,0 +1,72 @@
+---
+# The health check and the manifest finalization are the same on both actions, so this
+# delegates to install.yaml rather than restating them. Calling app_check_pods directly
+# here instead would skip the finalization altogether, leaving the manifest in progress
+# after an upgrade that succeeded. install.yaml guards its install-only steps on
+# component_action, so the delegation does not also write an install-time data report.
+- name: "app_post_install | Upgrade — run health check"
+  ansible.builtin.include_tasks: install.yaml
+
+- name: "app_post_install | Upgrade — collect post-upgrade data snapshot"
+  ansible.builtin.include_role:
+    name: app_data_consistency
+    tasks_from: snapshot.yaml
+  vars:
+    data_consistency_snapshot_label: "current"
+
+- name: "app_post_install | Upgrade — preserve post-snapshot"
+  ansible.builtin.set_fact:
+    _upgrade_post_snapshot: "{{ _data_snapshot }}"
+
+- name: "app_post_install | Upgrade — compare pre and post snapshots"
+  ansible.builtin.include_role:
+    name: app_data_consistency
+    tasks_from: compare.yaml
+  when: _upgrade_pre_snapshot is defined
+
+- name: "app_post_install | Upgrade — skip comparison (no pre-snapshot)"
+  ansible.builtin.debug:
+    msg: "[UPGRADE] No pre-upgrade snapshot available — recording baseline only"
+  when: _upgrade_pre_snapshot is not defined
+
+- name: "app_post_install | Upgrade — set baseline result when no pre-snapshot"
+  ansible.builtin.set_fact:
+    _upgrade_pre_snapshot: "{{ _upgrade_post_snapshot }}"
+    _upgrade_consistency_result:
+      stores: {}
+      violations: []
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      verdict: "baseline"
+  when: _upgrade_pre_snapshot is not defined
+
+- name: "app_post_install | Upgrade — generate report"
+  ansible.builtin.include_role:
+    name: app_data_consistency
+    tasks_from: report.yaml
+  vars:
+    data_consistency_report_kind: "upgrade"
+
+# Here rather than in install.yaml, which leaves it alone on this action: the snapshot
+# Jobs above render their manifests into this directory, so it has to survive until the
+# comparison is done. Before the gate below, so a refused upgrade is not also the run
+# that leaves the directory behind.
+- name: "app_post_install | Upgrade — remove RAG temporary work directory"
+  ansible.builtin.file:
+    path: "{{ rag_tmp_dir }}"
+    state: absent
+
+- name: "app_post_install | Upgrade — block on data consistency violations"
+  ansible.builtin.fail:
+    msg: |
+      Data consistency check failed — data decreased across the upgrade:
+      {{ _upgrade_consistency_result.violations | join('; ') }}
+      Report: {{ _data_consistency_report_path | default(env_dir ~ '/reports') }}
+      Override with -e data_consistency_no_fail=true (or -e force_install_mode=true).
+  when:
+    - _upgrade_consistency_result.verdict | default('') == 'fail'
+    - not (data_consistency_no_fail | default(false) | bool)
+    - not (force_install_mode | default(false) | bool)
+
+- name: "app_post_install | Upgrade complete"
+  ansible.builtin.debug:
+    msg: "[UPGRADE] Application upgrade complete — manifest finalized, data consistency reported"

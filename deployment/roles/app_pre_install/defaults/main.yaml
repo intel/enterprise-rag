@@ -1,0 +1,60 @@
+---
+# Defaults for app_pre_install. Override in deployment/config.yaml or via -e.
+app_pre_install_namespace: "pre_install"
+
+# --- RAG-scoped work dirs (subdirs of the shared log_dir/tmp_dir owned by core
+#     site.yaml). All .rag-generated artifacts live here so teardown can wipe
+#     the whole tree without touching core-owned files. ---
+rag_log_dir: "{{ log_dir }}/rag"
+rag_tmp_dir: "{{ tmp_dir }}/rag"
+
+# --- Cross-role shared defaults - consumed by resolve_vector_dims and solution_config. ---
+# *_model_name is the catalog/served name; embedding_model_id is the HF repo id.
+llm_model_name: ""                                 # app_inference_models
+embedding_model_name: ""                           # app_inference_models
+embedding_model_id: ""                             # app_inference_models
+reranking_model_name: ""                           # app_inference_models
+# vector_databases_vector_dims is deliberately NOT declared here: unset means
+# "auto-detect", and load_settings.yaml keys the detection gate off that.
+
+# --- Cross-role shared defaults - derived from base_domain_name in tasks/solution_config.yaml; declared here for standalone runs. ---
+ui_domain_name: "solutions.ai"                                                       # app_ui
+erag_keycloak_domain_name: "auth.solutions.ai"                                        # app_keycloak_config
+erag_keycloak_path_prefix: ""                                                     # app_keycloak_config
+erag_keycloak_default_path_prefix: "/auth"                                        # app_keycloak_config
+edp_minio_domain_name: "seaweedfs.{{ base_domain_name | default('solutions.ai') }}"  # app_edp
+edp_minio_api_domain_name: "s3.{{ base_domain_name | default('solutions.ai') }}"     # app_edp
+edp_seaweedfs_path_prefix: ""                                                    # app_edp
+routing_mode: subdomain                            # solution_config (subdomain | path)
+secure_logs: true                                  # global
+
+# --- Cross-role shared defaults - consumed by validate_mcp_enabled.yaml. ---
+mcp_enabled: false                                 # set per flavour in pipelines/<flavour>/config.yaml
+pipeline_type: "chatqna"                           # app_pipeline
+pipeline_variant: "base"                           # app_pipeline
+# Referenced by chatqna/pipeline.yaml's endpoints block, which the composer run in
+# validate_mcp_enabled.yaml renders. app_inference_models sets the real value first in a
+# full install; the empty default only keeps a standalone run from failing, and the
+# precondition check does not read the URL.
+llm_endpoint: ""                                   # app_inference_models
+# --- Cross-role shared defaults - consumed by the app_data_consistency snapshot that
+#     this role includes on the upgrade path. Another role's defaults are not in scope
+#     while this one runs, so the values it queries are declared here against their
+#     owning role. ---
+vector_databases_namespace: "vdb"                    # app_vector_databases
+vector_databases_helm_release_name: "vdb"            # app_vector_databases
+vector_databases_vector_store: "redis-cluster"       # app_vector_databases (redis-cluster | mssql | pgvector)
+chat_history_namespace: "chat-history"               # app_chat_history
+chat_history_helm_release_name: "chat-history"       # app_chat_history
+edp_namespace: "edp"                                 # app_edp
+edp_helm_release_name: "edp"                         # app_edp
+keycloak_namespace: "keycloak"                       # app_keycloak_config
+keycloak_admin_secret_name: "keycloak-admin-secret"  # app_keycloak_config
+keycloak_statefulset_pod: "keycloak-0"               # keycloak, platform layer
+erag_keycloak_realm: "EnterpriseRAG"                 # app_keycloak_config
+
+# Owned by nothing else: the Redis secret the vector store's chart creates, the
+# container to exec into, and the stores the snapshot knows how to count.
+data_snapshot_vdb_secret_name: "redis-cluster-secret"
+data_snapshot_vdb_container: "redis"
+data_snapshot_redis_stores: ["redis", "redis-cluster"]

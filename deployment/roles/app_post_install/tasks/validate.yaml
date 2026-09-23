@@ -1,0 +1,21 @@
+---
+- name: "app_post_install | Check pod health"
+  ansible.builtin.include_role:
+    name: app_check_pods
+    tasks_from: install.yaml
+  vars:
+    check_pods_retries: 1
+    check_pods_no_wait: true
+    check_pods_no_fail: true
+    check_pods_store_result: true
+
+- name: "app_post_install | Assert pods healthy"
+  ansible.builtin.assert:
+    that: check_pods_healthy | default(false) | bool
+    fail_msg: >-
+      Pod health check failed.
+      Not-ready: {{ check_pods_result.not_ready_containers | default([]) | length }},
+      Bad-phase: {{ check_pods_result.undesirable_pods | default([]) | length }},
+      Missing-ns: {{ check_pods_result.missing_namespaces | default([]) | length }}
+    success_msg: "app_post_install: all pods healthy"
+    quiet: true

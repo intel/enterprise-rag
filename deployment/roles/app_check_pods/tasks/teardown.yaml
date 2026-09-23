@@ -1,0 +1,82 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Verify that all expected pods have been removed after teardown.
+# Retries up to check_pods_retries times with a 60-second pause between attempts.
+
+- name: "app_check_pods | teardown | Main verification block"
+  block:
+    - name: "app_check_pods | teardown | Increment attempt counter"
+      ansible.builtin.set_fact:
+        check_pods_attempt: "{{ (check_pods_attempt | default(0) | int) + 1 }}"
+
+    - name: "app_check_pods | teardown | Get enabled namespaces"
+      ansible.builtin.include_tasks: get_namespaces.yaml
+
+    - name: "app_check_pods | teardown | Query pod state"
+      ansible.builtin.include_tasks: _query_pods.yaml
+
+    - name: "app_check_pods | teardown | Identify non-job pods still present"
+      ansible.builtin.set_fact:
+        undesirable_pods: >-
+          {%- set result = [] -%}
+          {%- for pod in all_pods -%}
+            {%- set is_job_pod = pod.metadata.ownerReferences | default([]) |
+                selectattr('kind', 'equalto', 'Job') | list | length > 0 -%}
+            {%- if not is_job_pod -%}
+              {%- set _ = result.append(pod.metadata.name) -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ result }}
+
+    - name: "app_check_pods | teardown | Evaluate cleanup status"
+      ansible.builtin.set_fact:
+        check_pods_healthy: "{{ undesirable_pods | length == 0 }}"
+
+    - name: "app_check_pods | teardown | Store result"
+      ansible.builtin.set_fact:
+        check_pods_result:
+          status: "{{ 'success' if check_pods_healthy | bool else 'failed' }}"
+          undesirable_pods: "{{ undesirable_pods | default([]) }}"
+      when: check_pods_store_result | bool
+
+    - name: "app_check_pods | teardown | Fail if pods still present"
+      ansible.builtin.fail:
+        msg: |
+          Teardown incomplete — {{ undesirable_pods | length }} pod(s) still running:
+          {% for pod in undesirable_pods %}
+            - {{ pod }}
+          {% endfor %}
+          To inspect: kubectl get pods -A | grep -E '{{ undesirable_pods | join("|") }}'
+      when: not check_pods_healthy | bool and not check_pods_no_fail | bool
+
+  rescue:
+    - name: "app_check_pods | teardown | Store result on rescue"
+      ansible.builtin.set_fact:
+        check_pods_result:
+          status: 'failed'
+          error: "Teardown verification failed after {{ check_pods_attempt | default(1) }} attempt(s)."
+          undesirable_pods: "{{ undesirable_pods | default([]) }}"
+      when: check_pods_store_result | bool
+
+    - name: "app_check_pods | teardown | Fail after maximum retries"
+      ansible.builtin.fail:
+        msg: "Pod teardown check failed after {{ check_pods_retries }} attempt(s)."
+      when:
+        - not check_pods_no_fail | bool
+        - (check_pods_attempt | int) >= (check_pods_retries if not check_pods_no_wait | bool else 1)
+
+    - name: "app_check_pods | teardown | Wait before retry"
+      ansible.builtin.pause:
+        seconds: 60
+      when:
+        - not check_pods_no_wait | bool
+        - (check_pods_attempt | int) < (check_pods_retries | int)
+
+    - name: "app_check_pods | teardown | Retry"
+      ansible.builtin.include_role:
+        name: app_check_pods
+        tasks_from: teardown.yaml
+      when:
+        - not check_pods_no_wait | bool
+        - (check_pods_attempt | int) < (check_pods_retries | int)

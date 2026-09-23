@@ -1,0 +1,13 @@
+---
+- name: "app_nats | Check Helm release"
+  kubernetes.core.helm_info:
+    name: "{{ nats_helm_release_name }}"
+    release_namespace: "{{ nats_namespace }}"
+  register: _nats_release
+
+- name: "app_nats | Assert installed"
+  ansible.builtin.assert:
+    that: _nats_release.status is defined
+    fail_msg: "NATS Helm release '{{ nats_helm_release_name }}' not found in {{ nats_namespace }}"
+    success_msg: "app_nats: OK"
+    quiet: true

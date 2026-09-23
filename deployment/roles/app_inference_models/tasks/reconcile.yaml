@@ -1,0 +1,203 @@
+---
+# =============================================================================
+# app_inference_models — undeploy what we own and no longer want
+# =============================================================================
+# Runs after sizing (needs _deploy_overrides) and before the deploy, because
+# model-manager's placement pre-flight counts running pods' cores against the
+# new spec — the stale set has to be gone by then.
+#
+# Two things get removed:
+#   - Orphans: owned but dropped or renamed in config. Nothing else would ever
+#     remove them; they keep holding cores and starve the new set.
+#   - On a replica-count change, the whole owned set. Not just the role that
+#     changed: calculate_replicas.py sizes roles jointly (the LLM is shrunk to
+#     fit alongside embedding + reranking inside one NUMA node), so one role's
+#     change re-windows every other role's cores. A machine-filling pod cannot
+#     roll in place either — it would wait on cores the outgoing pod still holds.
+#
+# Replicas are the drift signal because they are the one field that survives
+# model-manager unchanged: it rewrites MODEL_CPU for the CPU policy (rounding to an
+# integer, and to a whole physical core under full-pcpus-only), so comparing cpu
+# would report drift on every re-run.
+#
+# That covers calculator-driven changes, where a cpu change is a consequence of
+# packing more replicas per NUMA node and so arrives with a replica change. It does
+# NOT cover a hand-edit to cpu/memory in env/<env>/models-rag.yaml that leaves the
+# replica count alone: that re-applies in place and can still hit the pre-flight,
+# whose core accounting counts the model's own running pods against it. Undeploy
+# the model by hand in that case.
+
+# ── Adoption ────────────────────────────────────────────────────────────────
+# A model we want that is already deployed without our label was put there by
+# hand, by .core, or by a run predating ownership tracking. Label it here rather
+# than letting the deploy below do it: model-manager would see a changed spec and
+# re-apply, and its placement pre-flight counts the model's own running pods
+# against the new spec — a model already occupying the cores it needs fails its
+# own pre-flight. Stamping the label first leaves the rendered manifest identical
+# to the live object, so the deploy diffs clean and skips.
+#
+# Safe to patch in place: KServe does not propagate the CR's own labels to the
+# Deployment or pod template (it stamps its own set), so this does not roll the
+# workload. Done before query_owned so adopted models are immediately subject to
+# the drift check below — if their live size differs from the new spec, that is a
+# real change and the whole set gets torn down, which is what we want.
+
+- name: "app_inference_models | reconcile | Split the ownership label"
+  ansible.builtin.set_fact:
+    _owner_key: "{{ inference_owner_label.split('=')[0] }}"
+    _owner_value: "{{ inference_owner_label.split('=')[1] }}"
+
+- name: "app_inference_models | reconcile | Find models we already own"
+  ansible.builtin.include_tasks: query_owned.yaml
+
+- name: "app_inference_models | reconcile | Query all serving resources in the namespace"
+  # Unlabelled ones included: needed to find what to adopt.
+  kubernetes.core.k8s_info:
+    api_version: "{{ item.api_version }}"
+    kind: "{{ item.kind }}"
+    namespace: "{{ inference_namespace }}"
+  loop: "{{ inference_serving_kinds }}"
+  loop_control:
+    label: "{{ item.kind }}"
+  register: _all_query
+
+- name: "app_inference_models | reconcile | Resolve models to adopt"
+  ansible.builtin.set_fact:
+    # Set arithmetic on names only — wanted, deployed, and not already ours.
+    _adopt_names: >-
+      {{ (inference_models | map(attribute='name') | list)
+         | intersect(_all_query.results | map(attribute='resources') | flatten
+                     | map(attribute='metadata.name') | list)
+         | difference(_owned | list) }}
+
+- name: "app_inference_models | reconcile | Adopt models deployed without our label"
+  # Objects carry their own apiVersion/kind, so no second pass over
+  # inference_serving_kinds is needed to address them.
+  kubernetes.core.k8s:
+    state: patched
+    api_version: "{{ item.apiVersion }}"
+    kind: "{{ item.kind }}"
+    name: "{{ item.metadata.name }}"
+    namespace: "{{ item.metadata.namespace }}"
+    definition:
+      metadata:
+        # Built as a whole dict, not a templated mapping key: Ansible does not
+        # template YAML keys, so `"{{ var }}": val` would send the literal
+        # "{{ var }}" as the label name. Strategic merge keeps existing labels.
+        labels: "{{ {_owner_key: _owner_value} }}"
+  loop: >-
+    {{ _all_query.results | map(attribute='resources') | flatten
+       | selectattr('metadata.name', 'in', _adopt_names) | list }}
+  loop_control:
+    label: "{{ item.kind }}/{{ item.metadata.name }}"
+
+- name: "app_inference_models | reconcile | debug | Adopted models"
+  ansible.builtin.debug:
+    msg: >-
+      Adopted {{ _adopt_names | join(', ') }} — deployed in
+      {{ inference_namespace }} without {{ inference_owner_label }}, so by hand, by
+      .core, or by a run predating ownership tracking. They now carry our label,
+      and a later change to inference_models will undeploy them.
+  when: _adopt_names | length > 0
+
+- name: "app_inference_models | reconcile | Re-read the owned set after adoption"
+  # Adopted models must be subject to the drift check below: if their live size
+  # differs from the spec about to be applied, that is a real change and the whole
+  # set has to go.
+  ansible.builtin.include_tasks: query_owned.yaml
+  when: _adopt_names | length > 0
+
+- name: "app_inference_models | reconcile | Resolve orphans"
+  ansible.builtin.set_fact:
+    _orphan_names: >-
+      {{ _owned | list | difference(inference_models | map(attribute='name') | list) }}
+
+- name: "app_inference_models | reconcile | Reset drift accumulator"
+  ansible.builtin.set_fact:
+    _resized_names: []
+
+- name: "app_inference_models | reconcile | Detect replica-count drift"
+  ansible.builtin.set_fact:
+    _resized_names: "{{ _resized_names + [item.name] }}"
+  when:
+    - item.name in _owned
+    - (_owned[item.name] | int) != (_deploy_overrides[item.role].replicas | int)
+  loop: "{{ inference_models }}"
+  loop_control:
+    label: "{{ item.name }} ({{ item.role }})"
+
+- name: "app_inference_models | reconcile | Resolve the undeploy set"
+  ansible.builtin.set_fact:
+    _undeploy_names: >-
+      {{ (_owned | list) if (_resized_names | length > 0) else _orphan_names }}
+
+- name: "app_inference_models | reconcile | debug | Decision"
+  ansible.builtin.debug:
+    msg: |
+      {% if _undeploy_names | length == 0 %}
+      Nothing to undeploy — owned set matches the spec about to be applied.
+      {% elif _resized_names | length > 0 %}
+      Replica count changed for {{ _resized_names | join(', ') }} — undeploying the
+      whole owned set ({{ _undeploy_names | join(', ') }}) so the new sizes can be placed.
+      {% else %}
+      Dropped from config — undeploying {{ _undeploy_names | join(', ') }}.
+      {% endif %}
+      {# Inline conditionals, not {% if %}: a line-final block tag makes Jinja's
+         trim_blocks eat the newline and collapses the list onto one line. #}
+      {% for name, reps in (_owned | dictsort) %}
+        {{ name }}: {{ reps }} replica(s) deployed{{ ' → dropped from config' if name in _orphan_names else '' }}
+      {% endfor %}
+      {% for m in inference_models %}
+        {{ m.name }} ({{ m.role }}): want {{ _deploy_overrides[m.role].replicas }} replica(s){{ ' → not deployed yet' if m.name not in _owned else '' }}
+      {% endfor %}
+
+- name: "app_inference_models | reconcile | Undeploy"
+  when: _undeploy_names | length > 0
+  block:
+    # --wait blocks until the pods are gone and their cores released, not just
+    # until the CR is deleted — deleting the CR only tells KServe to start, and
+    # the pods keep their pinned CPUs / NRI balloon through graceful shutdown.
+    # NOTE: model-manager doesn't accept --namespace; namespace comes from the
+    # model entry in models.yaml (.namespace, default llm-inference).
+    - name: "app_inference_models | reconcile | Undeploy models"
+      ansible.builtin.command:
+        cmd: >-
+          {{ inference_model_manager_path }} undeploy {{ item }}
+          --wait --wait-timeout
+          {{ (inference_undeploy_wait_retries | int) * (inference_undeploy_wait_delay | int) }}
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') | default('~/.kube/config', true) }}"
+        MM_CONFIG: "{{ env_dir }}/models-rag.yaml"
+      loop: "{{ _undeploy_names }}"
+      register: _undeploy_result
+      changed_when: "'undeployed' in (_undeploy_result.stdout | default(''))"
+      # A name that is neither in the catalog nor live in the cluster aborts —
+      # expected when the owned set is already partly gone, so tolerated. Nothing
+      # else is: a --wait timeout only warns and still exits 0, and swallowing it
+      # would let the deploy below run against cores that are still held.
+      failed_when: >-
+        (_undeploy_result.rc != 0
+         and 'No catalog entry or deployed resource named'
+             not in (_undeploy_result.stderr | default('')))
+        or 'still terminating' in (_undeploy_result.stderr | default(''))
+
+    # --wait already returned, so this is a confirmation, not a wait: it exists
+    # because model-manager's `kubectl delete` swallows its own errors, and a
+    # delete blocked by a finalizer would otherwise surface as a failed deploy.
+    # Exact name intersect, never a prefix match: with hand-deployed models in
+    # the same namespace, `bge-base` would otherwise also match `bge-base-en`
+    # and wait out the retries on a model that is staying.
+    - name: "app_inference_models | reconcile | Confirm the serving resources are gone"
+      kubernetes.core.k8s_info:
+        api_version: "{{ item.api_version }}"
+        kind: "{{ item.kind }}"
+        namespace: "{{ inference_namespace }}"
+      register: _crs_gone
+      until: >-
+        _crs_gone.resources | map(attribute='metadata.name')
+        | intersect(_undeploy_names) | length == 0
+      retries: "{{ inference_undeploy_confirm_retries }}"
+      delay: "{{ inference_undeploy_confirm_delay }}"
+      loop: "{{ inference_serving_kinds }}"
+      loop_control:
+        label: "{{ item.kind }}"

@@ -1,0 +1,73 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: "deployment_manifest | Load version metadata"
+  ansible.builtin.include_vars:
+    file: "{{ deployment_dir }}/version.yaml"
+  when: solution_version is not defined
+
+- name: "deployment_manifest | Ensure manifest namespace exists"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ manifest_namespace }}"
+        labels: "{{ manifest_namespace_labels }}"
+
+- name: "deployment_manifest | Check for existing deployment manifest"
+  kubernetes.core.k8s_info:
+    kind: ConfigMap
+    namespace: "{{ manifest_namespace }}"
+    label_selectors:
+      - "{{ manifest_label_selector }}"
+  register: existing_manifests_stub
+  failed_when: false
+
+- name: "deployment_manifest | Parse existing manifest for stub"
+  ansible.builtin.set_fact:
+    _stub_existing: "{{ ((existing_manifests_stub.resources | default([]))[0].data['manifest.yaml'] | from_yaml) if (existing_manifests_stub.resources | default([]) | length) > 0 else {} }}"
+    _stub_manifest_exists: "{{ (existing_manifests_stub.resources | default([]) | length) > 0 }}"
+
+- name: "deployment_manifest | Determine stub version and targetVersion"
+  ansible.builtin.set_fact:
+    stub_version: >-
+      {{ manifest_unset_version if not _stub_manifest_exists
+         else _stub_existing.deployment.version | default(manifest_unset_version) }}
+    stub_target_version: >-
+      {{ solution_version if (not _stub_manifest_exists or _stub_existing.deployment.status | default('') != manifest_status_in_progress)
+         else _stub_existing.deployment.targetVersion | default(solution_version) }}
+
+- name: "deployment_manifest | Build stub manifest data"
+  ansible.builtin.set_fact:
+    _stub_manifest_data:
+      deployment:
+        version: "{{ stub_version if stub_version | trim != '' else None }}"
+        targetVersion: "{{ stub_target_version | trim }}"
+        imageTag: "{{ _stub_existing.deployment.imageTag | default('') if _stub_manifest_exists else '' }}"
+        targetImageTag: "{{ tag | default(default_image_tag) }}"
+        status: "{{ manifest_status_in_progress }}"
+        startedAt: "{{ ansible_date_time.iso8601 }}"
+        installedBy: "ansible"
+      components: {}
+
+- name: "deployment_manifest | Create stub ConfigMap"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: "{{ manifest_name }}"
+        namespace: "{{ manifest_namespace }}"
+        labels: "{{ manifest_labels | combine({'app.kubernetes.io/version': solution_version}) }}"
+      data:
+        manifest.yaml: "{{ _stub_manifest_data | to_nice_yaml }}"
+
+- name: "deployment_manifest | Display stub creation"
+  ansible.builtin.debug:
+    msg: >-
+      Manifest stub: version={{ stub_version | trim | default('null', true) }},
+      targetVersion={{ stub_target_version | trim }},
+      status={{ manifest_status_in_progress }}

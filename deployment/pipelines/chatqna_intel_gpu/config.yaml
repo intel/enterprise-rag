@@ -1,0 +1,79 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# =============================================================================
+# Pipeline defaults - fetched via: ai-solutions installer init rag --chatqna_intel_gpu
+# =============================================================================
+# Thin flavour: the ChatQnA graph (pipeline_type: chatqna) served on an Intel GPU.
+# EXPERIMENTAL: Intel discrete GPU (Arc B-Series / Battlemage / XPU) support is
+# experimental and intended for evaluation.
+# The delta vs chatqna is kubernetes_accelerator=intel-gpu, which makes model-manager
+# serve the LLM on the vLLM-XPU runtime (intel/vllm:0.21.0-xpu) and request
+# gpu.intel.com/xe per pod. Embedding and reranking are pinned back to CPU via their
+# per-entry `accelerator: cpu` under inference_models below — so the split (LLM on
+# GPU, embed+rerank on CPU) is expressed here in the config. Requires the core
+# cluster to be installed with the intel_gpu_operator (kubernetes_accelerator=intel-gpu).
+
+# --- Container images ---
+registry: "docker.io/intel"
+# tag: "3.0.0" # Omit to use the default tag matching the solution version (recommended). Must contain the solution version if set.
+
+# --- Pipeline (app_pipeline) ---
+pipeline_type: "chatqna"
+pipeline_variant: "base"
+# solution_language: "auto"                 # auto | en | pl
+
+# --- Accelerator (app_inference_models) ---
+# Cluster serves the LLM on Intel GPU (XPU); embed/rerank are pinned back to CPU via
+# their per-entry accelerator: under inference_models. CPU is the default in every
+# other flavour — this is the one config that opts into the GPU.
+kubernetes_accelerator: "intel-gpu"
+
+# --- Components ---
+vector_databases_enabled: true
+chat_history_enabled: true
+fingerprint_enabled: true
+edp_enabled: true
+ui_enabled: true
+
+# --- Inference models (app_inference_models - deployed via model-manager.sh) ---
+# Each entry maps to a model in deployment/models.yaml.
+# The role deploys them, waits for readiness, and computes endpoints dynamically.
+# accelerator: is passed to model-manager as --accelerator. Omit it (llm) to follow
+# the cluster onto the GPU; set `cpu` (embed/rerank) to pin to CPU on this GPU cluster.
+inference_namespace: "llm-inference"
+inference_models:
+  - name: llama3-8b-awq
+    role: llm
+  - name: nomic-embed
+    role: embedding
+    accelerator: cpu
+  - name: bge-reranker
+    role: reranking
+    accelerator: cpu
+
+# --- Ansible settings ---
+#secure_logs: false
+#helm_timeout: "10m0s"
+#helm_retries: 3
+
+# --- UI (app_ui) ---
+# ui_chat_maintenance_mode: true
+
+# --- EDP (app_edp) ---
+# edp_namespace: "edp"
+# edp_storage_type: "seaweedfs"            # seaweedfs | minio | s3 | s3compatible
+# edp_late_chunking_enabled: false
+# edp_rbac_enabled: false
+# edp_scheduled_sync_enabled: false
+
+# --- Vector DB (app_vector_databases) ---
+# vector_databases_namespace: "vdb"
+# vector_databases_vector_store: "redis-cluster"    # redis-cluster | redis | mssql | pgvector
+# vector_databases_vector_datatype: "FLOAT32"
+# vector_databases_vector_dims: 768         # auto-detected; override for unknown models
+
+# --- Path overrides (paths inside the ext repo) ---
+deployment_dir: "{{ playbook_dir }}/../ext/enterprise.ai-erag/deployment"
+components_dir: "{{ deployment_dir }}/components"
+pipelines_dir: "{{ deployment_dir }}/pipelines/"

@@ -1,0 +1,25 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# Text Extractor step - Extract text from documents (PDF, DOCX, TXT) #}
+step:
+  name: TextExtractor
+  data: $response
+  dependency: Hard
+  internalService:
+    serviceName: text-extractor-svc
+    config:
+      endpoint: /v1/text_extractor
+      # File uploads reach the pipeline as multipart/form-data; the router sends
+      # those to the multipart endpoint and JSON (links/texts) to the one above.
+      multipartEndpoint: /v1/text_extractor/upload
+resources:
+  text-extractor-usvc:
+    replicas: 2
+    resources:
+      requests:
+        cpu: 4
+        memory: 2Gi
+      limits:
+        cpu: 8
+        memory: 12Gi

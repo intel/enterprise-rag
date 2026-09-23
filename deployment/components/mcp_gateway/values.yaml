@@ -1,0 +1,94 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+image:
+  repository: docker.io/intel
+  name: enterprise-rag-mcp-gateway
+  tag: "latest"
+  pullPolicy: Always
+
+replicaCount: 1
+
+service:
+  port: 8000
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+proxy:
+  httpProxy: ""
+  httpsProxy: ""
+  noProxy: ""
+
+tls:
+  # K8s secret in this namespace holding tls.crt; mounted as the CA bundle for
+  # outbound HTTPS (needed when the gateway serves a private/self-signed cert).
+  secretName: ""
+
+hostAliases: []
+
+config:
+  edpEndpoint: ""
+  s3TlsVerify: "true"
+  allowedHosts: []
+  # Tokens the service accepts. Callers authenticate with their own Keycloak token, so
+  # the gateway is an OAuth resource server: it rejects anything not issued by this
+  # issuer for this audience, and advertises resourceUrl for RFC 9728 discovery.
+  jwtIssuer: ""
+  jwtAudience: "mcp-gateway"
+  # In-cluster JWKS endpoint the service fetches signing keys from.
+  jwksUri: ""
+  # Comma-separated signing algorithms accepted. The realm signs with RS384.
+  jwtAlgorithms: "RS256,RS384"
+  resourceUrl: ""
+
+  maxSessions: 100
+  maxSessionsPerClient: 5
+  sessionInactivityTimeout: 600
+
+httpRoute:
+  # Edge route on the shared Envoy Gateway. MCP bypasses APISIX.
+  enabled: true
+  gatewayRef:
+    name: eg-gateway
+    namespace: envoy-gateway-system
+    sectionName: https-apex
+  hostnames: []
+  # MCP SSE streams stay open for the life of a session. "0s" disables the request
+  # timeout so a stream is not cut at a fixed age; Envoy Gateway still applies a 1h
+  # idle timeout, which activity resets and which the service's own
+  # sessionInactivityTimeout undercuts anyway.
+  timeout: "0s"
+
+securityPolicy:
+  jwt:
+    # External realm issuer URL exactly as it appears in the token's iss claim.
+    issuer: ""
+    # Accepted aud values. Agent clients get an audience mapper for this value.
+    audiences:
+      - mcp-gateway
+    # In-cluster JWKS endpoint Envoy fetches signing keys from.
+    jwksUri: ""
+    # How long Envoy keeps a fetched JWKS. It bounds how long the route rejects valid
+    # tokens after the realm's signing keys change, which happens whenever the realm is
+    # recreated while the gateway data plane keeps running.
+    cacheDuration: "60s"
+    # Header the azp claim is projected into, used as the rate-limit key.
+    clientHeader: "x-mcp-client"
+
+rateLimit:
+  # Local (per Envoy pod) rate limiting on the MCP routes. Needs no rate-limit service.
+  enabled: true
+  # Per calling agent, keyed on the azp claim.
+  perClient:
+    requests: 120
+    unit: Minute
+  # Whole-route ceiling; also covers requests rejected before the JWT filter runs.
+  route:
+    requests: 600
+    unit: Minute

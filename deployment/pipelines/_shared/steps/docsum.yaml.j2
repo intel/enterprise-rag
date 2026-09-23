@@ -1,0 +1,25 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# DocSum step - Main document summarization orchestrator #}
+step:
+  name: DocSum
+  data: $response
+  dependency: Hard
+  internalService:
+    serviceName: docsum-svc
+    config:
+      endpoint: /v1/docsum
+      paramsKey: docsum
+      paramsKind: docsum
+      DOCSUM_LLM_USVC_ENDPOINT: llm-svc
+resources:
+  docsum-usvc:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 4
+        memory: 4Gi

@@ -1,0 +1,21 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+{{- /* Rendered by Helm, so gate on the CRD being present in the cluster — the
+Go-side skipIfCRDMissing guard only covers controller-applied monitors, not this
+Helm resource. Without this check `helm install` fails where prometheus-operator
+is absent. */}}
+{{- if and .Values.monitoring.enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "gmc.fullname" . }}-controller
+  labels:
+    {{- include "gmc.labels" . | nindent 4 }}
+    release: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "gmc.selectorLabels" . | nindent 6 }}
+  podMetricsEndpoints:
+  - port: metrics
+{{- end }}

@@ -1,0 +1,22 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_apisix Role Defaults — APISIX ingress controller + auth gateway
+# =============================================================================
+
+# --- Deployment target ---
+apisix_namespace: "auth-apisix"
+
+# --- Helm ---
+apisix_helm_repo_name: "apisix"
+apisix_helm_repo_url: "https://charts.apiseven.com"
+apisix_helm_chart_name: "apisix"
+apisix_helm_chart_version: "2.10.0"
+apisix_helm_release_name: "auth-apisix"
+apisix_helm_chart_directory: "{{ deployment_dir }}/components/apisix"
+apisix_helm_default_values_file: "{{ deployment_dir }}/components/apisix/values.yaml"
+
+# --- OIDC integration ---
+apisix_oidc_client_id: "EnterpriseRAG-oidc-backend"

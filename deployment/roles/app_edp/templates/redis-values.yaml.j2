@@ -1,0 +1,34 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+nameOverride: {{ edp_redis_name }}
+fullnameOverride: {{ edp_redis_name }}
+
+image:
+  repository: redis
+  tag: "8.2.2"
+  pullPolicy: IfNotPresent
+
+auth:
+  enabled: true
+  password: {{ EDP_REDIS_PASSWORD }}
+  secretName: {{ edp_redis_password_secret_name }}
+
+resources:
+  requests:
+    cpu: {{ edp_redis_helm_values.kubernetesConfig.resources.requests.cpu }}
+    memory: {{ edp_redis_helm_values.kubernetesConfig.resources.requests.memory }}
+  limits:
+    cpu: {{ edp_redis_helm_values.kubernetesConfig.resources.limits.cpu }}
+    memory: {{ edp_redis_helm_values.kubernetesConfig.resources.limits.memory }}
+
+persistence:
+  enabled: {{ edp_redis_helm_values.storage.volumeClaimTemplate.spec.resources.requests.storage is defined }}
+  size: {{ edp_redis_helm_values.storage.volumeClaimTemplate.spec.resources.requests.storage }}
+  {% if edp_redis_helm_values.storage.volumeClaimTemplate.spec.storageClassName is defined and edp_redis_helm_values.storage.volumeClaimTemplate.spec.storageClassName != '' %}
+  storageClass: {{ edp_redis_helm_values.storage.volumeClaimTemplate.spec.storageClassName }}
+  {% endif %}
+
+service:
+  type: ClusterIP
+  port: 6379

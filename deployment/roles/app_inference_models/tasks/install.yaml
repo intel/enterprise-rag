@@ -1,0 +1,609 @@
+---
+# =============================================================================
+# app_inference_models — Deploy models via model-manager, wait for readiness
+# =============================================================================
+
+- name: "app_inference_models | Seed models-rag.yaml into env dir"
+  ansible.builtin.copy:
+    src: "{{ deployment_dir }}/models.yaml"
+    dest: "{{ env_dir }}/models-rag.yaml"
+    remote_src: true
+    force: false
+    mode: '0644'
+
+- name: "app_inference_models | Fail if no models configured"
+  ansible.builtin.assert:
+    that: inference_models | length > 0
+    fail_msg: >-
+      No inference_models configured.  Ensure your config.erag.yaml has an
+      'inference_models' list with at least one entry.
+
+- name: "app_inference_models | Validate kubernetes_accelerator value"
+  ansible.builtin.assert:
+    that: (kubernetes_accelerator | default('cpu')) in inference_accelerator_profiles
+    fail_msg: >-
+      Unknown kubernetes_accelerator '{{ kubernetes_accelerator | default('cpu') }}'.
+      Known profiles: {{ inference_accelerator_profiles.keys() | list }}.
+      A typo here would silently deploy every model on CPU.
+    quiet: true
+
+- name: "app_inference_models | Assert upload mode declares embedding models only"
+  ansible.builtin.assert:
+    that: inference_models | rejectattr('role', 'equalto', 'embedding') | list | length == 0
+    fail_msg: >-
+      Upload mode is embedding-only but inference_models declares
+      {{ inference_models | rejectattr('role', 'equalto', 'embedding')
+         | map(attribute='name') | join(', ') }}. Remove the non-embedding entries.
+  when: pipeline_variant | default('base') == 'upload'
+
+- name: "app_inference_models | Verify model-manager exists"
+  ansible.builtin.stat:
+    path: "{{ inference_model_manager_path }}"
+  register: _mm_stat
+
+- name: "app_inference_models | Fail if model-manager not found"
+  ansible.builtin.assert:
+    that: _mm_stat.stat.exists
+    fail_msg: >-
+      model-manager not found at {{ inference_model_manager_path }}.
+      Ensure enterprise.ai-inference is cloned under <repo_dir>/ext/.
+
+# -----------------------------------------------------------------------------
+# Replica sizing: shrink LLM CPU and cap replica count so that
+# {LLM + embedding + reranking} fits inside a single NUMA node. Runs before
+# deploy so the sizes computed here are what actually gets applied.
+# -----------------------------------------------------------------------------
+
+- name: "app_inference_models | Load model catalog"
+  # Seeded by the first task in this file from deployment/models.yaml (force: false,
+  # so an operator's edits to the env copy survive) — not by es_auto_installer init,
+  # which seeds env/<env>/models.yaml from the inference repo's catalog.
+  # Must match MM_CONFIG below so baseline sizing sees the same catalog the
+  # deploy step uses.
+  ansible.builtin.set_fact:
+    _mm_catalog: "{{ lookup('file', env_dir + '/models-rag.yaml') | from_yaml }}"
+
+# Without this, a name with no catalog entry yields Undefined below and every
+# `_sizing_baseline.<role>.cpu | default(...)` fails on the attribute access
+# rather than falling back — an unhelpful Jinja error instead of a clear one.
+- name: "app_inference_models | Fail if a configured model is not in the catalog"
+  ansible.builtin.assert:
+    that: >-
+      (inference_models | map(attribute='name') | list)
+      | difference(_mm_catalog.models | map(attribute='name') | list) | length == 0
+    fail_msg: >-
+      inference_models names not present in {{ env_dir }}/models-rag.yaml:
+      {{ (inference_models | map(attribute='name') | list)
+         | difference(_mm_catalog.models | map(attribute='name') | list) | join(', ') }}.
+      Add a catalog entry, or correct the name in config.erag.yaml.
+    quiet: true
+
+- name: "app_inference_models | Extract baseline sizes per role from catalog"
+  ansible.builtin.set_fact:
+    _sizing_baseline: >-
+      {{
+        dict(inference_models
+             | map(attribute='role')
+             | zip(inference_models
+                   | map(attribute='name')
+                   | map('extract',
+                         dict(_mm_catalog.models | map(attribute='name')
+                              | zip(_mm_catalog.models)))
+                   | list))
+      }}
+
+- name: "app_inference_models | Roles present in this pipeline"
+  # Pipelines that don't use every role (e.g. docsum → llm-only) must NOT feed
+  # phantom embedding/reranking sizes to calculate_replicas.py — the calculator
+  # is already zero-size-aware (see its VLLM_MEMORY / n guards), and passing
+  # non-zero defaults for absent roles causes it to over-constrain the LLM to
+  # fit alongside services that will never be deployed.
+  ansible.builtin.set_fact:
+    _roles_present: "{{ inference_models | map(attribute='role') | list }}"
+
+- name: "app_inference_models | debug | Baseline sizes (from catalog)"
+  ansible.builtin.debug:
+    msg: |
+      Catalog file: {{ env_dir }}/models-rag.yaml
+      inference_models (name/role):
+      {% for m in inference_models %}  - {{ m.name }} → {{ m.role }}
+      {% endfor %}
+      Resolved per-role baseline (cpu / memory from catalog, fallback -> defaults):
+      {% if 'llm' in _roles_present %}  llm       cpu={{ _sizing_baseline.llm.cpu       | default(inference_default_llm_cpu) }}       memory={{ _sizing_baseline.llm.memory       | default(inference_default_llm_memory) }}
+      {% endif %}{% if 'embedding' in _roles_present %}  embedding cpu={{ _sizing_baseline.embedding.cpu | default(inference_default_embedding_cpu) }} memory={{ _sizing_baseline.embedding.memory | default(inference_default_embedding_memory) }}
+      {% endif %}{% if 'reranking' in _roles_present %}  reranking cpu={{ _sizing_baseline.reranking.cpu | default(inference_default_reranking_cpu) }} memory={{ _sizing_baseline.reranking.memory | default(inference_default_reranking_memory) }}
+      {% endif %}
+
+- name: "app_inference_models | Discover node topology (multinode)"
+  ansible.builtin.include_tasks: discover_topology.yaml
+  when: inference_auto_size | bool
+        or (kubernetes_cpu_policy | default('nri-balloons')) == 'best-effort'
+
+- name: "app_inference_models | debug | Node topology (input to calculator)"
+  ansible.builtin.debug:
+    msg: "{{ _nodes_topo_json }}"
+  when: inference_auto_size | bool
+        or (kubernetes_cpu_policy | default('nri-balloons')) == 'best-effort'
+
+- name: "app_inference_models | Compute replicas and adjusted LLM size"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - "{{ inference_calc_replicas_script }}"
+      - --nodes-dict
+      - "{{ _nodes_topo_json }}"
+      - --vllm-size
+      - "{{ ((_sizing_baseline.llm.cpu | default(inference_default_llm_cpu)) if 'llm' in _roles_present else 0) | int | string }}"
+      - --embedding-size
+      - "{{ ((_sizing_baseline.embedding.cpu | default(inference_default_embedding_cpu)) if 'embedding' in _roles_present else 0) | int | string }}"
+      - --reranking-size
+      - "{{ ((_sizing_baseline.reranking.cpu | default(inference_default_reranking_cpu)) if 'reranking' in _roles_present else 0) | int | string }}"
+      - --throughput-mode
+      - "{{ (inference_throughput_mode | default(true)) | string | lower }}"
+      - --edp-enabled
+      - "{{ (edp_enabled | default(false)) | string | lower }}"
+      - --telemetry-enabled
+      - "{{ (telemetry_enabled | default(false)) | string | lower }}"
+      - --vector-databases-enabled
+      - "{{ (vector_databases_enabled | default(false)) | string | lower }}"
+      - --max-replicas-per-node
+      - "{{ inference_max_replicas_per_node | int | string }}"
+      - --vllm-memory-gib
+      - "{{ ((_sizing_baseline.llm.memory | default(inference_default_llm_memory)) | regex_replace('[^0-9]', '') | int) if 'llm' in _roles_present else 0 }}"
+      - --embedding-memory-gib
+      - "{{ ((_sizing_baseline.embedding.memory | default(inference_default_embedding_memory)) | regex_replace('[^0-9]', '') | int) if 'embedding' in _roles_present else 0 }}"
+      - --reranking-memory-gib
+      - "{{ ((_sizing_baseline.reranking.memory | default(inference_default_reranking_memory)) | regex_replace('[^0-9]', '') | int) if 'reranking' in _roles_present else 0 }}"
+      # One KServe router-scheduler per model in inference_models. Every runtime this
+      # role deploys today (vllm, vllm-xpu) produces one; OVMS models do not, but the
+      # calc rounds up by ~1 GiB per OVMS model — safer to overshoot the reservation.
+      - --num-routers
+      - "{{ inference_models | length | int }}"
+  register: _replica_calc
+  changed_when: false
+  when: inference_auto_size | bool
+
+- name: "app_inference_models | debug | Raw calculator output"
+  ansible.builtin.debug:
+    msg: "{{ _replica_calc.stdout | from_json }}"
+  when: inference_auto_size | bool
+
+- name: "app_inference_models | Parse sizing result (aggregate AMX nodes only)"
+  when: inference_auto_size | bool
+  ansible.builtin.set_fact:
+    # calculate_replicas.py returns one entry per node plus a top-level
+    # `total_replicas`. Per-instance CPU sizes are identical across nodes
+    # (the calculator sizes per-instance, not per-cluster), so we take them
+    # from any AMX-capable node. Replicas sum across AMX nodes only —
+    # non-AMX nodes (e.g. Sierra Forest) cannot run vLLM AMX kernels, so
+    # including their replica counts would over-provision the cluster.
+    # Memory % reports the worst-case AMX node.
+    _per_node_sizings: >-
+      {{
+        (_replica_calc.stdout | from_json).items()
+        | rejectattr('0', 'eq', 'total_replicas')
+        | map('last')
+        | selectattr('amx_supported', 'eq', true)
+        | list
+      }}
+    _sizing: >-
+      {{
+        (
+          (_replica_calc.stdout | from_json).items()
+          | rejectattr('0', 'eq', 'total_replicas')
+          | map('last')
+          | selectattr('amx_supported', 'eq', true)
+          | first
+        ) | combine({
+          'vllm': (
+            ((_replica_calc.stdout | from_json).items()
+              | rejectattr('0', 'eq', 'total_replicas')
+              | map('last')
+              | selectattr('amx_supported', 'eq', true)
+              | first).vllm
+            | combine({'replicas':
+                (_replica_calc.stdout | from_json).items()
+                | rejectattr('0', 'eq', 'total_replicas')
+                | map('last')
+                | selectattr('amx_supported', 'eq', true)
+                | map(attribute='vllm.replicas') | map('int') | sum
+              })
+          ),
+          'embedding': (
+            ((_replica_calc.stdout | from_json).items()
+              | rejectattr('0', 'eq', 'total_replicas')
+              | map('last')
+              | selectattr('amx_supported', 'eq', true)
+              | first).embedding
+            | combine({'replicas':
+                (_replica_calc.stdout | from_json).items()
+                | rejectattr('0', 'eq', 'total_replicas')
+                | map('last')
+                | selectattr('amx_supported', 'eq', true)
+                | map(attribute='embedding.replicas') | map('int') | sum
+              })
+          ),
+          'reranking': (
+            ((_replica_calc.stdout | from_json).items()
+              | rejectattr('0', 'eq', 'total_replicas')
+              | map('last')
+              | selectattr('amx_supported', 'eq', true)
+              | first).reranking
+            | combine({'replicas':
+                (_replica_calc.stdout | from_json).items()
+                | rejectattr('0', 'eq', 'total_replicas')
+                | map('last')
+                | selectattr('amx_supported', 'eq', true)
+                | map(attribute='reranking.replicas') | map('int') | sum
+              })
+          ),
+          'memory_usage_percent': (
+            (_replica_calc.stdout | from_json).items()
+            | rejectattr('0', 'eq', 'total_replicas')
+            | map('last')
+            | selectattr('amx_supported', 'eq', true)
+            | map(attribute='memory_usage_percent') | map('float') | max
+          ),
+          'replicas': (
+            (_replica_calc.stdout | from_json).items()
+            | rejectattr('0', 'eq', 'total_replicas')
+            | map('last')
+            | selectattr('amx_supported', 'eq', true)
+            | map(attribute='replicas') | map('int') | sum
+          )
+        })
+      }}
+
+- name: "app_inference_models | Fail if calculator returned 0 replicas"
+  ansible.builtin.assert:
+    that: _sizing.replicas | int > 0
+    fail_msg: >-
+      calculate_replicas.py returned 0 replicas — LLM baseline size
+      ({{ _sizing_baseline.llm.cpu | default(inference_default_llm_cpu) }} CPUs) is too
+      large to fit
+      {% if _roles_present | length > 1 %}alongside {{ (_roles_present | reject('equalto', 'llm') | list) | join('+') }}{% endif %}
+      in a single NUMA node.
+      Reduce the LLM catalog cpu value or add larger nodes.
+  when: inference_auto_size | bool
+
+# Under best-effort, all replicas share one deploy — so replicas must be
+# ≤ AMX-node count, otherwise multiple replicas land on the same node with the
+# same CPU request and one goes Pending. Under nri-balloons / kubelet-static the
+# pinning plugin partitions CPUs per pod, so packing multiple replicas per node
+# is fine and we leave the calculator's number alone.
+- name: "app_inference_models | Count AMX-capable nodes"
+  ansible.builtin.set_fact:
+    _amx_node_count: >-
+      {{ _per_node_sizings | length }}
+  when: inference_auto_size | bool
+
+- name: "app_inference_models | Cap replicas for best-effort"
+  ansible.builtin.set_fact:
+    _replicas_llm: >-
+      {{
+        (_sizing.vllm.replicas | int)
+        if (kubernetes_cpu_policy | default('nri-balloons')) != 'best-effort'
+        else [_sizing.vllm.replicas | int, _amx_node_count | int] | min
+      }}
+    _replicas_embedding: >-
+      {{
+        (_sizing.embedding.replicas | int)
+        if (kubernetes_cpu_policy | default('nri-balloons')) != 'best-effort'
+        else [_sizing.embedding.replicas | int, _amx_node_count | int] | min
+      }}
+    _replicas_reranking: >-
+      {{
+        (_sizing.reranking.replicas | int)
+        if (kubernetes_cpu_policy | default('nri-balloons')) != 'best-effort'
+        else [_sizing.reranking.replicas | int, _amx_node_count | int] | min
+      }}
+  when: inference_auto_size | bool
+
+- name: "app_inference_models | Build per-role deploy overrides (calculator)"
+  ansible.builtin.set_fact:
+    _deploy_overrides:
+      llm:
+        cpu: "{{ _sizing.vllm.adjusted_cpu_size }}"
+        memory: "{{ _sizing_baseline.llm.memory | default(inference_default_llm_memory) }}"
+        replicas: "{{ _replicas_llm }}"
+      embedding:
+        cpu: "{{ _sizing.embedding.cpu_size }}"
+        memory: "{{ _sizing_baseline.embedding.memory | default(inference_default_embedding_memory) }}"
+        replicas: "{{ _replicas_embedding }}"
+      reranking:
+        cpu: "{{ _sizing.reranking.cpu_size }}"
+        memory: "{{ _sizing_baseline.reranking.memory | default(inference_default_reranking_memory) }}"
+        replicas: "{{ _replicas_reranking }}"
+  when: inference_auto_size | bool
+
+# Auto-size disabled: use models.yaml values verbatim. Same _deploy_overrides
+# shape so the deploy step and (auto_size=false + best-effort) bind-list block
+# both work unchanged.
+- name: "app_inference_models | Build per-role deploy overrides (catalog verbatim)"
+  ansible.builtin.set_fact:
+    _deploy_overrides:
+      llm:
+        cpu: "{{ _sizing_baseline.llm.cpu | default(inference_default_llm_cpu) }}"
+        memory: "{{ _sizing_baseline.llm.memory | default(inference_default_llm_memory) }}"
+        replicas: "{{ _sizing_baseline.llm.replicas | default(1) }}"
+      embedding:
+        cpu: "{{ _sizing_baseline.embedding.cpu | default(inference_default_embedding_cpu) }}"
+        memory: "{{ _sizing_baseline.embedding.memory | default(inference_default_embedding_memory) }}"
+        replicas: "{{ _sizing_baseline.embedding.replicas | default(1) }}"
+      reranking:
+        cpu: "{{ _sizing_baseline.reranking.cpu | default(inference_default_reranking_cpu) }}"
+        memory: "{{ _sizing_baseline.reranking.memory | default(inference_default_reranking_memory) }}"
+        replicas: "{{ _sizing_baseline.reranking.replicas | default(1) }}"
+  when: not (inference_auto_size | bool)
+
+- name: "app_inference_models | Sizing summary"
+  ansible.builtin.debug:
+    msg: |
+      Sizing source: {{ 'calculate_replicas.py' if (inference_auto_size | bool) else 'models.yaml (verbatim)' }}
+      Pipeline roles: {{ _roles_present | join(', ') }}
+      {% if inference_auto_size | bool %}Calculation method: {{ _sizing.calculation_method }}
+      Memory usage:       {{ _sizing.memory_usage_percent }}%  (across all replicas × per-role reservation)
+      {% endif %}{% if 'llm' in _roles_present %}LLM:        {{ _deploy_overrides.llm.replicas }} × ({{ _deploy_overrides.llm.cpu }} CPU, {{ _deploy_overrides.llm.memory }})
+      {% endif %}{% if 'embedding' in _roles_present %}Embedding:  {{ _deploy_overrides.embedding.replicas }} × ({{ _deploy_overrides.embedding.cpu }} CPU, {{ _deploy_overrides.embedding.memory }})
+      {% endif %}{% if 'reranking' in _roles_present %}Reranking:  {{ _deploy_overrides.reranking.replicas }} × ({{ _deploy_overrides.reranking.cpu }} CPU, {{ _deploy_overrides.reranking.memory }})
+      {% endif %}
+
+# ── Best-effort: compute per-role CPU bind list ────────────────────────────
+# Under best-effort no plugin pins CPUs — vLLM's auto-detect sees the pod's
+# whole cpuset (= the whole node) and its OMP pool oversubscribes host cores.
+# Compute a static bind list from ONE AMX node's NUMA-0 primary threads:
+#   llm      → cores [0 : cpu_llm]
+#   rerank   → cores [cpu_llm : cpu_llm + cpu_rerank]
+#   embed    → cores [cpu_llm + cpu_rerank : cpu_llm + cpu_rerank + cpu_embed]
+# All replicas of a role share the same list — since replicas ≤ amx_node_count
+# and each replica lands on a different homogeneous AMX node, the list refers
+# to real CPUs on every host. Under nri-balloons / kubelet-static this whole
+# block is skipped (they pin themselves).
+
+- name: "app_inference_models | best-effort | Pick reference AMX node topology"
+  ansible.builtin.set_fact:
+    # First AMX node from the probe. Assumption: cluster is homogeneous across
+    # AMX nodes (same NUMA layout, same physical core count). Verified upstream
+    # by calculate_replicas.py which per-instance-sizes identically on every node.
+    _ref_topo: >-
+      {{
+        (_nodes_topo_dict | dict2items
+          | selectattr('value.amx_supported', 'eq', true)
+          | map(attribute='value') | first)
+      }}
+  when: (kubernetes_cpu_policy | default('nri-balloons')) == 'best-effort'
+
+- name: "app_inference_models | best-effort | Expand NUMA-0 primary cpulist"
+  # Turn the "0,1,2,3,..." shape from the probe into a Python list of ints so
+  # slicing per-role is trivial. The probe already emits primary threads only.
+  ansible.builtin.set_fact:
+    _numa0_primaries: >-
+      {{
+        (_ref_topo.physical_cpus_per_numa['0'] | default(''))
+        .split(',') | map('trim') | select | map('int') | list
+      }}
+  when: (kubernetes_cpu_policy | default('nri-balloons')) == 'best-effort'
+
+- name: "app_inference_models | best-effort | Assert enough cores for all roles"
+  ansible.builtin.assert:
+    that: >-
+      _numa0_primaries | length
+       >= (('llm' in _roles_present)       | ternary(_deploy_overrides.llm.cpu       | int, 0)
+         + ('reranking' in _roles_present) | ternary(_deploy_overrides.reranking.cpu | int, 0)
+         + ('embedding' in _roles_present) | ternary(_deploy_overrides.embedding.cpu | int, 0))
+    fail_msg: >-
+      NUMA-0 has {{ _numa0_primaries | length }} physical cores but roles need
+      {{ ('llm' in _roles_present)       | ternary(_deploy_overrides.llm.cpu       | int, 0)
+       + ('reranking' in _roles_present) | ternary(_deploy_overrides.reranking.cpu | int, 0)
+       + ('embedding' in _roles_present) | ternary(_deploy_overrides.embedding.cpu | int, 0) }} total
+      (roles={{ _roles_present | join(',') }};
+      llm={{ _deploy_overrides.llm.cpu }},
+      rerank={{ _deploy_overrides.reranking.cpu }},
+      embed={{ _deploy_overrides.embedding.cpu }}).
+      Reduce catalog CPU sizes or add a larger node.
+  when: (kubernetes_cpu_policy | default('nri-balloons')) == 'best-effort'
+
+- name: "app_inference_models | best-effort | Compute per-role bind lists"
+  ansible.builtin.set_fact:
+    # Slices are cumulative-offset windows over NUMA-0 primaries. Absent roles
+    # (e.g. embedding/reranking on a docsum pipeline) contribute 0 cores so
+    # downstream roles occupy the space they would have taken. Emitted bind
+    # strings for absent roles are '' — deploy step below only reads bind_lists
+    # entries for roles that appear in inference_models.
+    _cpu_llm:        "{{ ('llm'       in _roles_present) | ternary(_deploy_overrides.llm.cpu       | int, 0) }}"
+    _cpu_reranking:  "{{ ('reranking' in _roles_present) | ternary(_deploy_overrides.reranking.cpu | int, 0) }}"
+    _cpu_embedding:  "{{ ('embedding' in _roles_present) | ternary(_deploy_overrides.embedding.cpu | int, 0) }}"
+  when: (kubernetes_cpu_policy | default('nri-balloons')) == 'best-effort'
+
+- name: "app_inference_models | best-effort | Build bind list slices"
+  ansible.builtin.set_fact:
+    _bind_lists:
+      llm: >-
+        {{ _numa0_primaries[0 : _cpu_llm | int] | join(',') }}
+      reranking: >-
+        {{ _numa0_primaries[_cpu_llm | int : (_cpu_llm | int) + (_cpu_reranking | int)] | join(',') }}
+      embedding: >-
+        {{ _numa0_primaries[(_cpu_llm | int) + (_cpu_reranking | int)
+                            : (_cpu_llm | int) + (_cpu_reranking | int) + (_cpu_embedding | int)]
+           | join(',') }}
+  when: (kubernetes_cpu_policy | default('nri-balloons')) == 'best-effort'
+
+- name: "app_inference_models | best-effort | debug | bind lists"
+  ansible.builtin.debug:
+    msg: |
+      Reference AMX node: {{ _ref_topo }}
+      NUMA-0 primaries:   {{ _numa0_primaries | length }} cores
+      LLM       bind:     {{ _bind_lists.llm }}
+      Reranker  bind:     {{ _bind_lists.reranking }}
+      Embedding bind:     {{ _bind_lists.embedding }}
+  when: (kubernetes_cpu_policy | default('nri-balloons')) == 'best-effort'
+
+# ── Reconcile ───────────────────────────────────────────────────────────────
+# Undeploy models we own that config no longer wants, and — on a replica-count
+# change — the whole owned set, so the deploy below can actually be placed. Runs
+# here because it needs _deploy_overrides from above and must free cores before
+# model-manager's placement pre-flight below.
+
+- name: "app_inference_models | Reconcile the deployed model set"
+  ansible.builtin.include_tasks: reconcile.yaml
+
+# ── Deploy ──────────────────────────────────────────────────────────────────
+# One model-manager deploy per role, --replicas N, --label for ownership.
+# Under best-effort, adds --env OMP_NUM_THREADS=<cpu> and
+# --env VLLM_CPU_OMP_THREADS_BIND=<static bind list> so vLLM's OpenMP workers
+# pin to the reserved physical cores on every replica's host.
+# Under nri-balloons / kubelet-static, the pinning plugin gives each pod an
+# exclusive cpuset — we leave OMP env alone rather than fighting the plugin.
+
+- name: "app_inference_models | debug | model-manager deploy commands"
+  ansible.builtin.debug:
+    msg: >-
+      {{ inference_model_manager_path }} deploy {{ item.name }}
+      --cpu {{ _deploy_overrides[item.role].cpu }}
+      --memory {{ _deploy_overrides[item.role].memory }}
+      --replicas {{ _deploy_overrides[item.role].replicas }}
+      --label {{ inference_owner_label }}
+      {% if item.accelerator is defined %}--accelerator {{ item.accelerator }}{% endif %}
+      {% if (kubernetes_cpu_policy | default('nri-balloons')) == 'best-effort' %}
+      --env OMP_NUM_THREADS={{ _deploy_overrides[item.role].cpu }}
+      --env VLLM_CPU_OMP_THREADS_BIND={{ _bind_lists[item.role] }}
+      {% endif %}
+      --wait --wait-timeout 1200
+  loop: "{{ inference_models }}"
+  loop_control:
+    label: "{{ item.name }} ({{ item.role }})"
+
+- name: "app_inference_models | Deploy models"
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [
+          inference_model_manager_path, 'deploy', item.name,
+          '--cpu',      _deploy_overrides[item.role].cpu    | string,
+          '--memory',   _deploy_overrides[item.role].memory | string,
+          '--replicas', _deploy_overrides[item.role].replicas | string,
+          '--label',    inference_owner_label,
+        ]
+        + (['--accelerator', item.accelerator] if item.accelerator is defined else [])
+        + (
+          [
+            '--env', 'OMP_NUM_THREADS=' ~ (_deploy_overrides[item.role].cpu | string),
+            '--env', 'VLLM_CPU_OMP_THREADS_BIND=' ~ (_bind_lists[item.role] | trim),
+          ]
+          if (kubernetes_cpu_policy | default('nri-balloons')) == 'best-effort'
+          else []
+        )
+        + ['--wait', '--wait-timeout', '1200']
+      }}
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+    MM_CONFIG: "{{ env_dir }}/models-rag.yaml"
+    # The wrapper prompts for an env when several exist under env/ and hard-fails
+    # with no tty. Pass the env the installer already resolved from --env.
+    ES_ENV: "{{ env_dir | basename }}"
+    MM_CPU_POLICY: "{{ kubernetes_cpu_policy | default('nri-balloons') }}"
+    # Accelerator plumbing (see defaults/main.yaml). On intel-gpu: MM_VLLM_RUNTIME
+    # swaps the logical `vllm` runtime for vllm-xpu and MM_ACCEL_RESOURCE
+    # (gpu.intel.com/xe) is requested per pod; MM_ACCEL_RENDER_GID adds the host
+    # `render` group as a pod supplementalGroup so the non-root vLLM-XPU pod can
+    # enumerate the GPU. All empty on CPU (and whenever the profile leaves them
+    # unset), so model-manager emits none of the GPU wiring. A model's per-entry
+    # accelerator: (passed as --accelerator above) overrides MM_ACCELERATOR.
+    MM_ACCELERATOR: "{{ kubernetes_accelerator | default('cpu') }}"
+    MM_VLLM_RUNTIME: "{{ (inference_accelerator_profiles[kubernetes_accelerator | default('cpu')] | default({})).vllm_runtime | default('') }}"
+    MM_ACCEL_RESOURCE: "{{ (inference_accelerator_profiles[kubernetes_accelerator | default('cpu')] | default({})).k8s_resource | default('') }}"
+    MM_ACCEL_RENDER_GID: "{{ (inference_accelerator_profiles[kubernetes_accelerator | default('cpu')] | default({})).render_group_gid | default('') }}"
+  loop: "{{ inference_models }}"
+  loop_control:
+    label: "{{ item.name }} ({{ item.role }})"
+  register: _deploy_result
+  changed_when: false
+
+- name: "app_inference_models | Wait for all model replicas to be Ready"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ inference_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/name={{ item.name }}"
+  register: _model_pods
+  until: >-
+    (_model_pods.resources | default([])
+      | selectattr('status.conditions', 'defined')
+      | map(attribute='status.conditions') | flatten
+      | selectattr('type', 'eq', 'Ready')
+      | selectattr('status', 'eq', 'True')
+      | list | length) >= (_deploy_overrides[item.role].replicas | int)
+  retries: "{{ inference_model_ready_retries }}"
+  delay: "{{ inference_model_ready_delay }}"
+  loop: "{{ inference_models }}"
+  loop_control:
+    label: "{{ item.name }} ({{ _deploy_overrides[item.role].replicas }} replicas)"
+  when: (_deploy_overrides[item.role].replicas | int) > 1
+
+- name: "app_inference_models | debug | model-manager deploy output"
+  ansible.builtin.debug:
+    msg: |
+      {{ item.item.name }} ({{ item.item.role }}) — rc={{ item.rc }}
+      stdout:
+      {{ item.stdout | default('') }}
+      stderr:
+      {{ item.stderr | default('') }}
+  loop: "{{ _deploy_result.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+# Catalog name → HuggingFace model_id. Both identities are needed downstream:
+# the name is what KServe serves the model as (and what vLLM accepts in the
+# "model" field), the model_id is what tokenizer/dims lookups need.
+- name: "app_inference_models | Map catalog name to HuggingFace model_id"
+  ansible.builtin.set_fact:
+    _mm_model_ids: "{{ _mm_catalog.models | items2dict(key_name='name', value_name='model_id') }}"
+
+# Build endpoints from declared models only — a role absent from inference_models
+# (e.g. docsum declares no embedding) simply doesn't appear in the dict.
+# LLM goes via the AI gateway; embedding/reranking hit their kserve svc directly.
+- name: "app_inference_models | Resolve endpoints per role"
+  ansible.builtin.set_fact:
+    inference_endpoints: >-
+      {{ inference_endpoints | default({}) | combine({
+           item.role: {
+             'model_name': item.name,
+             'model_id': _mm_model_ids[item.name] | default(''),
+             'endpoint': inference_aigw_endpoint if item.role == 'llm'
+               else 'http://' + item.name + '-kserve-workload-svc.' + inference_namespace + '.svc:8000'
+           }
+         }) }}
+  loop: "{{ inference_models }}"
+  loop_control:
+    label: "{{ item.role }}: {{ item.name }}"
+
+# Flat vars consumed by app_pipeline, app_edp, app_fingerprint, app_pre_install.
+# Absent roles resolve to '' — templates guard on the empty endpoint.
+# *_model_name is the catalog/served name (k8s svc name, vLLM "model" field);
+# embedding_model_id is the HF repo id, needed by tokenizer + vector-dims lookups.
+- name: "app_inference_models | Set endpoint vars"
+  ansible.builtin.set_fact:
+    llm_endpoint: "{{ inference_endpoints.llm.endpoint | default('') }}"
+    llm_model_name: "{{ inference_endpoints.llm.model_name | default('') }}"
+    embedding_endpoint: "{{ inference_endpoints.embedding.endpoint | default('') }}"
+    embedding_model_name: "{{ inference_endpoints.embedding.model_name | default('') }}"
+    embedding_model_id: "{{ inference_endpoints.embedding.model_id | default('') }}"
+    reranking_endpoint: "{{ inference_endpoints.reranking.endpoint | default('') }}"
+    reranking_model_name: "{{ inference_endpoints.reranking.model_name | default('') }}"
+
+# Only DocSum consumes the model's context length (to pre-validate 'stuff' summaries).
+- name: "app_inference_models | Resolve LLM context length"
+  ansible.builtin.include_tasks: resolve_model_context_length.yaml
+  when:
+    - pipeline_type | default('') == 'docsum'
+    - inference_endpoints.llm is defined
+
+- name: "app_inference_models | Endpoints resolved"
+  ansible.builtin.debug:
+    msg: >-
+      {{ item.key }}: {{ item.value.endpoint }}
+      (served as {{ item.value.model_name }}, model_id {{ item.value.model_id | default('?') }})
+  loop: "{{ inference_endpoints | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"

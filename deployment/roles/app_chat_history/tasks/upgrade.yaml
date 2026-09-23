@@ -1,0 +1,3 @@
+---
+- name: "app_chat_history | Upgrade — delegate to install (Helm handles upgrade)"
+  ansible.builtin.include_tasks: install.yaml

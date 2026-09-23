@@ -1,0 +1,159 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# =============================================================================
+# app_inference_models — Discover per-node CPU/NUMA/memory topology
+# =============================================================================
+# Multinode-safe replacement for the localhost `lscpu` path. Runs a short-lived
+# unprivileged busybox DaemonSet whose pods `sleep infinity`; the controller
+# then execs into each pod and reads /sys + /proc directly (no lscpu — busybox
+# doesn't ship it). Kubelet places one pod per node, so this probe is
+# independent of Ansible inventory / SSH reachability.
+#
+# The pod runs unprivileged and matches Pod Security Standards 'restricted':
+#   - runAsNonRoot + explicit uid/gid + fsGroup
+#   - allowPrivilegeEscalation: false
+#   - capabilities.drop: [ALL]
+#   - seccompProfile: RuntimeDefault
+#
+# Output: `_nodes_topo` — dict keyed by node name, shape matches what
+# calculate_replicas.py already consumes:
+#   {"nodeA": {"numa_nodes":2, "cpus_per_numa_node":32,
+#              "total_memory_GiB":256, "amx_supported":true}, ...}
+
+- name: "app_inference_models | topology | Create probe DaemonSet"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: DaemonSet
+      metadata:
+        name: "{{ inference_topology_ds_name }}"
+        namespace: "{{ inference_topology_ns }}"
+        labels:
+          app.kubernetes.io/name: "{{ inference_topology_ds_name }}"
+          app.kubernetes.io/managed-by: ansible
+          app.kubernetes.io/component: topology-probe
+      spec:
+        selector:
+          matchLabels:
+            app.kubernetes.io/name: "{{ inference_topology_ds_name }}"
+        template:
+          metadata:
+            labels:
+              app.kubernetes.io/name: "{{ inference_topology_ds_name }}"
+          spec:
+            # PSS 'restricted' — pod-level securityContext. Matches the pattern
+            # in roles/nri_cpu_balloons: nobody/nogroup (65534), seccomp default.
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65534
+              runAsGroup: 65534
+              seccompProfile:
+                type: RuntimeDefault
+            containers:
+              - name: probe
+                image: "{{ inference_topology_image }}"
+                imagePullPolicy: IfNotPresent
+                command: ["sh", "-c", "sleep infinity"]
+                # Container-level hardening: read-only rootfs, no capabilities,
+                # no privilege escalation. Reads /sys and /proc only (both are
+                # visible in the container's own namespaces without any mount).
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  runAsNonRoot: true
+                  runAsUser: 65534
+                  capabilities:
+                    drop: ["ALL"]
+                resources:
+                  requests:
+                    cpu: "10m"
+                    memory: "16Mi"
+                  limits:
+                    cpu: "100m"
+                    memory: "32Mi"
+            restartPolicy: Always
+            terminationGracePeriodSeconds: 1
+
+- name: "app_inference_models | topology | Wait for probe pods to be Ready"
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: "{{ inference_topology_ns }}"
+    label_selectors:
+      - "app.kubernetes.io/name={{ inference_topology_ds_name }}"
+  register: _topo_pods
+  until: >-
+    _topo_pods.resources | length > 0 and
+    (_topo_pods.resources
+       | selectattr('status.phase', 'equalto', 'Running') | list | length)
+     == (_topo_pods.resources | length) and
+    (_topo_pods.resources
+       | selectattr('status.containerStatuses', 'defined')
+       | selectattr('status.containerStatuses.0.ready', 'equalto', true)
+       | list | length)
+     == (_topo_pods.resources | length)
+  retries: "{{ inference_topology_wait_retries }}"
+  delay: "{{ inference_topology_wait_delay }}"
+
+- name: "app_inference_models | topology | Load probe script"
+  # Load the probe script from disk into a var. Keeping the shell script in its
+  # own file (files/probe-node-topology.sh) avoids running it through Jinja —
+  # earlier embedded versions tripped Jinja's brace/tag parser on `{...}` in
+  # the JSON printf and `sed 's/^node//'` substitutions.
+  ansible.builtin.set_fact:
+    _topo_probe_script: "{{ lookup('file', role_path + '/files/probe-node-topology.sh') }}"
+
+- name: "app_inference_models | topology | Collect per-node stats"
+  # Runs the loaded script inside each probe pod. The script itself is fed via
+  # `kubectl exec ... -- sh -c "$script"` — no k8s_exec, because k8s_exec's
+  # `command:` gets templated by Jinja and can't safely carry brace-heavy shell.
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - exec
+      - "-n"
+      - "{{ inference_topology_ns }}"
+      - "-c"
+      - probe
+      - "{{ item.metadata.name }}"
+      - "--"
+      - sh
+      - "-c"
+      - "{{ _topo_probe_script }}"
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') | default('~/.kube/config', true) }}"
+  register: _topo_results
+  changed_when: false
+  loop: "{{ _topo_pods.resources }}"
+  loop_control:
+    label: "{{ item.spec.nodeName }}"
+
+- name: "app_inference_models | topology | Assemble per-node dict"
+  ansible.builtin.set_fact:
+    _nodes_topo_dict: >-
+      {{
+        dict(_topo_results.results
+             | map(attribute='item.spec.nodeName')
+             | zip(_topo_results.results
+                   | map(attribute='stdout')
+                   | map('from_json')
+                   | list))
+      }}
+
+- name: "app_inference_models | topology | Serialize to JSON for the calculator"
+  ansible.builtin.set_fact:
+    _nodes_topo_json: "{{ _nodes_topo_dict | to_json }}"
+
+- name: "app_inference_models | topology | debug"
+  ansible.builtin.debug:
+    msg: "{{ _nodes_topo_dict }}"
+
+- name: "app_inference_models | topology | Tear down probe DaemonSet"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: apps/v1
+    kind: DaemonSet
+    name: "{{ inference_topology_ds_name }}"
+    namespace: "{{ inference_topology_ns }}"
+  failed_when: false

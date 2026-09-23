@@ -1,0 +1,21 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+
+- name: "app_generate_password | Check if the password file exists"
+  ansible.builtin.stat:
+    path: "{{ password_file }}"
+  register: password_file_stat
+
+- name: "app_generate_password | Create password file"
+  ansible.builtin.file:
+    path: "{{ password_file }}"
+    state: touch
+    mode: '0600'
+  when: not password_file_stat.stat.exists
+
+- name: "app_generate_password | Load the passwords from the file"
+  ansible.builtin.include_vars:
+    file: "{{ password_file }}"
+  when: password_file_stat.stat.exists

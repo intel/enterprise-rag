@@ -1,0 +1,191 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# Attachment checks (V0, V1, V2b, V3) shared by install and validate. Every failure
+# mode of the reverse proxy is a status condition: the objects apply cleanly with no
+# Gateway, no Backend CRD or a hostname somebody else already claimed, and the first
+# symptom is a 401, a 404 or a 503 on an upload. The waits are short because the
+# objects have just been applied; validate re-runs the same checks later.
+
+- name: "app_edp | ONTAP S3 | Read every HTTPRoute in the cluster"
+  kubernetes.core.k8s_info:
+    api_version: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+  register: _edp_ontap_all_routes
+  check_mode: false
+  changed_when: false
+
+- name: "app_edp | ONTAP S3 | V0 Assert no other HTTPRoute claims the S3 endpoint"
+  ansible.builtin.assert:
+    that: _conflicts | length == 0
+    fail_msg: >-
+      {{ _conflicts | join(', ') }} also
+      {{ 'claim' if _conflicts | length > 1 else 'claims' }} {{ _claim }}.
+      Gateway API awards an overlapping match to the older route, so browser uploads
+      keep landing in the other backend while edpInternalUrl already points at ONTAP S3:
+      every upload appears to succeed and nothing is ever ingested. Delete the route
+      above, or give ONTAP S3 a hostname of its own with gateway_s3_subdomain.
+    success_msg: "app_edp: ONTAP S3 is the only route claiming {{ _claim }}"
+    quiet: true
+  vars:
+    _prefix: "{{ _edp_s3_prefix if _edp_s3_path_mode | bool else '/' }}"
+    _claim: "https://{{ _edp_s3_host }}{{ _prefix }}"
+    # A route with no hostnames claims nothing on a hostname-bound listener; paths is
+    # null when a rule matches on something other than the path.
+    _claims: >-
+      {{ _edp_ontap_all_routes.resources | default([])
+         | json_query("[?spec.hostnames].{id: join('/', [metadata.namespace, metadata.name]),
+                          hosts: spec.hostnames, paths: spec.rules[].matches[].path.value}") }}
+    _host_claims: >-
+      {{ _claims | rejectattr('id', 'eq', edp_namespace ~ '/' ~ edp_ontap_s3_route_name)
+         | selectattr('hosts') | selectattr('hosts', 'contains', _edp_s3_host) | list }}
+    # In path mode the apex hostname is shared with the UI and the API, so only a
+    # route matching the same PathPrefix collides. In subdomain mode the whole
+    # hostname belongs to the S3 API.
+    _conflicts: >-
+      {{ (_host_claims | selectattr('paths') | selectattr('paths', 'contains', _prefix) | list
+          if _edp_s3_path_mode | bool else _host_claims)
+         | map(attribute='id') | list }}
+
+# One block so the condition-filtering vars below are written once and shared by the
+# wait and the assert that reports it.
+- name: "app_edp | ONTAP S3 | HTTPRoute attachment"
+  vars:
+    _section: "{{ _edp_s3_section | default('', true) }}"
+    _route: "{{ _edp_ontap_route.resources | default([{}]) | first }}"
+    _parents: >-
+      {{ _route.status.parents | default([]) | selectattr('parentRef.sectionName', 'defined')
+         | selectattr('parentRef.sectionName', 'eq', _section) | list
+         if _section | length > 0 else _route.status.parents | default([]) }}
+    _all: "{{ _parents | map(attribute='conditions', default=[]) | flatten }}"
+    _current: >-
+      {{ _all | selectattr('observedGeneration', 'defined')
+         | selectattr('observedGeneration', 'eq', _route.metadata.generation | default(0) | int) | list }}
+    # Only the conditions written for the listener this run binds and for the current
+    # generation. Re-pinning the route leaves the previous parent in status with its own
+    # Accepted=True, and a listener the route returns to keeps a stale entry under an
+    # older observedGeneration; either would otherwise satisfy the check. The fallback
+    # covers a controller that does not report observedGeneration at all.
+    _conditions: "{{ _current if (_all | selectattr('observedGeneration', 'defined') | list | length > 0) else _all }}"
+  block:
+
+    - name: "app_edp | ONTAP S3 | Wait for the HTTPRoute to be programmed"
+      kubernetes.core.k8s_info:
+        api_version: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        name: "{{ edp_ontap_s3_route_name }}"
+        namespace: "{{ edp_namespace }}"
+      register: _edp_ontap_route
+      check_mode: false
+      changed_when: false
+      until: >-
+        _conditions | selectattr('type', 'eq', 'Accepted') | selectattr('status', 'eq', 'True') | list | length > 0
+        and _conditions | selectattr('type', 'eq', 'ResolvedRefs') | selectattr('status', 'eq', 'True') | list | length > 0
+      retries: 12
+      delay: 5
+      # An exhausted wait must reach the assert below, which names the object and the
+      # effect; on its own it aborts with the bare {"attempts": N} dump.
+      failed_when: false
+
+    - name: "app_edp | ONTAP S3 | V1 Assert the HTTPRoute is accepted and its refs resolve"
+      ansible.builtin.assert:
+        that:
+          - _edp_ontap_route.resources | default([]) | length > 0
+          - _conditions | selectattr('type', 'eq', 'Accepted') | selectattr('status', 'eq', 'True') | list | length > 0
+          - _conditions | selectattr('type', 'eq', 'ResolvedRefs') | selectattr('status', 'eq', 'True') | list | length > 0
+        fail_msg: >-
+          HTTPRoute {{ edp_namespace }}/{{ edp_ontap_s3_route_name }} is missing or not
+          programmed. Conditions: {{ _conditions | default([]) }}.
+          Accepted=False means the parent Gateway {{ gateway_namespace }}/{{ gateway_name }}
+          rejected the hostname or the sectionName
+          '{{ _edp_s3_section | default('(unresolved)', true) }}'. Gateway API gives a
+          hostname to the most specific listener claiming it, so a route pinned to the
+          '*.{{ base_domain_name }}' listener stops matching once a listener claims
+          {{ _edp_s3_host }} exactly.
+          ResolvedRefs=False means the backend cannot be resolved: in
+          '{{ _edp_ontap_s3_tls_mode }}' mode the route points at
+          {{ 'Backend/' ~ edp_ontap_s3_backend_name ~ ', which needs extensionApis.enableBackend on the envoy-gateway Helm release' if _edp_ontap_s3_tls_mode == 'insecure' else 'Service/' ~ edp_ontap_s3_backend_name }}.
+        success_msg: >-
+          app_edp: ONTAP S3 route accepted on listener
+          {{ _edp_s3_section | default('(unresolved)', true) }} and refs resolved
+        quiet: true
+
+- name: "app_edp | ONTAP S3 | Wait for the envoy-gateway Backend to be accepted"
+  kubernetes.core.k8s_info:
+    api_version: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    name: "{{ edp_ontap_s3_backend_name }}"
+    namespace: "{{ edp_namespace }}"
+  register: _edp_ontap_backend
+  check_mode: false
+  changed_when: false
+  until: >-
+    (_edp_ontap_backend.resources | default([{}]) | first).status.conditions | default([])
+    | selectattr('type', 'eq', 'Accepted') | selectattr('status', 'eq', 'True') | list | length > 0
+  retries: 12
+  delay: 5
+  failed_when: false
+  when: _edp_ontap_s3_tls_mode == 'insecure'
+
+- name: "app_edp | ONTAP S3 | V2b Assert the Backend is accepted"
+  ansible.builtin.assert:
+    that:
+      - _edp_ontap_backend.resources | default([]) | length > 0
+      - _backend_conditions | selectattr('type', 'eq', 'Accepted') | selectattr('status', 'eq', 'True') | list | length > 0
+    fail_msg: >-
+      Backend {{ edp_namespace }}/{{ edp_ontap_s3_backend_name }} is missing or not
+      accepted (conditions: {{ _backend_conditions | default([]) }}). The Backend API is
+      an envoy-gateway extension and is ignored unless the envoy-gateway Helm release sets
+      config.envoyGateway.extensionApis.enableBackend: true. Either enable it, or switch to
+      edp_ontap_s3_tls_mode: ca / plaintext, which route through
+      Service/{{ edp_ontap_s3_backend_name }} instead. Until then every upload answers 503.
+    success_msg: "app_edp: ONTAP S3 Backend accepted (upstream TLS, insecureSkipVerify)"
+    quiet: true
+  vars:
+    _backend_conditions: >-
+      {{ (_edp_ontap_backend.resources | default([{}]) | first).status.conditions | default([]) }}
+  when: _edp_ontap_s3_tls_mode == 'insecure'
+
+- name: "app_edp | ONTAP S3 | Wait for the no-auth SecurityPolicy to be accepted"
+  kubernetes.core.k8s_info:
+    api_version: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    name: "{{ edp_ontap_s3_backend_name }}-no-auth"
+    namespace: "{{ edp_namespace }}"
+  register: _edp_ontap_secpolicy
+  check_mode: false
+  changed_when: false
+  until: >-
+    (_edp_ontap_secpolicy.resources | default([{}]) | first).status.ancestors | default([])
+    | map(attribute='conditions', default=[]) | flatten
+    | selectattr('type', 'eq', 'Accepted') | selectattr('status', 'eq', 'True') | list | length > 0
+  retries: 12
+  delay: 5
+  failed_when: false
+
+- name: "app_edp | ONTAP S3 | V3 Assert the no-auth SecurityPolicy is attached to the route"
+  ansible.builtin.assert:
+    that:
+      # Exact name, not a substring: a policy left targeting 'ontap-s3-route-old'
+      # satisfies a search and leaves every upload answering 401.
+      - _edp_ontap_secpolicy.resources | default([]) | length > 0
+      - edp_ontap_s3_route_name in _target_names
+      - _policy_conditions | selectattr('type', 'eq', 'Accepted') | selectattr('status', 'eq', 'True') | list | length > 0
+    fail_msg: >-
+      SecurityPolicy {{ edp_namespace }}/{{ edp_ontap_s3_backend_name }}-no-auth does not
+      exist, does not target HTTPRoute {{ edp_ontap_s3_route_name }}
+      (targets: {{ _target_names | join(', ') | default('none', true) }}), or is not
+      accepted (conditions: {{ _policy_conditions }}).
+      Every S3 upload will return 401: the core installer attaches
+      SecurityPolicy/gateway-auth to the whole Gateway, and S3 clients present SigV4
+      signatures instead of OIDC tokens.
+    success_msg: "app_edp: ONTAP S3 no-auth override in place"
+    quiet: true
+  vars:
+    _target_names: >-
+      {{ (_edp_ontap_secpolicy.resources | default([{}]) | first).spec.targetRefs | default([])
+         | map(attribute='name') | list }}
+    _policy_conditions: >-
+      {{ (_edp_ontap_secpolicy.resources | default([{}]) | first).status.ancestors | default([])
+         | map(attribute='conditions', default=[]) | flatten }}

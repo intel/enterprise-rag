@@ -1,0 +1,151 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "app_mcp_gateway | Check Helm release"
+  kubernetes.core.helm_info:
+    name: "{{ mcp_helm_release_name }}"
+    release_namespace: "{{ mcp_namespace }}"
+  register: _mcp_release
+
+- name: "app_mcp_gateway | Assert installed"
+  ansible.builtin.assert:
+    that: _mcp_release.status is defined
+    fail_msg: "MCP gateway Helm release '{{ mcp_helm_release_name }}' not found in {{ mcp_namespace }}"
+    success_msg: "app_mcp_gateway: OK"
+    quiet: true
+
+- name: "app_mcp_gateway | Check pods"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ mcp_namespace }}"
+    label_selectors:
+      - "app=mcp-gateway"
+  register: _mcp_pods
+
+- name: "app_mcp_gateway | Assert a pod is Ready"
+  ansible.builtin.assert:
+    that:
+      - >-
+        _mcp_pods.resources | default([])
+        | selectattr('status.conditions', 'defined')
+        | map(attribute='status.conditions')
+        | map('selectattr', 'type', 'eq', 'Ready')
+        | map('selectattr', 'status', 'eq', 'True')
+        | map('list') | map('length')
+        | select('gt', 0) | list | length > 0
+    fail_msg: "No Ready mcp-gateway pod in {{ mcp_namespace }}"
+    success_msg: "app_mcp_gateway pod: Ready"
+    quiet: true
+
+- name: "app_mcp_gateway | Check HTTPRoute"
+  kubernetes.core.k8s_info:
+    api_version: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    name: mcp-gateway-route
+    namespace: "{{ mcp_namespace }}"
+  register: _mcp_route
+
+- name: "app_mcp_gateway | Assert HTTPRoute is accepted by the gateway"
+  ansible.builtin.assert:
+    that:
+      - _mcp_route.resources | default([]) | length > 0
+      - >-
+        _mcp_route.resources[0].status.parents | default([])
+        | map(attribute='conditions')
+        | map('selectattr', 'type', 'eq', 'Accepted')
+        | map('selectattr', 'status', 'eq', 'True')
+        | map('list') | map('length')
+        | select('gt', 0) | list | length > 0
+    fail_msg: >-
+      HTTPRoute 'mcp-gateway-route' in {{ mcp_namespace }} is not Accepted by Gateway
+      '{{ gateway_namespace }}/{{ gateway_name }}'. It binds to the 'https-apex' listener,
+      which the gateway only defines when gateway_tls_mode is not 'none'.
+    success_msg: "app_mcp_gateway route: Accepted"
+    quiet: true
+
+- name: "app_mcp_gateway | Check the route enforces JWT authentication"
+  kubernetes.core.k8s_info:
+    api_version: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    name: mcp-gateway-jwt
+    namespace: "{{ mcp_namespace }}"
+  register: _mcp_jwt_policy
+
+- name: "app_mcp_gateway | Assert the JWT policy targets the MCP route"
+  ansible.builtin.assert:
+    that:
+      - _mcp_jwt_policy.resources | default([]) | length > 0
+      - _mcp_jwt_policy.resources[0].spec.jwt.providers | default([]) | length > 0
+      - _mcp_jwt_policy.resources[0].spec.jwt.providers[0].issuer == mcp_jwt_issuer
+      - mcp_jwt_audience in _mcp_jwt_policy.resources[0].spec.jwt.providers[0].audiences | default([])
+      - >-
+        _mcp_jwt_policy.resources[0].spec.targetRefs | default([])
+        | selectattr('name', 'eq', 'mcp-gateway-route') | list | length > 0
+    fail_msg: >-
+      SecurityPolicy 'mcp-gateway-jwt' does not enforce JWT for issuer '{{ mcp_jwt_issuer }}'
+      with audience '{{ mcp_jwt_audience }}' on 'mcp-gateway-route'. Without it the MCP data
+      path accepts unauthenticated requests at the edge.
+    success_msg: "app_mcp_gateway edge auth: JWT enforced"
+    quiet: true
+
+- name: "app_mcp_gateway | Check the rate limit policy"
+  kubernetes.core.k8s_info:
+    api_version: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    name: mcp-gateway-rate-limit
+    namespace: "{{ mcp_namespace }}"
+  register: _mcp_rate_limit
+  when: mcp_rate_limit_enabled | bool
+
+- name: "app_mcp_gateway | Assert the rate limit is in place"
+  ansible.builtin.assert:
+    that:
+      - _mcp_rate_limit.resources | default([]) | length > 0
+      - _mcp_rate_limit.resources[0].spec.rateLimit.local.rules | default([]) | length >= 2
+    fail_msg: >-
+      BackendTrafficPolicy 'mcp-gateway-rate-limit' is missing or has no rules, leaving the
+      MCP routes without a per-client or per-source throttle.
+    success_msg: "app_mcp_gateway rate limit: OK"
+    quiet: true
+  when: mcp_rate_limit_enabled | bool
+
+- name: "app_mcp_gateway | Check Deployment"
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: mcp-gateway
+    namespace: "{{ mcp_namespace }}"
+  register: _mcp_deploy
+
+- name: "app_mcp_gateway | Assert Deployment exists"
+  ansible.builtin.assert:
+    that: _mcp_deploy.resources | default([]) | length > 0
+    fail_msg: "Deployment 'mcp-gateway' not found in {{ mcp_namespace }}"
+    success_msg: "app_mcp_gateway deployment: OK"
+    quiet: true
+
+- name: "app_mcp_gateway | Assert the pod can serve and reach the deployment domain"
+  ansible.builtin.assert:
+    that:
+      - ui_domain_name in _mcp_allowed_hosts
+      - mcp_edge_hostnames | difference(_mcp_host_aliases) | length == 0
+    fail_msg: >-
+      MCP gateway Deployment in {{ mcp_namespace }} is misconfigured.
+      MCP_ALLOWED_HOSTS={{ _mcp_allowed_hosts }} must contain '{{ ui_domain_name }}';
+      hostAliases={{ _mcp_host_aliases }} must cover {{ mcp_edge_hostnames }}.
+    success_msg: "app_mcp_gateway host config: OK"
+    quiet: true
+  vars:
+    _mcp_pod_spec: "{{ _mcp_deploy.resources[0].spec.template.spec | default({}) }}"
+    _mcp_allowed_hosts: >-
+      {{ (_mcp_pod_spec.containers[0].env | default([])
+          | selectattr('name', 'eq', 'MCP_ALLOWED_HOSTS')
+          | map(attribute='value') | first | default('')).split(',') }}
+    _mcp_host_aliases: >-
+      {{ _mcp_pod_spec.hostAliases | default([]) | map(attribute='hostnames') | flatten }}
+
+- name: "app_mcp_gateway | Verify edge authentication end to end"
+  ansible.builtin.include_tasks: verify_edge_auth.yaml
+  when: gateway_tls_mode != 'none'

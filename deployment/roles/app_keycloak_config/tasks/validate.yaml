@@ -1,0 +1,52 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "app_keycloak_config | Check erag-credentials secret"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: erag-credentials
+    namespace: "{{ keycloak_namespace }}"
+  register: _kc_creds
+
+- name: "app_keycloak_config | Assert configured"
+  ansible.builtin.assert:
+    that: _kc_creds.resources | length > 0
+    fail_msg: "Keycloak credentials secret 'erag-credentials' not found in {{ keycloak_namespace }}"
+    success_msg: "app_keycloak_config: OK"
+    quiet: true
+
+# Single Sign-On / SharePoint checks. Both features are enabled implicitly by
+# credential presence, so validate re-checks the same completeness contract that
+# install.yaml enforces, to catch configuration drift between runs.
+- name: "app_keycloak_config | Assert external OIDC configuration is complete"
+  ansible.builtin.include_tasks: assert_oidc_config.yaml
+
+# The configurator Job is what creates the identity-provider instance in the
+# realm, so a succeeded Job is the lightweight proof that brokering was applied.
+# Jobs are only removed by the next install run, so this is stable after install.
+- name: "app_keycloak_config | Check configurator Jobs"
+  kubernetes.core.k8s_info:
+    api_version: batch/v1
+    kind: Job
+    namespace: "{{ keycloak_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/name=keycloak-configurator"
+  register: _kc_configurator_jobs
+  when: erag_keycloak_oidc_endpoint | default('', true) | string | trim | length > 0
+
+- name: "app_keycloak_config | Assert identity provider was configured"
+  ansible.builtin.assert:
+    that: >-
+      _kc_configurator_jobs.resources | default([])
+      | selectattr('status.succeeded', 'defined')
+      | selectattr('status.succeeded', 'ge', 1) | list | length > 0
+    fail_msg: >-
+      No successful Keycloak configurator Job found in {{ keycloak_namespace }},
+      so identity provider '{{ erag_keycloak_oidc_alias }}' may be missing from
+      realm '{{ erag_keycloak_realm }}'. Re-run:
+      ./es_auto_installer.sh install app_keycloak_config --only --env <name>
+    success_msg: "app_keycloak_config: identity provider '{{ erag_keycloak_oidc_alias }}' configured"
+    quiet: true
+  when: erag_keycloak_oidc_endpoint | default('', true) | string | trim | length > 0

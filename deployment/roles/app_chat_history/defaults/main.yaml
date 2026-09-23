@@ -1,0 +1,39 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# =============================================================================
+# app_chat_history Role Defaults
+# =============================================================================
+
+# --- Deployment target ---
+chat_history_namespace: "chat-history"
+
+# --- Helm ---
+chat_history_helm_version: "{{ helm_version }}"
+chat_history_helm_release_name: "chat-history"
+chat_history_helm_chart_directory: "{{ deployment_dir }}/components/chat_history"
+chat_history_helm_default_values_file: "{{ deployment_dir }}/components/chat_history/values.yaml"
+
+# --- FerretDB/PostgreSQL ---
+chat_history_db_name: "CHAT_HISTORY"
+chat_history_db_password_secret_name: "mongo-database-secret"
+chat_history_db_user: "chat_history"
+chat_history_db_password_file_name: "chat-history-postgres-password"
+
+# --- User-supplied Helm values append-block. This stays a dict —
+#     it is fed to `to_nice_yaml` directly into the rendered values file.
+#     Empty by default; user overrides slot in extra keys. ---
+chat_history_additional_values: {}
+
+# --- Cross-role shared defaults - Owned by other roles; declared here so this role is standalone-runnable. ---
+apisix_oidc_client_id: "EnterpriseRAG-oidc-backend"  # app_apisix
+keycloak_namespace: "keycloak"     # core/keycloak
+pipeline_namespace: "{{ pipeline_type | default('chatqna') }}"     # app_pipeline
+erag_keycloak_realm: "EnterpriseRAG"     # app_keycloak_config
+ui_domain_name: "solutions.ai"         # app_ui
+ui_keycloak_realm: "EnterpriseRAG"      # app_ui
+rag_tmp_dir: "{{ tmp_dir }}/rag"                   # app_pre_install (derived from tmp_dir)
+secure_logs: true                                  # global
+istio_enabled: false                               # global
+minimal_configuration: false                       # global

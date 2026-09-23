@@ -1,0 +1,29 @@
+{# Copyright (C) 2026 Intel Corporation #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# Query Rewrite variant steps #}
+{# Inserted before the embedding step to enhance the query before embedding #}
+{#                                                                          #}
+{# paramsKey MUST be set: the fingerprint group is `query_rewrite`, but the  #}
+{# default key is the lowercased step name (`queryrewrite`).                #}
+step:
+  name: QueryRewrite
+  data: $response
+  dependency: Hard
+  internalService:
+    serviceName: query-rewrite-svc
+    config:
+      endpoint: /v1/query_rewrite
+      paramsKey: query_rewrite
+      paramsKind: query_rewrite
+      QUERY_REWRITE_LLM_ENDPOINT: "{{ endpoints.llm.url }}"
+resources:
+  query-rewrite-usvc:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 4
+        memory: 4Gi

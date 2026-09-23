@@ -1,0 +1,71 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Remove only this solution's custom rules from the prometheus-adapter.
+# Rules from other solutions are preserved.
+#
+# The adapter is a shared dependency this role never owns, so when it is absent there is
+# nothing to clean up. That case has to be detected first: the tasks below end in a
+# `state: present` helm call, which would otherwise *install* the adapter during a
+# teardown and then block on `wait: true` for a Prometheus that is not there either.
+
+- name: "app_hpa | Check whether prometheus-adapter is installed"
+  ansible.builtin.command:
+    cmd: >-
+      helm get values {{ app_hpa_adapter_release_name }}
+      -n {{ app_hpa_adapter_namespace }} -o yaml
+  environment:
+    KUBECONFIG: "{{ kubeconfig | default(lookup('env', 'KUBECONFIG')) }}"
+  register: _current_values_raw
+  changed_when: false
+  failed_when: false
+
+- name: "app_hpa | Skip rule cleanup — prometheus-adapter is not installed"
+  ansible.builtin.debug:
+    msg: >-
+      Release '{{ app_hpa_adapter_release_name }}' not found in namespace
+      '{{ app_hpa_adapter_namespace }}', so this solution has no rules to remove.
+  when: _current_values_raw.rc != 0
+
+- name: "app_hpa | Remove this solution's rules from the shared adapter"
+  when: _current_values_raw.rc == 0
+  block:
+    - name: "app_hpa | Add prometheus-community Helm repo"
+      kubernetes.core.helm_repository:
+        name: "{{ app_hpa_helm_repo_name }}"
+        repo_url: "{{ app_hpa_helm_repo_url }}"
+        state: present
+
+    - name: "app_hpa | Parse current values"
+      ansible.builtin.set_fact:
+        _current_values: "{{ _current_values_raw.stdout | from_yaml if _current_values_raw.stdout | length > 0 else {} }}"
+
+    - name: "app_hpa | Remove this solution from rule ownership map"
+      ansible.builtin.set_fact:
+        _rule_meta: "{{ (_current_values._ruleMeta | default({})) | dict2items | rejectattr('key', 'equalto', app_hpa_solution_name) | list | items2dict }}"
+
+    - name: "app_hpa | Flatten remaining solutions' rules"
+      ansible.builtin.set_fact:
+        _remaining_rules: "{{ _rule_meta.values() | list | flatten }}"
+
+    - name: "app_hpa | Apply remaining rules (or reset to defaults if empty)"
+      kubernetes.core.helm:
+        name: "{{ app_hpa_adapter_release_name }}"
+        chart_ref: "{{ app_hpa_helm_repo_name }}/prometheus-adapter"
+        release_namespace: "{{ app_hpa_adapter_namespace }}"
+        state: present
+        values:
+          prometheus:
+            url: "{{ app_hpa_adapter_prometheus_url }}"
+            timeout: 30s
+          rules:
+            default: "{{ (_remaining_rules | length == 0) | bool }}"
+            resources: []
+            custom: "{{ _remaining_rules }}"
+          _ruleMeta: "{{ _rule_meta }}"
+        wait: true
+        timeout: "{{ helm_timeout }}"
+      register: helm_install_result
+      until: helm_install_result is succeeded
+      retries: 3
+      delay: 10

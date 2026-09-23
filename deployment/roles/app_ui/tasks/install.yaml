@@ -1,0 +1,68 @@
+---
+- name: "app_ui | Set override_values.yaml path"
+  ansible.builtin.set_fact:
+    ui_helm_override_values_path: "{{ rag_tmp_dir }}/{{ ui_helm_chart_name }}-override-values.yaml"
+
+- name: "app_ui | Generate override values file from template"
+  ansible.builtin.template:
+    src: "values.yaml.j2"
+    dest: "{{ ui_helm_override_values_path }}"
+    mode: '0644'
+
+- name: "app_ui | Set values_files list"
+  ansible.builtin.set_fact:
+    values_files: >
+      {{
+        [ui_helm_default_values_file] +
+        [ui_helm_override_values_path]
+      }}
+
+- name: "app_ui | Ensure namespace exists"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ ui_namespace }}"
+
+- name: "app_ui | Label namespace — Istio"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ ui_namespace }}"
+        labels:
+          istio.io/dataplane-mode: "ambient"
+          erag-istio-protected: "true"
+  when: istio_enabled | default(false) | bool
+
+- name: "app_ui | Label namespace — PSS"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ ui_namespace }}"
+        labels:
+          pod-security.kubernetes.io/enforce: "restricted"
+          pod-security.kubernetes.io/audit: "restricted"
+          pod-security.kubernetes.io/warn: "restricted"
+  when: enforce_pss | default(false) | bool
+
+- name: "app_ui | Install or Upgrade Helm chart"
+  kubernetes.core.helm:
+    name: "{{ ui_helm_release_name }}"
+    chart_ref: "{{ ui_helm_chart_directory }}"
+    namespace: "{{ ui_namespace }}"
+    values_files: "{{ values_files }}"
+    state: present
+    create_namespace: true
+    timeout: "{{ helm_timeout }}"
+  register: helm_repo_install_result
+  until: helm_repo_install_result is succeeded
+  retries: "{{ helm_retries }}"
+  delay: 15

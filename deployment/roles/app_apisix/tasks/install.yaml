@@ -1,0 +1,90 @@
+---
+- name: "app_apisix | Ensure Helm repository is added"
+  kubernetes.core.helm_repository:
+    name: "{{ apisix_helm_repo_name }}"
+    repo_url: "{{ apisix_helm_repo_url }}"
+    state: present
+  register: helm_repo_add_result
+  until: helm_repo_add_result is succeeded
+  retries: "{{ helm_retries }}"
+  delay: 15
+
+- name: "app_apisix | Build Helm chart dependencies"
+  ansible.builtin.command:
+    cmd: helm dependency build
+    chdir: "{{ apisix_helm_chart_directory }}"
+  register: helm_repo_add_result
+  until: helm_repo_add_result is succeeded
+  retries: "{{ helm_retries }}"
+  delay: 15
+
+- name: "app_apisix | Ensure namespace exists"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ apisix_namespace }}"
+
+- name: "app_apisix | Label namespace — Istio"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ apisix_namespace }}"
+        labels:
+          istio.io/dataplane-mode: "ambient"
+          erag-istio-protected: "true"
+  when: istio_enabled | default(false) | bool
+
+# Host-network apiserver (no mesh identity) can't reach the ingress controller's
+# admission webhook under STRICT; open only its port, rest stays STRICT.
+- name: "app_apisix | Allow apiserver to reach IC webhook (port-level mTLS)"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: security.istio.io/v1
+      kind: PeerAuthentication
+      metadata:
+        name: allow-webhook
+        namespace: "{{ apisix_namespace }}"
+      spec:
+        selector:
+          matchLabels:
+            app.kubernetes.io/name: ingress-controller
+        mtls:
+          mode: STRICT
+        portLevelMtls: "{{ {'9443': {'mode': 'PERMISSIVE'}} }}"
+  when: istio_enabled | default(false) | bool
+
+- name: "app_apisix | Label namespace — PSS"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ apisix_namespace }}"
+        labels:
+          pod-security.kubernetes.io/enforce: "restricted"
+          pod-security.kubernetes.io/audit: "restricted"
+          pod-security.kubernetes.io/warn: "restricted"
+  when: enforce_pss | default(false) | bool
+
+- name: "app_apisix | Install or Upgrade Helm chart"
+  kubernetes.core.helm:
+    name: "{{ apisix_helm_release_name }}"
+    chart_ref: "{{ apisix_helm_chart_directory }}"
+    namespace: "{{ apisix_namespace }}"
+    values_files: "{{ apisix_helm_default_values_file }}"
+    state: present
+    create_namespace: true
+    wait: true
+    timeout: "{{ helm_timeout }}"
+  register: helm_repo_install_result
+  until: helm_repo_install_result is succeeded
+  retries: "{{ helm_retries }}"
+  delay: 15

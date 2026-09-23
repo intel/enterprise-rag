@@ -1,0 +1,13 @@
+---
+- name: "app_ui | Check Helm release"
+  kubernetes.core.helm_info:
+    name: "{{ ui_helm_release_name }}"
+    release_namespace: "{{ ui_namespace }}"
+  register: _ui_release
+
+- name: "app_ui | Assert installed"
+  ansible.builtin.assert:
+    that: _ui_release.status is defined
+    fail_msg: "UI Helm release '{{ ui_helm_release_name }}' not found in {{ ui_namespace }}"
+    success_msg: "app_ui: OK"
+    quiet: true

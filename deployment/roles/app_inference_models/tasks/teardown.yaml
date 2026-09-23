@@ -1,0 +1,40 @@
+---
+# Undeploy by ownership label, not by inference_models: a model dropped from
+# config is no longer in that list, so looping it would leave the model running
+# and holding its cores after a full teardown.
+
+- name: "app_inference_models | Find models we own"
+  ansible.builtin.include_tasks: query_owned.yaml
+
+# --wait blocks until the pods are gone and their cores released, not just until
+# the CR is deleted. NOTE: model-manager doesn't accept --namespace; namespace
+# comes from the model entry in models.yaml (.namespace, default llm-inference).
+- name: "app_inference_models | Undeploy models"
+  ansible.builtin.command:
+    cmd: >-
+      {{ inference_model_manager_path }} undeploy {{ item }}
+      --wait --wait-timeout
+      {{ (inference_undeploy_wait_retries | int) * (inference_undeploy_wait_delay | int) }}
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') | default('~/.kube/config', true) }}"
+    MM_CONFIG: "{{ env_dir }}/models-rag.yaml"
+    # See install.yaml: the wrapper can't prompt for an env under Ansible.
+    ES_ENV: "{{ env_dir | basename }}"
+  loop: "{{ _owned | list }}"
+  register: _mm_undeploy
+  changed_when: "'undeployed' in (_mm_undeploy.stdout | default(''))"
+  # A name that is in the label set but already gone from the cluster aborts —
+  # tolerated. A --wait timeout is not: it only warns and exits 0, and the
+  # inference layer's teardown runs after this one.
+  failed_when: >-
+    (_mm_undeploy.rc != 0
+     and 'No catalog entry or deployed resource named'
+         not in (_mm_undeploy.stderr | default('')))
+    or 'still terminating' in (_mm_undeploy.stderr | default(''))
+
+- name: "app_inference_models | Nothing to tear down"
+  ansible.builtin.debug:
+    msg: >-
+      No models labelled {{ inference_owner_label }} in {{ inference_namespace }} —
+      nothing deployed from here.
+  when: _owned | length == 0

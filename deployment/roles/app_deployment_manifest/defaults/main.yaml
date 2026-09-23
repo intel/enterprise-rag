@@ -1,0 +1,26 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Derived from this role's own location, not from the caller's playbook_dir: the
+# role ships inside this repository and must not depend on where the installer
+# checked it out to.
+deployment_dir: "{{ role_path }}/../.."
+
+manifest_namespace: "default"
+manifest_name: "erag-deployment-manifest"
+
+manifest_namespace_labels:
+  meta.erag/is-metadata-namespace: "true"
+
+manifest_labels:
+  app.kubernetes.io/name: "erag-deployment"
+  app.kubernetes.io/component: "deployment-manifest"
+  app.kubernetes.io/managed-by: "ansible"
+
+manifest_label_selector: "app.kubernetes.io/name=erag-deployment,app.kubernetes.io/component=deployment-manifest"
+
+manifest_status_in_progress: "in-progress"
+manifest_status_complete: "complete"
+manifest_status_deleting: "deleting"
+
+manifest_unset_version: ""

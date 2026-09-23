@@ -1,0 +1,64 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Configure the prometheus-adapter with solution-specific custom metric rules.
+# Multi-tenant: merges this solution's rules with existing rules from other solutions.
+#
+# Ownership tracking: a top-level `_ruleMeta` dict in Helm values stores each
+# solution's rules keyed by solution name. The flat `rules.custom` list is rebuilt
+# from _ruleMeta on every install/teardown. The adapter chart ignores unknown
+# top-level keys, so _ruleMeta is persisted but never parsed by the adapter.
+
+- name: "app_hpa | Add prometheus-community Helm repo"
+  kubernetes.core.helm_repository:
+    name: "{{ app_hpa_helm_repo_name }}"
+    repo_url: "{{ app_hpa_helm_repo_url }}"
+    state: present
+
+- name: "app_hpa | Load this solution's rules from file"
+  ansible.builtin.set_fact:
+    app_hpa_new_rules: "{{ (lookup('file', app_hpa_rules_file) | from_yaml).rules.custom }}"
+
+- name: "app_hpa | Get current prometheus-adapter Helm values"
+  ansible.builtin.command:
+    cmd: >-
+      helm get values {{ app_hpa_adapter_release_name }}
+      -n {{ app_hpa_adapter_namespace }} -o yaml
+  environment:
+    KUBECONFIG: "{{ kubeconfig | default(lookup('env', 'KUBECONFIG')) }}"
+  register: _current_values_raw
+  changed_when: false
+  failed_when: false
+
+- name: "app_hpa | Parse current values"
+  ansible.builtin.set_fact:
+    _current_values: "{{ _current_values_raw.stdout | from_yaml if _current_values_raw.rc == 0 and _current_values_raw.stdout | length > 0 else {} }}"
+
+- name: "app_hpa | Build updated rule ownership map"
+  ansible.builtin.set_fact:
+    _rule_meta: "{{ (_current_values._ruleMeta | default({})) | combine({app_hpa_solution_name: app_hpa_new_rules}) }}"
+
+- name: "app_hpa | Flatten all solutions' rules into one list"
+  ansible.builtin.set_fact:
+    _merged_rules: "{{ _rule_meta.values() | list | flatten }}"
+
+- name: "app_hpa | Generate merged values file"
+  ansible.builtin.copy:
+    content: "{{ {'prometheus': {'url': app_hpa_adapter_prometheus_url, 'timeout': '30s'}, 'rules': {'default': false, 'resources': [], 'custom': _merged_rules}, '_ruleMeta': _rule_meta} | to_nice_yaml(indent=2) }}"
+    dest: "{{ tmp_dir }}/prometheus_adapter_merged.yaml"
+    mode: '0600'
+
+- name: "app_hpa | Upgrade prometheus-adapter with merged rules"
+  kubernetes.core.helm:
+    name: "{{ app_hpa_adapter_release_name }}"
+    chart_ref: "{{ app_hpa_helm_repo_name }}/prometheus-adapter"
+    release_namespace: "{{ app_hpa_adapter_namespace }}"
+    state: present
+    values_files:
+      - "{{ tmp_dir }}/prometheus_adapter_merged.yaml"
+    wait: true
+    timeout: "{{ helm_timeout }}"
+  register: helm_install_result
+  until: helm_install_result is succeeded
+  retries: 5
+  delay: 15

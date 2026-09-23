@@ -1,0 +1,63 @@
+---
+# Both serving kinds are queried, not just LLMInferenceService: the runtime
+# decides which one model-manager creates (vllm → LLMInferenceService,
+# openvino → InferenceService), so a catalog entry on openvino would otherwise
+# always be reported not-Ready.
+
+- name: "app_inference_models | Validate models deployed"
+  when: inference_models | default([]) | length > 0
+  block:
+    - name: "app_inference_models | Query serving resources"
+      kubernetes.core.k8s_info:
+        api_version: "{{ item.api_version }}"
+        kind: "{{ item.kind }}"
+        namespace: "{{ inference_namespace }}"
+      register: _isvc_query
+      loop: "{{ inference_serving_kinds }}"
+      loop_control:
+        label: "{{ item.kind }}"
+
+    - name: "app_inference_models | Reset readiness accumulator"
+      ansible.builtin.set_fact:
+        _ready_by_name: {}
+
+    - name: "app_inference_models | Index readiness by model name"
+      ansible.builtin.set_fact:
+        _ready_by_name: >-
+          {{
+            _ready_by_name | combine({
+              item.metadata.name: (
+                item.status.conditions | default([])
+                | selectattr('type', 'eq', 'Ready')
+                | selectattr('status', 'eq', 'True')
+                | list | length > 0
+              )
+            })
+          }}
+      loop: "{{ _isvc_query.results | map(attribute='resources') | flatten }}"
+      loop_control:
+        label: "{{ item.metadata.name }}"
+
+    - name: "app_inference_models | Assert all models ready"
+      ansible.builtin.assert:
+        that:
+          - item.name in _ready_by_name
+          - _ready_by_name[item.name] | bool
+        fail_msg: >-
+          Model {{ item.name }} ({{ item.role }}) is
+          {{ 'not Ready' if item.name in _ready_by_name else 'not deployed' }}
+        success_msg: "{{ item.name }}: Ready"
+        quiet: true
+      loop: "{{ inference_models }}"
+      loop_control:
+        label: "{{ item.name }} ({{ item.role }})"
+
+- name: "app_inference_models | Validate passed"
+  ansible.builtin.debug:
+    msg: "All inference models ready ({{ inference_models | default([]) | map(attribute='name') | join(', ') }})"
+  when: inference_models | default([]) | length > 0
+
+- name: "app_inference_models | No models configured"
+  ansible.builtin.debug:
+    msg: "app_inference_models validate: no models configured — skipping"
+  when: inference_models | default([]) | length == 0
