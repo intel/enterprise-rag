@@ -125,12 +125,32 @@ model_name=$LLM_VLLM_MODEL_NAME ./query.sh
 
 _This step is required only for computing RAGAS metrics._
 
-To calculate RAGAS metrics, a separate embedding service that provides vector representations of text is required. You can launch this service using existing scripts provided elsewhere in the project. 
+To calculate RAGAS metrics, a separate embedding service that provides vector representations of text is required. You can either reuse the embedding service already deployed as part of the RAG pipeline (Option 1), run a standalone vLLM embedding model server using the scripts provided in the project (Option 2).
+
+
+#### Reuse the vLLM embedding model server from the RAG pipeline (Option 1)
+
+The RAG pipeline already runs an embedding model server in the `llm-inference` namespace. You can expose it locally with `kubectl port-forward` instead of starting a separate server. Identify the name of the embedding service used by your RAG pipeline and use it in the command below. The example uses the service name from the default RAG pipeline configuration.
+
+```bash
+# Forward the in-cluster KServe embedding service to localhost:8108
+kubectl port-forward -n llm-inference svc/nomic-embed-kserve-workload-svc 8108:8000
+```
+
+Leave this port-forward command running in a separate terminal for the duration of the evaluation.
+
+The evaluator uses `http://localhost:8108/v1/embeddings` as the default embedding endpoint. If you forward the service to a different local port than 8108, provide the corresponding endpoint using `--embedding_endpoint`.
+
+You do not need to specify `--embedding_model_name` if the embedding server serves a single model; its name will be detected automatically. If multiple models are served, it is recommended to specify `--embedding_model_name` explicitly to ensure the desired model is used. Otherwise, the first model returned by the server will be selected.
+
+
+#### Runs standalone vLLM embedding model server (Option 2)
 
 To start the VLLM embedding model server, navigate to [src/comps/embeddings/impl/model_server/vllm](../../../../../../src/comps/embeddings/impl/model_server/vllm) and run the following commands:
 
 ```bash
 cd ../../../../../../src/comps/embeddings/impl/model_server/vllm
+
 
 # (Optional) Customize port and model if needed
 export EMBEDDING_VLLM_PORT=8108
@@ -211,7 +231,7 @@ python eval_multihop.py --help
 | `--keep_checkpoint`       | *(flag)*                                          | Keep the checkpoint file after evaluation (do not delete)                                                                            |
 | `--llm_judge_endpoint`    | `http://localhost:8008`                           | URL of the LLM judge service; only used for RAGAS evaluation                                                                         |
 | `--embedding_endpoint`    | `http://localhost:8108/v1/embeddings`             | URL of the embedding service endpoint, only used for RAGAS                                                                           |
-| `--embedding_model_name`  | `nomic-ai/nomic-embed-text-v1`                  | Model name served by vLLM at the embeddings endpoint; only used for RAGAS                                                              |
+| `--embedding_model_name`  | *auto-detected*                                   | (Optional) Model name served at the embeddings endpoint. If not specified, the model is automatically detected, only used for RAGAS  |
 | `--temperature`           | Read from RAG system config                       | Controls text generation randomness; defaults to RAG system setting if omitted                                                       |
 | `--max_new_tokens`        | Read from RAG system config                       | Maximum tokens generated; defaults to RAG system setting if omitted                                                                  |
 | `--bucket_names`          | *None*                                            | Filter retrieval and generation by specific bucket names. If not provided, all buckets are used. Example: --bucket_names secondary   |
@@ -316,7 +336,7 @@ This section outlines how to run MultiHop evaluation of the RAG pipeline using [
 
     ⚠️ For RAGAS evaluation, you must have two external services running: an LLM-as-a-Judge service and an embedding service - see the Run LLM-as-a-Judge and Embedding section for setup instructions.
 
-    If both services are running on their default endpoints (`http://localhost:8008` for LLM judge and `http://localhost:8108/v1/embeddings` for embeddings, serving `nomic-ai/nomic-embed-text-v1`), you can simply run:
+    If both services are running on their default endpoints (`http://localhost:8008` for LLM judge and `http://localhost:8108/v1/embeddings` for embeddings), you can simply run:
     ```bash
     python eval_multihop.py --ragas_metrics
     ```
