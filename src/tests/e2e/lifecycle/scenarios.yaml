@@ -21,6 +21,13 @@ scenarios:
   install-all-at-once:
     markers: "smoke"
 
+  switch-to-upload:
+    lifecycle:
+      after-switch-to-upload:
+        - test_upload_variant.py
+      after-switch-back-to-base:
+        - test_upload_rollback.py
+
   upgrade:
     lifecycle:
       before-upgrade:

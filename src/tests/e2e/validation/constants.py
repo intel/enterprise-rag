@@ -15,6 +15,12 @@ INGRESS_NGINX_CONTROLLER_NS = "ingress-nginx"
 INGRESS_NGINX_CONTROLLER_POD_LABEL_SELECTOR = {"app.kubernetes.io/name": "ingress-nginx"}
 CHATQNA_NAMESPACE = "chatqna"
 EDP_NAMESPACE = "edp"
+
+# ChatQnA model microservice pod labels — used to assert which model servers are (un)deployed
+# (e.g. the upload variant is embedding-only: LLM + reranking are undeployed).
+LLM_USVC_POD_LABEL = "app.kubernetes.io/name=llm-usvc"
+EMBEDDING_USVC_POD_LABEL = "app.kubernetes.io/name=embedding-usvc"
+RERANKING_USVC_POD_LABEL = "app.kubernetes.io/name=reranking-usvc"
 LLM_INFERENCE_NAMESPACE = "llm-inference"
 
 # Backup and restore. The engine lives in the installer; these mirror what it
