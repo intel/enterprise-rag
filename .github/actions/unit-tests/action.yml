@@ -16,10 +16,3 @@ runs:
         mkdir -p ".tox/${TEST_NAME}/log"
         tox run -e "${TEST_NAME}"
       shell: bash
-    - name: Clean up virtualenv
-      env:
-        TEST_NAME: ${{ inputs.test-name }}
-      run: |
-        cd src
-        rm -rf ".tox/${TEST_NAME}"
-      shell: bash
