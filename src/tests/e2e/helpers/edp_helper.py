@@ -10,7 +10,6 @@ import shutil
 import time
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
-from typing import Any
 
 import aiohttp
 import requests
@@ -423,16 +422,42 @@ class EdpHelper(ApiRequestHelper):
 
         return results
 
-    def retrieve(self, payload: dict[str, Any]) -> requests.Response:
-        """Make post call to /api/v1/edp/retrieve endpoint with the given payload"""
-        logger.debug(f"Attempting to retrieve documents using the following payload: {payload}")
+    def retry_file(self, file_uuid, as_user=False):
+        """Re-ingest a file — the UI 'Reingest' action, which re-embeds an already-ingested file
+        with the currently deployed embedding model. POST /file/{uuid}/retry."""
+        logger.info(f"Re-ingesting (retry) file with id: {file_uuid}")
         response = requests.post(
-            url=f"{self.edp_api_path}/retrieve",
-            headers=self.get_headers(),
-            json=payload,
+            url=f"{self.edp_api_path}/file/{file_uuid}/retry",
+            headers=self.get_headers(as_user),
             verify=False
         )
         return response
+
+    def wait_for_reingest(self, filename, expected_embedding_model, timeout=FILE_UPLOAD_TIMEOUT_S):
+        """Wait until `filename` has been re-ingested with `expected_embedding_model` — i.e. its
+        status is back to 'ingested' and its embedding_model reflects the new model. Used after
+        retry_file() following an embedding-model switch."""
+        sleep_interval = 10
+        start_time = time.time()
+        while time.time() < start_time + timeout:
+            for f in self.list_files().json():
+                obj_name = f.get("object_name", "")
+                if obj_name == filename or obj_name.endswith("/" + filename):
+                    status = f.get("status")
+                    model = f.get("embedding_model")
+                    if status == "error":
+                        raise FileStatusException(f"File {filename} errored during re-ingestion")
+                    if status == "ingested" and model == expected_embedding_model:
+                        logger.info(f"File {filename} re-ingested with '{expected_embedding_model}'. "
+                                    f"Elapsed time: {round(time.time() - start_time, 1)}s")
+                        return f
+                    logger.info(f"Waiting {sleep_interval}s for {filename} to be re-ingested "
+                                f"(status={status}, embedding_model={model})")
+                    break
+            time.sleep(sleep_interval)
+        raise UploadTimeoutException(
+            f"Timed out after {timeout} seconds while waiting for {filename} to be re-ingested "
+            f"with embedding model '{expected_embedding_model}'")
 
     def wait_for_file_upload(self, filename, desired_status, timeout=FILE_UPLOAD_TIMEOUT_S):
         """Wait for the file to be uploaded and have the desired status"""
