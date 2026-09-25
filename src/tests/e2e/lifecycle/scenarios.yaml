@@ -18,6 +18,9 @@ scenarios:
   install:
     markers: "smoke"
 
+  install-all-at-once:
+    markers: "smoke"
+
   switch-to-upload:
     lifecycle:
       after-switch-to-upload:
@@ -35,12 +38,7 @@ scenarios:
   update-llm-model:
     lifecycle:
       - test_update_llm_model.py
-    validation:
-      all: false
-      include:
-        - test_chatqa.py::test_chatqa_streaming_capability
-        - test_chatqa.py::test_follow_up_questions_simple_case
-        - test_learning_capabilities.py
+    markers: "smoke"
 
   update-reranker-model:
     lifecycle:
@@ -49,8 +47,14 @@ scenarios:
 
   update-embedding-model:
     lifecycle:
-      - test_update_embedding_model.py
-    markers: "smoke"
+      before-update:
+        - test_pre_update_embedding.py
+      after-update:
+        - test_update_embedding_model.py
+    # Full smoke after the update only (the after-update phase); the snapshot-based EDP cleanup
+    # keeps the pre-existing baseline document, so the re-ingest check is unaffected.
+    markers:
+      after-update: "smoke"
 
   backup-restore:
     lifecycle:
