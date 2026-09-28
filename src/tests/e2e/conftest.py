@@ -147,6 +147,11 @@ def pytest_runtest_call(item):
     custom = f"{scenario_name}:{item.nodeid}"
     custom_history_id = hashlib.sha256(custom.encode()).hexdigest()
     allure.dynamic.parameter("historyId", custom_history_id)
+    # Surface the scenario as a visible parameter ONLY for lifecycle-scenario runs (SCENARIO set),
+    # so the same smoke test executed once per update-* scenario is distinguishable in every Allure
+    # view. Plain runs (no SCENARIO) are left exactly as before — no parameter added.
+    if os.getenv("SCENARIO"):
+        allure.dynamic.parameter("scenario", scenario_name)
 
 
 def pytest_collection_modifyitems(config, items):

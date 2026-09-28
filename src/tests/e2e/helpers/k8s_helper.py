@@ -104,6 +104,11 @@ class K8sHelper:
             raise ResourceNotFound(f"No running pods found with label '{label_selector}' in namespace '{namespace}'.")
         return pods[0]
 
+    def count_pods_by_label(self, namespace, label_selector):
+        """Returns the number of pods matching a label selector in a namespace (0 if none)."""
+        logger.debug(f"Counting pods with label selector '{label_selector}' in namespace '{namespace}'")
+        return len(list(kr8s.get("pods", namespace=namespace, label_selector=label_selector)))
+
     def get_deployment_manifest_version(self, namespace="default"):
         """Read the solution version from the erag-deployment-manifest ConfigMap."""
         logger.debug("Reading version from erag-deployment-manifest ConfigMap")
@@ -187,10 +192,6 @@ class K8sHelper:
             release_name = parts[4] if len(parts) >= 6 else secret.name
             releases.append((secret.namespace, release_name))
         return releases
-
-    def list_pvcs(self, namespace):
-        """List PersistentVolumeClaims in a namespace"""
-        return list(kr8s.get("persistentvolumeclaims", namespace=namespace))
 
     def list_secrets(self, namespace):
         """List secrets in a namespace"""

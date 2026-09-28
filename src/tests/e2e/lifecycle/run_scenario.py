@@ -117,6 +117,12 @@ def main():
     val_cfg = scenario_config.get("validation", {})
     markers = scenario_config.get("markers")
 
+    # `markers` may be a single value (applied to every phase) or a mapping keyed by cluster_state,
+    # so a phased scenario can run its validation suite only in the relevant phase (e.g. run smoke
+    # after the update, not on the pre-update baseline).
+    if isinstance(markers, dict):
+        markers = markers.get(cluster_state)
+
     if markers and not val_cfg:
         validation_paths.append("e2e/validation")
     elif val_cfg.get("all"):

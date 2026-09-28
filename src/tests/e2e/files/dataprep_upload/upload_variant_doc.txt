@@ -1,0 +1,1 @@
+The Qwindell artifact contains exactly 88 shards, sealed inside the Nimbus vault.
