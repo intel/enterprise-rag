@@ -78,6 +78,27 @@ def test_download_file_content(edp_helper, ingested_test_file):
     )
 
 
+@allure.testcase("IEASG-T724")
+def test_download_denied_without_authorization(edp_helper, ingested_test_file):
+    """Security: a stored object must not be retrievable via a raw object-store URL that carries
+    neither a valid presigned signature nor an Authorization header. Take the presigned GET URL,
+    strip its query (any X-Amz-* signature) and send no auth header — as a plain browser tab would —
+    and confirm the object store rejects it. A 200 means ingested documents are readable anonymously
+    by name, which is a security defect."""
+    response = edp_helper.generate_presigned_url(ingested_test_file, method="GET")
+    assert response.status_code == 200, f"Failed to generate presigned URL. Response: {response.text}"
+    presigned_url = response.json().get("url")
+    assert presigned_url, "Presigned URL is empty"
+
+    bare_url = presigned_url.split("?")[0]  # drop any signature query params
+    download_response = requests.get(bare_url, verify=False)  # no signature, no Authorization header
+    assert download_response.status_code in (401, 403), (
+        f"Object downloadable without authorization or signature (status "
+        f"{download_response.status_code}); the object store must not serve ingested files "
+        f"anonymously by name"
+    )
+
+
 @allure.testcase("IEASG-T607")
 def test_download_file_from_chatqa_citation(edp_helper, chatqa_api_helper, ingested_test_file):
     """
