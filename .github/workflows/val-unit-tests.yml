@@ -74,3 +74,19 @@ jobs:
         uses: ./.github/actions/unit-tests
         with:
           test-name: ${{ matrix.test-name }}
+
+  unit_tests_all_passed:
+    name: "Unit tests pass check"
+    needs: unit-tests
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check unit tests results
+        env:
+          UNIT_TESTS_RESULT: ${{ needs.unit-tests.result }}
+        run: |
+          echo "unit-tests result: ${UNIT_TESTS_RESULT}"
+          if [[ "${UNIT_TESTS_RESULT}" != "success" ]]; then
+            echo "::error::Not all unit tests ran and passed (result: ${UNIT_TESTS_RESULT})"
+            exit 1
+          fi
