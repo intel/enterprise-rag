@@ -124,6 +124,38 @@ def test_delete_denied_without_authorization(edp_helper, ingested_test_file):
     assert still_present, f"'{ingested_test_file}' was deleted by an unauthenticated request"
 
 
+@allure.testcase("IEASG-T727")
+def test_download_admin_bucket_file_as_admin(edp_helper, tmp_path):
+    """Positive RBAC case: an admin can download a file stored in the admin-only bucket. Upload a
+    file with distinctive content to only-admin, then download it as admin via the authorized path
+    (bearer token attached) and confirm the content matches. RBAC-only. (The browser fails this
+    because it opens the bare presigned URL without the RBAC bearer token.)"""
+    if not cfg.get("edp_rbac_enabled"):
+        pytest.skip("EDP RBAC is disabled; the only-admin bucket is not meaningful")
+
+    content = "admin-only download positive-case probe"
+    file_name = "admin_download_probe.txt"
+    file_path = tmp_path / file_name
+    file_path.write_text(content)
+    edp_helper.upload_file_and_wait_for_ingestion(str(file_path), bucket="only-admin")
+
+    response = edp_helper.generate_presigned_url(file_name, method="GET", bucket="only-admin")
+    assert response.status_code == 200, f"Admin GET presigned generation failed: {response.text}"
+    download_response = requests.get(
+        response.json()["url"], verify=False, headers=_get_auth_header_for_s3(edp_helper))
+    assert download_response.status_code == 200, (
+        f"Admin failed to download a file from the admin-only bucket: "
+        f"{download_response.status_code} {download_response.text}"
+    )
+    assert download_response.text == content, (
+        f"Downloaded content does not match. Expected: '{content}', Got: '{download_response.text}'"
+    )
+
+    # cleanup: admin deletes the file
+    delete_response = edp_helper.generate_presigned_url(file_name, method="DELETE", bucket="only-admin")
+    edp_helper.delete_file(delete_response.json()["url"])
+
+
 @allure.testcase("IEASG-T607")
 def test_download_file_from_chatqa_citation(edp_helper, chatqa_api_helper, ingested_test_file):
     """
