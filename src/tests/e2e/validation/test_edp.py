@@ -492,6 +492,29 @@ def test_edp_rbac(edp_helper, chatqa_api_helper, temporarily_remove_regular_user
     assert "944" in chatqa_api_helper.get_text(response)
 
 
+@allure.testcase("IEASG-T726")
+def test_edp_admin_can_delete_file_in_admin_bucket(edp_helper, tmp_path):
+    """Positive RBAC case: an admin must be able to delete a file in the admin-only bucket.
+    Upload a uniquely-named file to the only-admin bucket, then delete it as admin via the
+    authorized path (bearer token attached) — the delete must succeed and the file must be gone."""
+    if not cfg.get("edp_rbac_enabled"):
+        pytest.skip("EDP RBAC is disabled; the only-admin bucket is not meaningful")
+
+    file_name = f"admin_delete_probe_{uuid.uuid4().hex[:8]}.txt"
+    file_path = tmp_path / file_name
+    file_path.write_text("admin-only delete positive-case probe")
+    edp_helper.upload_file_and_wait_for_ingestion(str(file_path), bucket="only-admin")
+
+    response = edp_helper.generate_presigned_url(file_name, method="DELETE", bucket="only-admin")
+    assert response.status_code == 200, f"Admin DELETE presigned generation failed: {response.text}"
+    delete_response = edp_helper.delete_file(response.json()["url"])
+    assert delete_response.status_code in (200, 204), (
+        f"Admin failed to delete a file in the admin-only bucket: "
+        f"{delete_response.status_code} {delete_response.text}"
+    )
+    edp_helper.wait_for_file_deletion(file_name)
+
+
 TEXT_EXTRACTOR_POD_LABEL_SELECTOR = "app.kubernetes.io/name=edp-ingestion"
 
 
