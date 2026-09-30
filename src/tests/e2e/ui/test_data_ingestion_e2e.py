@@ -616,3 +616,97 @@ async def test_delete_ingested_link_via_ui(chat_ui_helper):
     logger.info(f"Assert: Link '{test_link}' removed from table")
 
     logger.info("Test completed: Link deletion via UI validated")
+
+
+async def _select_named_destination(page, name: str) -> bool:
+    """Open the Upload Data destination dropdown and select the option whose text contains *name*
+    (e.g. an S3 bucket like ``only-admin``). Returns True if the option was selected."""
+    dropdown = page.locator('[data-testid="destination-dropdown"]')
+    await dropdown.wait_for(state="visible", timeout=10000)
+    await dropdown.locator("button").first.click()
+    await page.wait_for_timeout(500)
+    option = page.locator('[role="option"]', has_text=name).first
+    try:
+        await option.wait_for(state="visible", timeout=15000)
+        await option.click()
+        await page.wait_for_timeout(500)
+        logger.info(f"Selected destination '{name}'")
+        return True
+    except Exception as exc:
+        logger.warning(f"Destination '{name}' not found in dropdown: {exc}")
+        return False
+
+
+@allure.testcase("IEASG-T731")
+@pytest.mark.ui
+@pytest.mark.asyncio
+async def test_download_admin_bucket_file_via_ui(chat_ui_helper):
+    """UI regression guard: downloading a file from the RBAC-protected ``only-admin`` bucket through
+    the browser must succeed. The UI must attach the Keycloak bearer token to the S3 GET; if it does
+    not, SeaweedFS returns 403 and no browser download is triggered. Replicates the reported flow
+    (admin uploads to only-admin, clicks Download). RBAC-only."""
+    if not cfg.get("edp_rbac_enabled"):
+        pytest.skip("EDP RBAC is disabled; the only-admin bucket is not meaningful")
+
+    page = chat_ui_helper.page
+    file_path = os.path.abspath(_TEST_FILE)
+    file_name = os.path.basename(file_path)
+    assert os.path.isfile(file_path), f"Test file not found: {file_path}"
+
+    await _authenticate_to_seaweedfs(chat_ui_helper)
+
+    # Pre-cleanup: remove any leftover row from a previous run
+    try:
+        await chat_ui_helper.navigate_to_admin_tab("data-ingestion")
+        await page.wait_for_timeout(1000)
+        if await page.locator(f'tr:has-text("{file_name}")').count() > 0:
+            await _delete_row_via_table(chat_ui_helper, file_name)
+            await page.wait_for_timeout(2000)
+    except Exception as pre_err:
+        logger.debug(f"Pre-cleanup note: {pre_err}")
+
+    try:
+        # Upload the file into the admin-only (RBAC-protected) bucket
+        assert await _open_upload_dialog(chat_ui_helper), "Failed to open upload dialog"
+        assert await _select_named_destination(page, "only-admin"), \
+            "Could not select the 'only-admin' destination in the upload dialog"
+        async with page.expect_file_chooser() as fc_info:
+            await page.locator('[data-testid="browse-files-button"]').first.click()
+        file_chooser = await fc_info.value
+        await file_chooser.set_files(file_path)
+        submit_btn = page.locator('[data-testid="upload-data-button"]')
+        await submit_btn.wait_for(state="visible", timeout=5000)
+        await page.wait_for_timeout(500)
+        await submit_btn.click()
+        assert await chat_ui_helper.wait_for_testid_hidden("upload-data-dialog", timeout=15000), \
+            "Upload dialog did not close after submission"
+
+        assert await _wait_for_row_to_appear(chat_ui_helper, file_name, timeout_ms=30_000), \
+            f"File '{file_name}' did not appear in the table after upload"
+        # Best-effort wait for ingestion (backend processing is out of the UI's control)
+        await _wait_for_row_in_table(chat_ui_helper, file_name)
+
+        # The actual check: click Download and confirm the browser receives the file.
+        # If the UI omits the bearer token on the S3 GET, SeaweedFS returns 403, the fetch
+        # never resolves to a blob, and no download event fires -> expect_download times out.
+        row = page.locator(f'tr:has-text("{file_name}")')
+        assert await row.count() > 0, f"Row '{file_name}' not found in the table"
+        download_btn = row.first.locator('[data-testid="download-file-button"]')
+        async with page.expect_download(timeout=15000) as download_info:
+            await download_btn.click()
+        download = await download_info.value
+        assert download is not None, (
+            "No browser download was triggered for the only-admin file — the UI did not authorize "
+            "the S3 GET (missing RBAC bearer token)"
+        )
+        logger.info(f"Assert: browser download triggered for '{file_name}' ({download.suggested_filename})")
+    finally:
+        try:
+            await chat_ui_helper.navigate_to_admin_tab("data-ingestion")
+            await page.wait_for_timeout(1000)
+            await _delete_row_via_table(chat_ui_helper, file_name)
+            logger.info(f"Cleanup: Deleted '{file_name}'")
+        except Exception as cleanup_err:
+            logger.warning(f"Cleanup failed (non-fatal): {cleanup_err}")
+
+    logger.info("Test completed: admin-only bucket download via UI validated")

@@ -79,23 +79,28 @@ def test_download_file_content(edp_helper, ingested_test_file):
 
 
 @allure.testcase("IEASG-T724")
-def test_download_denied_without_authorization(edp_helper, ingested_test_file):
-    """Security: a stored object must not be retrievable via a raw object-store URL that carries
-    neither a valid presigned signature nor an Authorization header. Take the presigned GET URL,
-    strip its query (any X-Amz-* signature) and send no auth header — as a plain browser tab would —
-    and confirm the object store rejects it. A 200 means ingested documents are readable anonymously
-    by name, which is a security defect."""
-    response = edp_helper.generate_presigned_url(ingested_test_file, method="GET")
-    assert response.status_code == 200, f"Failed to generate presigned URL. Response: {response.text}"
-    presigned_url = response.json().get("url")
-    assert presigned_url, "Presigned URL is empty"
-
-    bare_url = presigned_url.split("?")[0]  # drop any signature query params
-    download_response = requests.get(bare_url, verify=False)  # no signature, no Authorization header
-    assert download_response.status_code in (401, 403), (
-        f"Object downloadable without authorization or signature (status "
-        f"{download_response.status_code}); the object store must not serve ingested files "
-        f"anonymously by name"
+def test_download_denied_without_authorization(edp_helper, tmp_path):
+    """Security: NO bucket should serve an object without authentication/signature. For every
+    bucket, upload a probe, take the GET presigned URL, strip its query (any X-Amz-* signature) and
+    GET the bare URL with no Authorization header — as a plain browser tab would — and confirm the
+    object store rejects it (401/403). A 200 for any bucket means ingested documents are readable
+    anonymously by name, which is a security defect."""
+    buckets = ["default", "secondary", "only-admin"]
+    leaked = []
+    for bucket in buckets:
+        file_name = f"anon_download_probe_{bucket}.txt"
+        file_path = tmp_path / file_name
+        file_path.write_text(f"anonymous-download probe for {bucket}")
+        edp_helper.upload_file_and_wait_for_ingestion(str(file_path), bucket=bucket)
+        response = edp_helper.generate_presigned_url(file_name, method="GET", bucket=bucket)
+        assert response.status_code == 200, f"[{bucket}] admin GET presigned generation failed: {response.text}"
+        bare_url = response.json()["url"].split("?")[0]  # drop any signature query params
+        download_response = requests.get(bare_url, verify=False)  # no signature, no Authorization header
+        if download_response.status_code not in (401, 403):
+            leaked.append(f"{bucket} (HTTP {download_response.status_code})")
+    assert not leaked, (
+        f"Objects downloadable without authorization/signature from bucket(s): {', '.join(leaked)}; "
+        f"no bucket must serve objects anonymously by name"
     )
 
 
@@ -123,27 +128,6 @@ def test_download_admin_bucket_file_as_admin(edp_helper, tmp_path):
     )
     assert download_response.text == content, (
         f"Downloaded content does not match. Expected: '{content}', Got: '{download_response.text}'"
-    )
-
-
-@allure.testcase("IEASG-T728")
-def test_download_admin_bucket_denied_without_authorization(edp_helper, tmp_path):
-    """Security: an object in the admin-only bucket must not be downloadable via a raw object-store
-    URL that carries neither a valid signature nor an Authorization header (contrast to the public
-    default bucket). Upload to only-admin, take the admin GET presigned URL, strip its query and GET
-    the bare URL with no auth header — expect denied (401/403)."""
-    content = "only-admin anonymous-download probe"
-    file_name = "only_admin_anon_download_probe.txt"
-    file_path = tmp_path / file_name
-    file_path.write_text(content)
-    edp_helper.upload_file_and_wait_for_ingestion(str(file_path), bucket="only-admin")
-    response = edp_helper.generate_presigned_url(file_name, method="GET", bucket="only-admin")
-    assert response.status_code == 200, f"Admin GET presigned generation failed: {response.text}"
-    bare_url = response.json()["url"].split("?")[0]  # drop any signature query params
-    download_response = requests.get(bare_url, verify=False)  # no signature, no Authorization header
-    assert download_response.status_code in (401, 403), (
-        f"Admin-only bucket object is downloadable without authorization (status "
-        f"{download_response.status_code}); a protected bucket must deny anonymous reads"
     )
 
 
