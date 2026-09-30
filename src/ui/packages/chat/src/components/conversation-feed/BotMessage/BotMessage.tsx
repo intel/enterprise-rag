@@ -10,7 +10,6 @@ import {
 } from "@intel-enterprise-rag-ui/components";
 import { ErrorIcon } from "@intel-enterprise-rag-ui/icons";
 import { Markdown } from "@intel-enterprise-rag-ui/markdown";
-import { sanitizeString } from "@intel-enterprise-rag-ui/utils";
 import classNames from "classnames";
 import { memo } from "react";
 
@@ -46,8 +45,9 @@ const BotMessage = ({
   onPlayMessage,
 }: BotMessageProps) => {
   const isWaitingForAnswer = isPending && (answer === "" || error !== null);
-  const sanitizedAnswer = sanitizeString(answer);
-  const showActions = !isPending && (sanitizedAnswer !== "" || error !== null);
+  // The raw answer goes to <Markdown>: parseMarkdown sanitizes the rendered HTML, which is the
+  // XSS boundary. Sanitizing the markdown source here would mangle code (`->`, `<vector>`).
+  const showActions = !isPending && (answer !== "" || error !== null);
   const showSources = showActions && Array.isArray(sources);
 
   const botResponse =
@@ -58,10 +58,10 @@ const BotMessage = ({
       </Alert>
     ) : (
       <div className="bot-message__text" data-testid="bot-message__text">
-        <Markdown text={sanitizedAnswer} />
+        <Markdown text={answer} />
         {showActions && (
           <footer className="bot-message__footer">
-            <CopyButton textToCopy={sanitizedAnswer} />
+            <CopyButton textToCopy={answer} />
             {onPlayMessage && (
               <PlaySpeechButton
                 turnId={id}

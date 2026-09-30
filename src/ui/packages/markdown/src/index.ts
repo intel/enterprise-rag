@@ -4,3 +4,4 @@
 import "./index.css";
 
 export * from "@/Markdown";
+export { parseMarkdown } from "@/utils";
