@@ -1,11 +1,14 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import { ScannerInputsTitle } from "@/components/ScannerInputsTitle/ScannerInputsTitle";
+import "./GenericScannerInputs.css";
+
+import { useId } from "react";
+
 import { ServiceArgumentCheckbox } from "@/components/ServiceArgumentCheckbox/ServiceArgumentCheckbox";
+import { ServiceArgumentInput } from "@/components/ServiceArgumentInput/ServiceArgumentInput";
 import { ServiceArgumentNumberInput } from "@/components/ServiceArgumentNumberInput/ServiceArgumentNumberInput";
-import { ServiceArgumentSelectInput } from "@/components/ServiceArgumentSelectInput/ServiceArgumentSelectInput";
-import { ServiceArgumentTextInput } from "@/components/ServiceArgumentTextInput/ServiceArgumentTextInput";
+import { ServiceArgumentSelect } from "@/components/ServiceArgumentSelect/ServiceArgumentSelect";
 import {
   ScannerInputsProps,
   useGuardScannerInputs,
@@ -59,7 +62,7 @@ const renderArgumentInput = (
 
   if (fieldConfig.options) {
     return (
-      <ServiceArgumentSelectInput
+      <ServiceArgumentSelect
         key={fieldName}
         {...fieldConfig}
         options={fieldConfig.options}
@@ -72,7 +75,7 @@ const renderArgumentInput = (
 
   if (fieldConfig.isCommaSeparated) {
     return (
-      <ServiceArgumentTextInput
+      <ServiceArgumentInput
         key={fieldName}
         {...fieldConfig}
         value={value as ServiceArgumentTextInputValue}
@@ -114,20 +117,38 @@ export const GenericScannerInputs = <
     handleArgumentValueChange,
     handleArgumentValidityChange,
   } = useGuardScannerInputs(scannerId, handlers);
+  const panelId = useId();
+
+  const { enabled: enabledFieldConfig, ...otherFieldsConfig } = config;
+  const isExpanded = Boolean(previousArgumentsValues.enabled);
 
   return (
-    <>
-      <ScannerInputsTitle>{titleCasedName}</ScannerInputsTitle>
-      {Object.entries(config).map(([fieldName, fieldConfig]) =>
-        renderArgumentInput(
-          fieldName,
-          fieldConfig,
-          previousArgumentsValues[fieldName],
-          handleArgumentValueChange,
-          handleArgumentValidityChange,
-          isReadOnly,
-        ),
+    <div className="generic-scanner-inputs">
+      <div className="generic-scanner-inputs__header">
+        <ServiceArgumentCheckbox
+          {...enabledFieldConfig}
+          label={titleCasedName}
+          value={previousArgumentsValues.enabled as boolean}
+          onArgumentValueChange={handleArgumentValueChange}
+          isDisabled={isReadOnly}
+          aria-expanded={isExpanded}
+          aria-controls={panelId}
+        />
+      </div>
+      {isExpanded && (
+        <div id={panelId} className="generic-scanner-inputs__panel">
+          {Object.entries(otherFieldsConfig).map(([fieldName, fieldConfig]) =>
+            renderArgumentInput(
+              fieldName,
+              fieldConfig,
+              previousArgumentsValues[fieldName],
+              handleArgumentValueChange,
+              handleArgumentValidityChange,
+              isReadOnly,
+            ),
+          )}
+        </div>
       )}
-    </>
+    </div>
   );
 };

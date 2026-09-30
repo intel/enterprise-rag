@@ -1,0 +1,58 @@
+/* Copyright (C) 2024-2026 Intel Corporation */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+@reference "@intel-enterprise-rag-ui/shadcn-preset/index.css";
+
+/* This card only ever renders inside ControlPlanePanel's config-panel-card__body — that's the
+   single scroll container (see its own max-h-[70vh] overflow-y-auto). Header/footer here are
+   sticky within that same container instead of each defining their own vh-based scroll region,
+   which used to produce two independent (and visually stacked) scrollbars. */
+.selected-service-card .selected-service-card__wrapper {
+  @apply flex flex-col;
+}
+.selected-service-card
+  .selected-service-card__wrapper
+  .selected-service-card__header {
+  @apply bg-card sticky top-0 z-10 pb-2;
+  @apply grid grid-cols-[1rem_auto] items-center justify-items-start gap-2;
+}
+.selected-service-card
+  .selected-service-card__wrapper
+  .selected-service-card__header
+  .selected-service-card__header__service-name {
+  @apply font-medium;
+}
+.selected-service-card
+  .selected-service-card__wrapper
+  .selected-service-card__content {
+  @apply flex flex-col gap-1;
+}
+.selected-service-card
+  .selected-service-card__wrapper
+  .selected-service-card__content
+  .service-details-grid {
+  @apply mt-2 grid auto-rows-[1.75rem] grid-cols-2 items-center justify-items-start;
+  column-gap: 0.5rem;
+  row-gap: 0.25rem;
+}
+.selected-service-card
+  .selected-service-card__wrapper
+  .selected-service-card__content
+  .service-details-grid
+  .service-detail-label {
+  @apply text-xs font-medium;
+}
+.selected-service-card
+  .selected-service-card__wrapper
+  .selected-service-card__content
+  .service-details-grid
+  .service-detail-value {
+  @apply w-full;
+  @apply overflow-hidden text-xs text-ellipsis whitespace-nowrap;
+}
+.selected-service-card
+  .selected-service-card__wrapper
+  .selected-service-card__footer {
+  @apply bg-card sticky bottom-0 z-10 border-t pt-2;
+  @apply flex items-center justify-end gap-2;
+}

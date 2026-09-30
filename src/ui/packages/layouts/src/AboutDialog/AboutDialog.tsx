@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./AboutDialog.scss";
+import "./AboutDialog.css";
 
 import {
   Dialog,
@@ -31,8 +31,13 @@ export const AboutDialog = ({
     <Tooltip
       title="About"
       trigger={
-        <IconButton data-testid="about-dialog-trigger-button" icon="info" />
+        <IconButton
+          data-testid="about-dialog-trigger-button"
+          icon="info-filled"
+          aria-label="About"
+        />
       }
+      placement="bottom"
     />
   );
 
@@ -50,7 +55,6 @@ export const AboutDialog = ({
       title="About"
       maxWidth={600}
       onClose={handleClose}
-      hasPlainHeader
       isCentered
     >
       <div className="about-dialog">

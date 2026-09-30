@@ -1,14 +1,14 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./PromptTemplateCard.scss";
+import "./PromptTemplateCard.css";
 
 import { getValidationErrorMessage } from "@intel-enterprise-rag-ui/input-validation";
 import { sanitizeString } from "@intel-enterprise-rag-ui/utils";
 import { ChangeEventHandler, useEffect, useState } from "react";
 
 import { SelectedServiceCard } from "@/components/SelectedServiceCard/SelectedServiceCard";
-import { ServiceArgumentTextArea } from "@/components/ServiceArgumentTextArea/ServiceArgumentTextArea";
+import { ServiceArgumentTextarea } from "@/components/ServiceArgumentTextarea/ServiceArgumentTextarea";
 import {
   PromptTemplateArgs,
   promptTemplateFormConfig,
@@ -93,7 +93,7 @@ export const PromptTemplateCard = ({
       isReadOnly={isReadOnly}
     >
       <div className="form-container">
-        <ServiceArgumentTextArea
+        <ServiceArgumentTextarea
           value={promptTemplateForm.system_prompt_template ?? ""}
           placeholder="Enter system prompt template..."
           isInvalid={showInvalid}
@@ -101,7 +101,7 @@ export const PromptTemplateCard = ({
           onChange={handleChange}
           isDisabled={isReadOnly}
         />
-        <ServiceArgumentTextArea
+        <ServiceArgumentTextarea
           value={promptTemplateForm.user_prompt_template ?? ""}
           placeholder="Enter user prompt template..."
           isInvalid={showInvalid}

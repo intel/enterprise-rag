@@ -1,10 +1,10 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./SourceDialog.scss";
+import "./SourceDialog.css";
 
 import {
-  ActionDialog,
+  AlertDialog,
   Button,
   Tooltip,
 } from "@intel-enterprise-rag-ui/components";
@@ -50,7 +50,7 @@ export const SourceDialog = ({
       : name;
 
   return (
-    <ActionDialog
+    <AlertDialog
       data-testid="source-dialog"
       title={title}
       trigger={trigger}
@@ -72,6 +72,6 @@ export const SourceDialog = ({
           ))}
         </div>
       </div>
-    </ActionDialog>
+    </AlertDialog>
   );
 };

@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./DataItemStatus.scss";
+import "./DataItemStatus.css";
 
 import { Tooltip } from "@intel-enterprise-rag-ui/components";
 import {
@@ -23,19 +23,19 @@ import { memo, ReactNode } from "react";
 import { DataStatus } from "@/types";
 
 const statusIconMap: Record<DataStatus, ReactNode> = {
-  uploaded: <UploadIcon />,
-  error: <ErrorIcon />,
-  processing: <LoadingIcon />,
-  text_extracting: <DataPrepIcon />,
-  text_compression: <DataPrepIcon />,
-  text_splitting: <DataPrepIcon />,
-  dpguard: <DPGuardIcon />,
-  late_chunking: <EmbeddingIcon />,
-  embedding: <EmbeddingIcon />,
-  ingested: <SuccessIcon />,
-  deleting: <DeleteIcon />,
-  canceled: <CanceledIcon />,
-  blocked: <BlockedIcon />,
+  uploaded: <UploadIcon weight="fill" />,
+  error: <ErrorIcon weight="fill" />,
+  processing: <LoadingIcon weight="fill" />,
+  text_extracting: <DataPrepIcon weight="fill" />,
+  text_compression: <DataPrepIcon weight="fill" />,
+  text_splitting: <DataPrepIcon weight="fill" />,
+  dpguard: <DPGuardIcon weight="fill" />,
+  late_chunking: <EmbeddingIcon weight="fill" />,
+  embedding: <EmbeddingIcon weight="fill" />,
+  ingested: <SuccessIcon weight="fill" />,
+  deleting: <DeleteIcon weight="fill" />,
+  canceled: <CanceledIcon weight="fill" />,
+  blocked: <BlockedIcon weight="fill" />,
 };
 
 const formatStatus = (status: DataStatus): string =>

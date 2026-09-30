@@ -29,10 +29,10 @@ export const HEADING_STYLES: Record<number, string> = {
 export const CSS_CLASSES = {
   /** Background and text colors for contrasting content blocks */
   CONTRAST_BG:
-    "bg-light-bg-contrast dark:bg-dark-bg-contrast text-light-text-primary dark:text-dark-text-primary",
+    "bg-card text-card-foreground",
   /** Primary background and text colors (headers, buttons) */
   PRIMARY_BG:
-    "bg-light-primary dark:bg-dark-primary text-light-text-inverse dark:text-dark-text-primary",
+    "bg-primary text-primary-foreground",
   /** Border colors for accents and dividers */
-  ACCENT_BORDER: "border-light-accent dark:border-dark-accent",
+  ACCENT_BORDER: "border-border",
 } as const;

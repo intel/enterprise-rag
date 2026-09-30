@@ -85,7 +85,7 @@ export default {
   },
 
   checkbox({ checked }) {
-    return `<input ${checked ? "checked" : ""} type="checkbox" class="mr-2 align-middle pointer-events-none accent-light-primary dark:accent-dark-primary" />`;
+    return `<input ${checked ? "checked" : ""} type="checkbox" class="mr-2 align-middle pointer-events-none accent-primary" />`;
   },
 
   paragraph({ tokens }) {
@@ -98,7 +98,7 @@ export default {
     const rowsHtml = rows
       .map((row) => {
         const cells = row.map((cell) => this.tablecell(cell)).join("");
-        return `<tr class="[&:not(:has(th)):not(:last-of-type)]:border-b [&:not(:has(th)):not(:last-of-type)]:border-b-light-border [&:not(:has(th)):not(:last-of-type)]:dark:border-b-dark-border">${cells}</tr>`;
+        return `<tr class="[&:not(:has(th)):not(:last-of-type)]:border-b [&:not(:has(th)):not(:last-of-type)]:border-b-border">${cells}</tr>`;
       })
       .join("");
 
@@ -139,7 +139,7 @@ export default {
 
   codespan({ text }) {
     const escapedText = escapeHtml(text);
-    return `<code class="whitespace-pre-wrap p-1 rounded bg-gray-100 dark:bg-dark-bg-contrast text-light-text-primary dark:text-dark-text-primary text-sm">${escapedText}</code>`;
+    return `<code class="whitespace-pre-wrap p-1 rounded bg-muted text-foreground text-sm">${escapedText}</code>`;
   },
 
   br() {
@@ -156,7 +156,7 @@ export default {
     const escapedTitle = title ? escapeHtml(title) : "";
     const titleAttr = escapedTitle ? ` title="${escapedTitle}"` : "";
     const text = this.parser.parseInline(tokens);
-    return `<a href="${sanitizedHref}"${titleAttr} target="_blank" rel="noopener noreferrer" class="underline underline-offset-4 text-light-text-accent dark:text-dark-text-accent">${text}</a>`;
+    return `<a href="${sanitizedHref}"${titleAttr} target="_blank" rel="noopener noreferrer" class="underline underline-offset-4 text-foreground">${text}</a>`;
   },
 
   image({ href, title, text }) {

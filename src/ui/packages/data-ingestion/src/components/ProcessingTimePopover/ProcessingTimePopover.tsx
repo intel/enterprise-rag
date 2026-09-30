@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./ProcessingTimePopover.scss";
+import "./ProcessingTimePopover.css";
 
 import {
   Button,
@@ -153,7 +153,7 @@ const ProcessingTimePopover = memo(
         <Button
           ref={triggerRef}
           data-testid="processing-time-popover-trigger"
-          variant="text"
+          variant="ghost"
           className="processing-time-popover__trigger"
           onPress={togglePopover}
         >

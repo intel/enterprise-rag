@@ -3,8 +3,8 @@
 
 import {
   Button,
+  Input,
   Popover,
-  TextInput,
   usePopover,
 } from "@intel-enterprise-rag-ui/components";
 import { ErrorIcon, IconName } from "@intel-enterprise-rag-ui/icons";
@@ -57,7 +57,7 @@ const AddSharePointSiteForm = ({ onSiteAdded }: AddSharePointSiteFormProps) => {
 
   return (
     <div className="sharepoint-sites-dialog__add-form">
-      <TextInput
+      <Input
         data-testid="sharepoint-site-url-input"
         type="url"
         value={siteUrl}

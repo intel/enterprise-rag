@@ -1,0 +1,17 @@
+/* Copyright (C) 2024-2026 Intel Corporation */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+@reference "@intel-enterprise-rag-ui/shadcn-preset/index.css";
+
+.generic-scanner-inputs {
+  @apply mt-3;
+  @apply rounded-md;
+  @apply ring-foreground/10 ring-1;
+}
+.generic-scanner-inputs .generic-scanner-inputs__header {
+  @apply px-3;
+}
+.generic-scanner-inputs .generic-scanner-inputs__panel {
+  @apply border-foreground/10 border-t;
+  @apply px-3 pb-1;
+}

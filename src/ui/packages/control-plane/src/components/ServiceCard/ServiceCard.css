@@ -1,0 +1,14 @@
+/* Copyright (C) 2024-2026 Intel Corporation */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+@reference "@intel-enterprise-rag-ui/shadcn-preset/index.css";
+
+.no-service-selected-card {
+  @apply bg-card;
+  @apply border-l-border border-l;
+  @apply flex h-full items-center justify-center;
+}
+.no-service-selected-card > p {
+  @apply w-[14rem];
+  @apply text-foreground text-center text-sm;
+}

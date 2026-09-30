@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./FilesList.scss";
+import "./FilesList.css";
 
 import { IconButton } from "@intel-enterprise-rag-ui/components";
 import { formatFileSize } from "@intel-enterprise-rag-ui/utils";
@@ -40,7 +40,7 @@ const FilesList = ({ files, setFiles }: FilesListProps) => {
             <IconButton
               data-testid="delete-file-from-list-button"
               icon="delete"
-              color="error"
+              variant="destructive"
               aria-label="Delete file from the list"
               onPress={() => removeDocumentFromList(index)}
             />

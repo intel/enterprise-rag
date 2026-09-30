@@ -2,16 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import "@xyflow/react/dist/style.css";
-import "./ControlPlanePanel.scss";
+import "./ControlPlanePanel.css";
 
 import {
-  CheckboxInputChangeHandler,
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
   IconButton,
   LoadingFallback,
   Tooltip,
 } from "@intel-enterprise-rag-ui/components";
-import classNames from "classnames";
-import { ReactNode, useCallback, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 
 import { GraphControls } from "@/components/GraphControls/GraphControls";
 
@@ -20,10 +23,9 @@ interface ControlPlanePanelProps {
   isRenderable: boolean;
   Graph: ReactNode;
   ConfigPanel?: ReactNode;
-  isAutorefreshEnabled: boolean;
-  onAutorefreshChange: CheckboxInputChangeHandler;
-  onRefresh: () => void;
-  isFetching: boolean;
+  // True once a node is selected whose service ServiceCard can't render a config form for
+  // (or no node is selected at all) — disables the trigger instead of opening an empty card.
+  isConfigPanelDisabled?: boolean;
   onConfigPanelToggle?: (isVisible: boolean) => void;
 }
 
@@ -32,23 +34,29 @@ export const ControlPlanePanel = ({
   isRenderable,
   Graph,
   ConfigPanel,
-  isAutorefreshEnabled,
-  onAutorefreshChange,
-  onRefresh,
-  isFetching,
+  isConfigPanelDisabled = false,
   onConfigPanelToggle,
 }: ControlPlanePanelProps) => {
-  const [isConfigPanelVisible, setIsConfigPanelVisible] = useState(true);
+  // Minimized (closed) by default — the config panel is one persistent floating card
+  // docked top-right over the graph, whose own header carries the open/minimize control
+  // (like a floating window's corner control), not a docked panel that reserves graph
+  // width or a separate trigger-plus-popover pair.
+  const [isConfigPanelVisible, setIsConfigPanelVisible] = useState(false);
 
   const toggleConfigPanel = useCallback(() => {
     const newVisibility = !isConfigPanelVisible;
     setIsConfigPanelVisible(newVisibility);
     onConfigPanelToggle?.(newVisibility);
-
-    setTimeout(() => {
-      window.dispatchEvent(new Event("resize"));
-    }, 350);
   }, [isConfigPanelVisible, onConfigPanelToggle]);
+
+  // Selection can change (or clear) while the card is open — close it rather than leave it
+  // floating over a now-disabled trigger.
+  useEffect(() => {
+    if (isConfigPanelDisabled && isConfigPanelVisible) {
+      setIsConfigPanelVisible(false);
+      onConfigPanelToggle?.(false);
+    }
+  }, [isConfigPanelDisabled, isConfigPanelVisible, onConfigPanelToggle]);
 
   const getControlPlaneContent = () => {
     if (isLoading) {
@@ -57,12 +65,7 @@ export const ControlPlanePanel = ({
       if (isRenderable) {
         return (
           <>
-            <GraphControls
-              isAutorefreshEnabled={isAutorefreshEnabled}
-              onAutorefreshChange={onAutorefreshChange}
-              onRefresh={onRefresh}
-              isFetching={isFetching}
-            />
+            <GraphControls />
             {Graph}
           </>
         );
@@ -76,50 +79,53 @@ export const ControlPlanePanel = ({
     }
   };
 
-  const controlPlanePanelClassName = classNames("control-plane-panel", {
-    "control-plane-panel__with-config-panel":
-      !!ConfigPanel && isConfigPanelVisible,
-  });
-
-  const configPanelWrapperClassName = classNames("config-panel-wrapper", {
-    "config-panel-wrapper--visible": isConfigPanelVisible,
-    "config-panel-wrapper--hidden": !isConfigPanelVisible,
-  });
-
-  const toggleWrapperClassName = classNames("config-panel-toggle-wrapper", {
-    "config-panel-toggle-wrapper--panel-hidden": !isConfigPanelVisible,
-  });
-
-  const toggleButtonLabel = isConfigPanelVisible
-    ? "Hide side panel"
-    : "Show side panel";
-
-  const toggleButtonIcon = isConfigPanelVisible ? "panel-hide" : "panel-show";
+  const toggleButtonLabel = isConfigPanelDisabled
+    ? "Select a configurable service to view its configuration"
+    : isConfigPanelVisible
+      ? "Hide config panel"
+      : "Show config panel";
 
   return (
-    <div
-      className={controlPlanePanelClassName}
-      data-testid="control-plane-panel"
-    >
+    <div className="control-plane-panel" data-testid="control-plane-panel">
+      <div className="control-plane-panel__dots-bg" aria-hidden="true" />
       <div className="graph-wrapper">{getControlPlaneContent()}</div>
       {ConfigPanel && (
-        <>
-          <div className={configPanelWrapperClassName}>{ConfigPanel}</div>
-          <div className={toggleWrapperClassName}>
-            <Tooltip
-              title={toggleButtonLabel}
-              placement="left"
-              trigger={
-                <IconButton
-                  icon={toggleButtonIcon}
-                  className="config-panel-toggle-button"
-                  onPress={toggleConfigPanel}
-                  aria-label={toggleButtonLabel}
-                />
-              }
-            />
-          </div>
-        </>
+        <Card
+          size="sm"
+          className="config-panel-card"
+          data-testid="config-panel-card"
+        >
+          <CardHeader className="config-panel-card__header">
+            {isConfigPanelVisible && (
+              <CardTitle>Service Configuration</CardTitle>
+            )}
+            <CardAction>
+              <Tooltip
+                title={toggleButtonLabel}
+                placement="left"
+                trigger={
+                  <IconButton
+                    icon={isConfigPanelVisible ? "panel-hide" : "panel-show"}
+                    size="sm"
+                    onPress={toggleConfigPanel}
+                    isDisabled={isConfigPanelDisabled}
+                    aria-label={toggleButtonLabel}
+                    aria-expanded={isConfigPanelVisible}
+                    data-testid="config-panel-toggle-button"
+                  />
+                }
+              />
+            </CardAction>
+          </CardHeader>
+          {isConfigPanelVisible && (
+            <CardContent
+              className="config-panel-card__body"
+              data-testid="config-panel-body"
+            >
+              {ConfigPanel}
+            </CardContent>
+          )}
+        </Card>
       )}
     </div>
   );

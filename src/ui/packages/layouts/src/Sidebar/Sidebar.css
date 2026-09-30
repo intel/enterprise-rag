@@ -1,0 +1,48 @@
+/* Copyright (C) 2024-2026 Intel Corporation */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+@reference "@intel-enterprise-rag-ui/shadcn-preset/index.css";
+
+.sidebar {
+  @apply absolute top-0 z-20;
+  @apply h-full w-64;
+  @apply flex flex-col;
+  @apply bg-sidebar;
+  @apply transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)];
+}
+.sidebar.sidebar--closed {
+  @apply opacity-0;
+}
+.sidebar.sidebar--open {
+  @apply opacity-100;
+}
+.sidebar > .sidebar__header {
+  @apply mx-2 flex h-16 items-center justify-between;
+}
+.sidebar > .sidebar__view-switch {
+  @apply mx-2 mt-1 mb-3 flex flex-col gap-1;
+}
+.sidebar > .sidebar__content {
+  @apply mx-2 flex-1 overflow-y-auto;
+}
+.sidebar > .sidebar__footer {
+  @apply border-border flex h-16 items-center border-t;
+}
+.sidebar.sidebar--left {
+  @apply left-0;
+}
+.sidebar.sidebar--left.sidebar--open {
+  @apply translate-x-0;
+}
+.sidebar.sidebar--left.sidebar--closed {
+  @apply translate-x-64;
+}
+.sidebar.sidebar--right {
+  @apply right-0;
+}
+.sidebar.sidebar--right.sidebar--open {
+  @apply translate-x-0;
+}
+.sidebar.sidebar--right.sidebar--closed {
+  @apply -translate-x-64;
+}

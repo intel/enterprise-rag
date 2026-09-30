@@ -1,9 +1,14 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./ChatHistoryItem.scss";
+import "./ChatHistoryItem.css";
 
-import { Anchor, Button, Tooltip } from "@intel-enterprise-rag-ui/components";
+import {
+  Anchor,
+  Button,
+  Tooltip,
+  useInlineRename,
+} from "@intel-enterprise-rag-ui/components";
 import { PinFilledIcon } from "@intel-enterprise-rag-ui/icons";
 import classNames from "classnames";
 import { useState } from "react";
@@ -17,6 +22,7 @@ import { ChatHistoryItemData } from "@/types";
 
 const TITLE_OVERFLOW_LIMIT = 12;
 const PINNED_TITLE_OVERFLOW_LIMIT = 10;
+const CHAT_NAME_CHAR_LIMIT = 250;
 
 export type OnChatHistoryItemPressHandler = (id: string) => void;
 
@@ -44,6 +50,12 @@ export const ChatHistoryItem = ({
   const { name } = itemData;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  const { isEditing, startEditing, inputProps } = useInlineRename({
+    value: name,
+    onSubmit: (newName) => onRename(itemData.id, newName),
+    maxLength: CHAT_NAME_CHAR_LIMIT,
+  });
+
   const handleItemPress = () => {
     if (isActive) return;
     onPress(itemData.id);
@@ -56,19 +68,42 @@ export const ChatHistoryItem = ({
     "chat-history-item--unpinned": !pinned,
   });
 
-  let titleElement = <p className="chat-history-item__title">{name}</p>;
   const titleOverflowLimit = pinned
     ? PINNED_TITLE_OVERFLOW_LIMIT
     : TITLE_OVERFLOW_LIMIT;
 
-  if (name.length > titleOverflowLimit) {
+  let titleElement;
+  if (isEditing) {
     titleElement = (
-      <Tooltip
-        title={name}
-        trigger={<p className="chat-history-item__title">{name}</p>}
-        placement="right"
+      <input
+        {...inputProps}
+        aria-label="Rename chat"
+        data-testid="chat-history-item-title-input"
+        className="chat-history-item__title-input"
+        onClick={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+        autoFocus
       />
     );
+  } else {
+    const titleNode = (
+      <p
+        className="chat-history-item__title"
+        onClick={(event) => event.stopPropagation()}
+        onDoubleClick={(event) => {
+          event.stopPropagation();
+          startEditing();
+        }}
+      >
+        {name}
+      </p>
+    );
+    titleElement =
+      name.length > titleOverflowLimit ? (
+        <Tooltip title={name} trigger={titleNode} placement="right" />
+      ) : (
+        titleNode
+      );
   }
 
   return (
@@ -93,16 +128,21 @@ export const ChatHistoryItem = ({
         />
       )}
       {titleElement}
-      <ChatHistoryItemMenu
-        itemData={itemData}
-        isOpen={isMenuOpen}
-        onOpenChange={setIsMenuOpen}
-        pinned={pinned}
-        onPinChange={onPinChange}
-        onDelete={onDelete}
-        onExport={onExport}
-        onRename={onRename}
-      />
+      {!isEditing && (
+        <div className="chat-history-item__title-fade" aria-hidden="true" />
+      )}
+      <div className="chat-history-item__menu-wrapper">
+        <ChatHistoryItemMenu
+          itemData={itemData}
+          isOpen={isMenuOpen}
+          onOpenChange={setIsMenuOpen}
+          pinned={pinned}
+          onPinChange={onPinChange}
+          onDelete={onDelete}
+          onExport={onExport}
+          onRename={onRename}
+        />
+      </div>
     </Anchor>
   );
 };

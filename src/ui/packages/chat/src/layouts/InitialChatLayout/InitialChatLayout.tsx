@@ -1,9 +1,9 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./InitialChatLayout.scss";
+import "./InitialChatLayout.css";
 
-import { ChatBotIcon } from "@intel-enterprise-rag-ui/icons";
+import { AiIcon } from "@intel-enterprise-rag-ui/icons";
 import { ChangeEventHandler } from "react";
 
 import { ChatDisclaimer } from "@/components/conversation-feed/ChatDisclaimer/ChatDisclaimer";
@@ -29,8 +29,10 @@ export const InitialChatLayout = ({
   onSpeechToTextError,
 }: InitialChatLayoutProps) => (
   <div className="initial-chat-layout">
-    <ChatBotIcon className="initial-chat-layout__chat-bot-icon" />
-    <p className="initial-chat-layout__greeting">What do you want to know?</p>
+    <div className="initial-chat-layout__greeting-row">
+      <p className="initial-chat-layout__greeting">How can I help?</p>
+      <AiIcon weight="fill" className="initial-chat-layout__chat-bot-icon" />
+    </div>
     <PromptInput
       prompt={userInput}
       enableMicrophone={enableMicrophone}
@@ -38,6 +40,7 @@ export const InitialChatLayout = ({
       onSubmit={onPromptSubmit}
       onSpeechToText={onSpeechToText}
       onSpeechToTextError={onSpeechToTextError}
+      showSparkAnimation
     />
     <ChatDisclaimer message={disclaimer} />
   </div>

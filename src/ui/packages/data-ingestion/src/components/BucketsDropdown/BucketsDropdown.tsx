@@ -1,15 +1,14 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./BucketsDropdown.scss";
+import "./BucketsDropdown.css";
 
 import {
-  addNotification,
-  SelectInput,
-  SelectInputChangeHandler,
+  Select,
+  SelectChangeHandler,
 } from "@intel-enterprise-rag-ui/components";
 import { useEffect } from "react";
-import { useDispatch } from "react-redux";
+import { toast } from "sonner";
 
 import { useGetS3BucketsListQuery } from "@/api/edpApi";
 import { ERROR_MESSAGES } from "@/config/api";
@@ -18,7 +17,7 @@ import { getErrorMessage } from "@/utils/api";
 interface BucketsDropdownProps {
   selectedBucket: string;
   files: File[];
-  onBucketChange: SelectInputChangeHandler<string>;
+  onBucketChange: SelectChangeHandler<string>;
 }
 
 const BucketsDropdown = ({
@@ -27,7 +26,6 @@ const BucketsDropdown = ({
   onBucketChange,
 }: BucketsDropdownProps) => {
   const { data: bucketsList, error, isFetching } = useGetS3BucketsListQuery();
-  const dispatch = useDispatch();
 
   useEffect(() => {
     if (error) {
@@ -35,15 +33,15 @@ const BucketsDropdown = ({
         error,
         ERROR_MESSAGES.GET_S3_BUCKETS_LIST,
       );
-      dispatch(addNotification({ severity: "error", text: errorMessage }));
+      toast.error(errorMessage);
     }
-  }, [dispatch, error]);
+  }, [error]);
 
   const isInvalid = files.length > 0 && !selectedBucket;
   const isDisabled = isFetching || !bucketsList || bucketsList.length === 0;
 
   return (
-    <SelectInput
+    <Select
       data-testid="s3-bucket-dropdown"
       value={selectedBucket}
       items={bucketsList}
