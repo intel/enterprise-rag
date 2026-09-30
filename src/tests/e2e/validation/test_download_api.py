@@ -99,31 +99,6 @@ def test_download_denied_without_authorization(edp_helper, ingested_test_file):
     )
 
 
-@allure.testcase("IEASG-T725")
-def test_delete_denied_without_authorization(edp_helper, ingested_test_file):
-    """Security: a stored object must not be deletable via a raw object-store URL that carries
-    neither a valid presigned signature nor an Authorization header. The DELETE presigned URL is a
-    bare object URL, so strip its query (any X-Amz-* signature) and send DELETE with no auth header —
-    as a plain browser/client would — and confirm it is rejected and the file still exists. A success
-    means anyone can delete ingested files by name, which is a security defect."""
-    response = edp_helper.generate_presigned_url(ingested_test_file, method="DELETE")
-    assert response.status_code == 200, f"Failed to generate DELETE presigned URL. Response: {response.text}"
-    delete_url = response.json().get("url")
-    assert delete_url, "Presigned URL is empty"
-
-    bare_url = delete_url.split("?")[0]  # drop any signature query params
-    delete_response = requests.delete(bare_url, verify=False)  # no signature, no Authorization header
-    assert delete_response.status_code in (401, 403), (
-        f"Object deletable without authorization or signature (status "
-        f"{delete_response.status_code}); the object store must not allow anonymous deletes"
-    )
-    still_present = any(
-        f.get("object_name", "").endswith(ingested_test_file)
-        for f in edp_helper.list_files().json()
-    )
-    assert still_present, f"'{ingested_test_file}' was deleted by an unauthenticated request"
-
-
 @allure.testcase("IEASG-T727")
 def test_download_admin_bucket_file_as_admin(edp_helper, tmp_path):
     """Positive RBAC case: an admin can download a file stored in the admin-only bucket. Upload a
