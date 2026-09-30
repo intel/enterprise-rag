@@ -156,6 +156,31 @@ def test_download_admin_bucket_file_as_admin(edp_helper, tmp_path):
     edp_helper.delete_file(delete_response.json()["url"])
 
 
+@allure.testcase("IEASG-T728")
+def test_download_admin_bucket_denied_without_authorization(edp_helper, tmp_path):
+    """Security: an object in the admin-only bucket must not be downloadable via a raw object-store
+    URL that carries neither a valid signature nor an Authorization header (contrast to the public
+    default bucket). Upload to only-admin, take the admin GET presigned URL, strip its query and GET
+    the bare URL with no auth header — expect denied (401/403)."""
+    content = "only-admin anonymous-download probe"
+    file_name = "only_admin_anon_download_probe.txt"
+    file_path = tmp_path / file_name
+    file_path.write_text(content)
+    edp_helper.upload_file_and_wait_for_ingestion(str(file_path), bucket="only-admin")
+    try:
+        response = edp_helper.generate_presigned_url(file_name, method="GET", bucket="only-admin")
+        assert response.status_code == 200, f"Admin GET presigned generation failed: {response.text}"
+        bare_url = response.json()["url"].split("?")[0]  # drop any signature query params
+        download_response = requests.get(bare_url, verify=False)  # no signature, no Authorization header
+        assert download_response.status_code in (401, 403), (
+            f"Admin-only bucket object is downloadable without authorization (status "
+            f"{download_response.status_code}); a protected bucket must deny anonymous reads"
+        )
+    finally:
+        delete_response = edp_helper.generate_presigned_url(file_name, method="DELETE", bucket="only-admin")
+        edp_helper.delete_file(delete_response.json()["url"])
+
+
 @allure.testcase("IEASG-T607")
 def test_download_file_from_chatqa_citation(edp_helper, chatqa_api_helper, ingested_test_file):
     """
