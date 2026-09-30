@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./FileSelectedToSummarize.scss";
+import "./FileSelectedToSummarize.css";
 
 import { Button } from "@intel-enterprise-rag-ui/components";
 import { useMemo } from "react";
@@ -34,18 +34,18 @@ const FileSelectedToSummarize = ({
         <Button
           data-testid="change-file-button"
           size="sm"
-          variant="outlined"
+          variant="outline"
           isDisabled={isGeneratingSummary}
-          onClick={onChangeFile}
+          onPress={onChangeFile}
         >
           Change
         </Button>
         <Button
           data-testid="delete-file-button"
-          color="error"
+          variant="destructive"
           size="sm"
           isDisabled={isGeneratingSummary}
-          onClick={onDeleteFile}
+          onPress={onDeleteFile}
         >
           Delete
         </Button>

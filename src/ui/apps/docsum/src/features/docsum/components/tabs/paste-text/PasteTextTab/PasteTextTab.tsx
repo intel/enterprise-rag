@@ -1,16 +1,12 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./PasteTextTab.scss";
+import "./PasteTextTab.css";
 
-import {
-  addNotification,
-  Button,
-  Label,
-  TextAreaInput,
-} from "@intel-enterprise-rag-ui/components";
+import { Button, Label, Textarea } from "@intel-enterprise-rag-ui/components";
 import { getValidationErrorMessage } from "@intel-enterprise-rag-ui/input-validation";
 import { ChangeEventHandler, useCallback, useEffect, useRef } from "react";
+import { toast } from "sonner";
 
 import { useSummarizePlainTextMutation } from "@/features/docsum/api";
 import { SummaryType } from "@/features/docsum/api/types";
@@ -107,12 +103,7 @@ const PasteTextTab = () => {
 
       if (error) {
         console.error("Text summary error:", error);
-        dispatch(
-          addNotification({
-            severity: "error",
-            text: `An error occurred while summarizing the text: ${error}`,
-          }),
-        );
+        toast.error(`An error occurred while summarizing the text: ${error}`);
       } else {
         const summaryToSave = summaryRef.current ?? data?.text ?? "";
         if (summaryToSave) {
@@ -126,11 +117,8 @@ const PasteTextTab = () => {
               source: text,
             }),
           );
-          dispatch(
-            addNotification({
-              severity: "success",
-              text: "The summary for the pasted text has been saved successfully.",
-            }),
+          toast.success(
+            "The summary for the pasted text has been saved successfully.",
           );
         }
       }
@@ -154,14 +142,14 @@ const PasteTextTab = () => {
           <Button
             data-testid="paste-text-clear-button"
             size="sm"
-            variant="outlined"
+            variant="outline"
             isDisabled={isClearBtnDisabled}
             onPress={clearText}
           >
             Clear
           </Button>
         </div>
-        <TextAreaInput
+        <Textarea
           data-testid="paste-text-textarea-input"
           id="paste-text"
           name="paste-text"
@@ -169,11 +157,18 @@ const PasteTextTab = () => {
           placeholder="Paste your text here..."
           className="paste-text-tab__text-area"
           aria-label="Paste your text here"
+          aria-describedby="paste-text-error-message"
           disabled={isLoading}
           onChange={handleChange}
           isInvalid={isInvalid}
         />
-        <p className="paste-text-tab__error-message">{errorMessage}</p>
+        <p
+          id="paste-text-error-message"
+          aria-live="polite"
+          className="paste-text-tab__error-message"
+        >
+          {errorMessage}
+        </p>
         <GenerateSummaryDropdownButton
           summaryType={summaryType}
           onSummaryTypeChange={handleSummaryTypeChange}

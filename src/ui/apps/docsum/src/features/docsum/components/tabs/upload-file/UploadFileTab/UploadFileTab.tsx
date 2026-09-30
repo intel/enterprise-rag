@@ -1,16 +1,16 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./UploadFileTab.scss";
+import "./UploadFileTab.css";
 
 import {
-  addNotification,
   FileInput,
   FileInputHandle,
 } from "@intel-enterprise-rag-ui/components";
 import { getValidationErrorMessage } from "@intel-enterprise-rag-ui/input-validation";
 import { sanitizeFile } from "@intel-enterprise-rag-ui/utils";
 import { ChangeEvent, DragEvent, useCallback, useRef } from "react";
+import { toast } from "sonner";
 
 import { useSummarizeFileMutation } from "@/features/docsum/api";
 import { SummaryType } from "@/features/docsum/api/types";
@@ -116,12 +116,7 @@ const UploadFileTab = () => {
 
       if (error) {
         console.error("File summary error:", error);
-        dispatch(
-          addNotification({
-            severity: "error",
-            text: `An error occurred while summarizing the file: ${error}`,
-          }),
-        );
+        toast.error(`An error occurred while summarizing the file: ${error}`);
       } else {
         const summaryToSave = summaryRef.current || data?.text || "";
         if (summaryToSave) {
@@ -135,11 +130,8 @@ const UploadFileTab = () => {
               source: fileData.name,
             }),
           );
-          dispatch(
-            addNotification({
-              severity: "success",
-              text: `The summary for ${fileData.name} has been saved successfully.`,
-            }),
+          toast.success(
+            `The summary for ${fileData.name} has been saved successfully.`,
           );
         }
       }

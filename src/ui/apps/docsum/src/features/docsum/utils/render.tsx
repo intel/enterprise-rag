@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {
-  DocFileIcon,
-  DocxFileIcon,
-  MdFileIcon,
-  PdfFileIcon,
+  FileDocIcon,
+  FileDocxIcon,
+  FileMdIcon,
+  FilePdfIcon,
+  FileTextIcon,
   PlainTextIcon,
-  TextFileIcon,
 } from "@intel-enterprise-rag-ui/icons";
 
 import { HistoryItemData } from "@/features/docsum/types/history";
@@ -15,15 +15,15 @@ import { HistoryItemData } from "@/features/docsum/types/history";
 export const getFileIcon = (fileName: string) => {
   const fileExtension = fileName.split(".").pop()?.toLowerCase();
   if (fileExtension === "pdf") {
-    return <PdfFileIcon />;
+    return <FilePdfIcon />;
   } else if (fileExtension === "docx") {
-    return <DocxFileIcon />;
+    return <FileDocxIcon />;
   } else if (fileExtension === "doc") {
-    return <DocFileIcon />;
+    return <FileDocIcon />;
   } else if (fileExtension === "md") {
-    return <MdFileIcon />;
+    return <FileMdIcon />;
   } else {
-    return <TextFileIcon />;
+    return <FileTextIcon />;
   }
 };
 
