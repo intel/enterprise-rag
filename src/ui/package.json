@@ -11,7 +11,14 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
     "typecheck": "pnpm -r run typecheck",
     "validate": "pnpm run lint && pnpm run format:check && pnpm run typecheck && pnpm -r build && pnpm audit",
-    "validate:fix": "pnpm run lint:fix && pnpm run format && pnpm audit --fix"
+    "validate:fix": "pnpm run lint:fix && pnpm run format && pnpm audit --fix",
+    "clean": "pnpm -r exec -- rm -rf dist node_modules && rm -rf node_modules",
+    "rebuild": "pnpm run clean && pnpm install && pnpm -r build",
+    "dev:chatqna": "pnpm --filter @intel-enterprise-rag-ui/chatqna run dev",
+    "dev:audioqna": "pnpm --filter @intel-enterprise-rag-ui/audioqna run dev",
+    "dev:docsum": "pnpm --filter @intel-enterprise-rag-ui/docsum run dev",
+    "a11y:axe": "axe --dir ./a11y-reports --save axe-report.json --exit",
+    "a11y:lighthouse": "lighthouse --output=html --output-path=./a11y-reports/lighthouse.html --only-categories=accessibility --chrome-flags=\"--headless\""
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.2.7",
@@ -23,7 +30,6 @@
     "lodash.debounce": "^4.0.8",
     "luxon": "^3.6.1",
     "react": "^18.3.1",
-    "react-aria-components": "^1.7.1",
     "react-dom": "^18.3.1",
     "react-redux": "^9.1.2",
     "react-router-dom": "^7.18.0",
@@ -31,7 +37,9 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@axe-core/cli": "^4.13.0",
     "@eslint/js": "^9.7.0",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/lodash.debounce": "^4.0.9",
     "@types/luxon": "^3.6.2",
     "@types/node": "^22.5.2",
@@ -49,13 +57,13 @@
     "eslint-plugin-react-refresh": "^0.4.7",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "globals": "^15.8.0",
+    "lighthouse": "^13.5.0",
     "postcss": "^8.4.47",
     "prettier": "^3.3.3",
     "prettier-plugin-organize-imports": "^4.0.0",
     "prettier-plugin-tailwindcss": "^0.6.8",
     "sass": "^1.77.8",
-    "tailwindcss": "^3.4.13",
-    "tailwindcss-react-aria-components": "^1.1.6",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.3.0",
     "vite": "^6.4.2",
@@ -66,5 +74,15 @@
     "node": ">=20",
     "npm": ">=10",
     "pnpm": ">=9"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "chromedriver",
+      "esbuild"
+    ],
+    "overrides": {
+      "chromedriver": "153.0.3"
+    }
   }
 }
