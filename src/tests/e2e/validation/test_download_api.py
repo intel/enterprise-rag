@@ -56,7 +56,12 @@ def test_download_presigned_url_generation(edp_helper, ingested_test_file):
     assert response.status_code == 200, f"Failed to generate presigned download URL. Response: {response.text}"
     url = response.json().get("url")
     assert url, "Presigned URL is empty"
-    assert "X-Amz-Signature" in url, "Presigned URL does not contain a signature"
+    if cfg.get("edp_rbac_enabled"):
+        # RBAC mode: the URL is bare; authorization is enforced via the bearer token
+        # at request time, not via a query-string signature.
+        assert "X-Amz-Signature" not in url, "RBAC presigned URL must not carry a query signature"
+    else:
+        assert "X-Amz-Signature" in url, "Presigned URL does not contain a signature"
 
 
 @pytest.mark.smoke
