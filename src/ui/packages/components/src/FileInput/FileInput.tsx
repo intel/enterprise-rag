@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./FileInput.scss";
+import "./FileInput.css";
 
 import { FileIcon } from "@intel-enterprise-rag-ui/icons";
 import classNames from "classnames";
@@ -11,12 +11,14 @@ import {
   Fragment,
   InputHTMLAttributes,
   useCallback,
+  useId,
   useImperativeHandle,
   useMemo,
   useRef,
   useState,
 } from "react";
 
+import { Alert, AlertDescription } from "@/Alert/Alert";
 import { Button } from "@/Button/Button";
 
 export interface FileInputHandle {
@@ -48,6 +50,7 @@ export const FileInput = forwardRef<FileInputHandle, FileInputProps>(
     forwardedRef,
   ) => {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const errorMessageId = `${useId()}-file-input-error`;
     useImperativeHandle(forwardedRef, () => ({
       clear: () => {
         if (fileInputRef.current) {
@@ -155,19 +158,26 @@ export const FileInput = forwardRef<FileInputHandle, FileInputProps>(
             className="file-input__box__input"
             multiple={multiple}
             aria-label={ariaLabel}
+            aria-describedby={hasErrorMessage ? errorMessageId : undefined}
             onChange={onChange}
             data-testid="file-input"
           />
         </div>
         {hasErrorMessage && (
-          <p className="file-input__error-message">
-            {(errorMessage ?? "").split("\n").map((msg, index) => (
-              <Fragment key={`file-input-error-msg-${index}`}>
-                {msg}
-                <br />
-              </Fragment>
-            ))}
-          </p>
+          <Alert
+            variant="error"
+            id={errorMessageId}
+            className="file-input__error-message"
+          >
+            <AlertDescription>
+              {(errorMessage ?? "").split("\n").map((msg, index) => (
+                <Fragment key={`file-input-error-msg-${index}`}>
+                  {msg}
+                  <br />
+                </Fragment>
+              ))}
+            </AlertDescription>
+          </Alert>
         )}
         {supportedFileFormatsMsg && (
           <p className="file-input__supported-formats-message">

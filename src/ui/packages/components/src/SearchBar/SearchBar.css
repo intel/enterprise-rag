@@ -1,0 +1,40 @@
+/* Copyright (C) 2024-2026 Intel Corporation */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+@reference "@intel-enterprise-rag-ui/shadcn-preset/index.css";
+
+.search-bar {
+  @apply border-input flex h-8 w-full max-w-[350px] items-center gap-2 rounded-lg border px-[10px] py-[6px];
+  @apply bg-background;
+}
+.search-bar:is(:focus, :focus-within, :focus-visible) {
+  @apply outline-ring outline outline-2;
+}
+.search-bar__icon {
+  @apply flex h-3 w-3 flex-shrink-0 items-center justify-center;
+  @apply text-foreground;
+}
+.search-bar__input {
+  @apply m-0 flex-1 appearance-none border-0 bg-transparent p-0 text-xs leading-[1.6] shadow-none outline-none;
+  @apply text-foreground;
+  @apply caret-foreground;
+}
+.search-bar__input:focus,
+.search-bar__input :focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.search-bar__input:focus::-webkit-input-placeholder {
+  color: transparent;
+}
+.search-bar__input::placeholder {
+  @apply text-muted-foreground not-italic opacity-90;
+}
+.search-bar__clear-icon {
+  @apply flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center;
+  @apply text-foreground;
+}
+.search-bar__clear-icon:hover {
+  @apply opacity-70;
+}
