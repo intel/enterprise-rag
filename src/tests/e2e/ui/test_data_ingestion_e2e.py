@@ -693,24 +693,25 @@ async def test_download_admin_bucket_file_via_ui(chat_ui_helper):
         row = page.locator(f'tr:has-text("{file_name}")')
         assert await row.count() > 0, f"Row '{file_name}' not found in the table"
         download_btn = row.first.locator('[data-testid="download-file-button"]')
+        # Observe the S3 GET the browser issues for the file rather than waiting for a download
+        # event. With the bug present the UI omits the RBAC bearer token and SeaweedFS answers 4xx
+        # (so no file and no download); when fixed the GET is authorized (2xx) and the file
+        # downloads. Asserting on the response status fails fast with the real HTTP code instead of
+        # timing out on a download that never fires.
         try:
-            async with page.expect_download(timeout=15000) as download_info:
+            async with page.expect_response(
+                lambda r: r.request.method == "GET" and file_name in r.url,
+                timeout=15000,
+            ) as resp_info:
                 await download_btn.click()
-            download = await download_info.value
         except PlaywrightTimeout:
-            # No download event means the browser never received the file: the UI issued the S3 GET
-            # without the RBAC bearer token, SeaweedFS answered 403, and the fetch never resolved to
-            # a blob. Convert the raw Playwright timeout into a clean assertion failure so the test
-            # reports as failed (red) rather than broken (errored/yellow) in Allure.
-            pytest.fail(
-                "No browser download was triggered for the only-admin file within 15s — the UI did "
-                "not authorize the S3 GET (missing RBAC bearer token)"
-            )
-        assert download is not None, (
-            "No browser download was triggered for the only-admin file — the UI did not authorize "
-            "the S3 GET (missing RBAC bearer token)"
+            pytest.fail(f"UI issued no S3 GET for '{file_name}' within 15s after clicking Download")
+        response = await resp_info.value
+        assert response.ok, (
+            f"UI download of the only-admin file returned HTTP {response.status} — the browser did "
+            f"not attach the RBAC bearer token to the S3 GET (expected 2xx)"
         )
-        logger.info(f"Assert: browser download triggered for '{file_name}' ({download.suggested_filename})")
+        logger.info(f"Assert: UI download GET authorized (HTTP {response.status}) for '{file_name}'")
     finally:
         try:
             await chat_ui_helper.navigate_to_admin_tab("data-ingestion")
