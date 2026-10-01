@@ -1,13 +1,9 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./LinkInput.scss";
+import "./LinkInput.css";
 
-import {
-  Button,
-  IconButton,
-  TextInput,
-} from "@intel-enterprise-rag-ui/components";
+import { Button, IconButton, Input } from "@intel-enterprise-rag-ui/components";
 import { getValidationErrorMessage } from "@intel-enterprise-rag-ui/input-validation";
 import { sanitizeString } from "@intel-enterprise-rag-ui/utils";
 import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
@@ -115,7 +111,7 @@ const LinkInput = ({ addLinkToList }: LinkInputProps) => {
   return (
     <div className="link-input">
       <div className="link-input__row">
-        <TextInput
+        <Input
           ref={inputRef}
           data-testid="link-input"
           type="text"
@@ -131,7 +127,7 @@ const LinkInput = ({ addLinkToList }: LinkInputProps) => {
         <IconButton
           data-testid="add-link-button"
           icon="plus"
-          variant="contained"
+          variant="default"
           aria-label="Add list to the list"
           isDisabled={addLinkBtnDisabled}
           onPress={handleAddLinkBtnPress}

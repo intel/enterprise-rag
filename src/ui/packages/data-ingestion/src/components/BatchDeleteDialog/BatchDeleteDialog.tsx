@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./BatchDeleteDialog.scss";
+import "./BatchDeleteDialog.css";
 
 import { Button, Dialog, DialogRef } from "@intel-enterprise-rag-ui/components";
 import { useRef } from "react";
@@ -45,7 +45,7 @@ const BatchDeleteDialog = ({
           <Button
             data-testid="batch-delete-confirm-button"
             size="sm"
-            color="error"
+            variant="destructive"
             onPress={handleConfirm}
           >
             Confirm
@@ -53,7 +53,7 @@ const BatchDeleteDialog = ({
           <Button
             data-testid="batch-delete-cancel-button"
             size="sm"
-            variant="outlined"
+            variant="outline"
             onPress={onClose}
           >
             Cancel
@@ -62,7 +62,6 @@ const BatchDeleteDialog = ({
       }
       isOpen={isOpen}
       isCentered
-      hasPlainHeader
     >
       <div className="batch-delete-dialog">
         <p className="batch-delete-dialog__question">

@@ -1,9 +1,9 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./RenameChatDialog.scss";
+import "./RenameChatDialog.css";
 
-import { ActionDialog, TextInput } from "@intel-enterprise-rag-ui/components";
+import { AlertDialog, Input } from "@intel-enterprise-rag-ui/components";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 
 const CHAT_NAME_CHAR_LIMIT = 250;
@@ -58,7 +58,7 @@ export const RenameChatDialog = ({
     !newChatName.trim() || newChatName === currentName;
 
   return (
-    <ActionDialog
+    <AlertDialog
       title="Rename Chat"
       isConfirmDisabled={isRenameActionDisabled}
       isOpen={isOpen}
@@ -66,7 +66,7 @@ export const RenameChatDialog = ({
       onCancel={handleCloseDialog}
       onOpenChange={onOpenChange}
     >
-      <TextInput
+      <Input
         ref={textInputRef}
         data-testid="rename-chat-input"
         name="new-chat-name"
@@ -78,6 +78,6 @@ export const RenameChatDialog = ({
       <p className="rename-chat-dialog__char-count">
         {newChatName.length} / {CHAT_NAME_CHAR_LIMIT} characters
       </p>
-    </ActionDialog>
+    </AlertDialog>
   );
 };

@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./LinksList.scss";
+import "./LinksList.css";
 
 import { IconButton } from "@intel-enterprise-rag-ui/components";
 import classNames from "classnames";
@@ -43,7 +43,7 @@ const LinksList = ({
             <IconButton
               data-testid="delete-link-from-list-button"
               icon="delete"
-              color="error"
+              variant="destructive"
               aria-label="Delete link from the list"
               onPress={() => removeLinkFromList(id)}
             />

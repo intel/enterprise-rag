@@ -1,11 +1,11 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import { TextAreaInput } from "@intel-enterprise-rag-ui/components";
+import { Textarea } from "@intel-enterprise-rag-ui/components";
 import { formatSnakeCaseToTitleCase } from "@intel-enterprise-rag-ui/utils";
 import { ChangeEventHandler } from "react";
 
-interface ServiceArgumentTextAreaProps {
+interface ServiceArgumentTextareaProps {
   value: string;
   placeholder: string;
   isInvalid: boolean;
@@ -19,7 +19,7 @@ interface ServiceArgumentTextAreaProps {
   isDisabled?: boolean;
 }
 
-export const ServiceArgumentTextArea = ({
+export const ServiceArgumentTextarea = ({
   value,
   placeholder,
   isInvalid,
@@ -28,11 +28,11 @@ export const ServiceArgumentTextArea = ({
   inputConfig: { name, tooltipText },
   onChange,
   isDisabled = false,
-}: ServiceArgumentTextAreaProps) => {
+}: ServiceArgumentTextareaProps) => {
   const label = titleCaseLabel ? formatSnakeCaseToTitleCase(name) : name;
 
   return (
-    <TextAreaInput
+    <Textarea
       name={name}
       value={value}
       label={label}

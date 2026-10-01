@@ -1,9 +1,9 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./dataTableCells.scss";
+import "./dataTableCells.css";
 
-import { Button, Tooltip } from "@intel-enterprise-rag-ui/components";
+import { IconButton, Tooltip } from "@intel-enterprise-rag-ui/components";
 import {
   S3BucketIcon,
   SharePointSiteIcon,
@@ -11,14 +11,18 @@ import {
 import { formatFileSize } from "@intel-enterprise-rag-ui/utils";
 import { ColumnDef } from "@tanstack/react-table";
 
-import ChunksProgressBar from "@/components/ChunksProgressBar/ChunksProgressBar";
+import ChunksProgress from "@/components/ChunksProgress/ChunksProgress";
 import DataItemStatus from "@/components/DataItemStatus/DataItemStatus";
 import FileTextExtractionDialog from "@/components/debug/FileTextExtractionDialog/FileTextExtractionDialog";
 import EmbeddingModelIndicator from "@/components/EmbeddingModelIndicator/EmbeddingModelIndicator";
 import ProcessingTimePopover from "@/components/ProcessingTimePopover/ProcessingTimePopover";
 import { FileDataItem } from "@/types";
 
-import { formatStatusForFilter } from "./utils";
+import { formatStatusForFilter, STATUS_FILTER_OPTIONS } from "./utils";
+
+// Upper bound for the "Size" column's range filter — files aren't expected to exceed this,
+// so the slider's max end still means "no filtering", matching the other columns' "All" default.
+const MAX_FILE_SIZE_FILTER_BYTES = 1024 * 1024 * 1024;
 
 interface FileActionsHandlers {
   downloadHandler: (
@@ -33,6 +37,7 @@ interface FileActionsHandlers {
     siteName: string | null,
   ) => void;
   sourceMap?: Record<string, string>;
+  sourceFilterOptions?: string[];
 }
 
 // EMBEDDING_MODEL_MIGRATION_NEW_MODEL = current embedding model used by the system
@@ -44,46 +49,14 @@ export const createFilesColumnDefs = (
   const currentEmbeddingModel = getAppEnv(
     "EMBEDDING_MODEL_MIGRATION_NEW_MODEL",
   );
-  const { downloadHandler, retryHandler, deleteHandler } = handlers;
+  const { downloadHandler, retryHandler, deleteHandler, sourceFilterOptions } =
+    handlers;
 
   return [
     {
-      accessorKey: "status",
-      header: "Status",
-      accessorFn: (row) => formatStatusForFilter(row.status),
-      cell: ({
-        row: {
-          original: { status, job_message: statusMessage },
-        },
-      }) => <DataItemStatus status={status} statusMessage={statusMessage} />,
-    },
-    {
-      accessorKey: "bucket_name",
-      header: "Source",
-      cell: ({
-        row: {
-          original: { bucket_name, site_name },
-        },
-      }) => {
-        if (site_name) {
-          return (
-            <span className="data-table-cell__icon-label">
-              <SharePointSiteIcon aria-hidden="true" />
-              {site_name}
-            </span>
-          );
-        }
-        return (
-          <span className="data-table-cell__icon-label">
-            <S3BucketIcon aria-hidden="true" />
-            {bucket_name}
-          </span>
-        );
-      },
-    },
-    {
       accessorKey: "object_name",
       header: "Name",
+      meta: { pin: "left", filterVariant: "text" },
       cell: ({
         row: {
           original: { object_name: fileName, embedding_model },
@@ -118,9 +91,56 @@ export const createFilesColumnDefs = (
       },
     },
     {
+      accessorKey: "status",
+      header: "Status",
+      accessorFn: (row) => formatStatusForFilter(row.status),
+      filterFn: "equalsString",
+      meta: { filterOptions: STATUS_FILTER_OPTIONS },
+      cell: ({
+        row: {
+          original: { status, job_message: statusMessage },
+        },
+      }) => <DataItemStatus status={status} statusMessage={statusMessage} />,
+    },
+    {
+      id: "source",
+      header: "Source",
+      accessorFn: (row) => row.site_name || row.bucket_name || "",
+      filterFn: "equalsString",
+      ...(sourceFilterOptions?.length && {
+        meta: { filterOptions: sourceFilterOptions },
+      }),
+      cell: ({
+        row: {
+          original: { bucket_name, site_name },
+        },
+      }) => {
+        if (site_name) {
+          return (
+            <span className="data-table-cell__icon-label">
+              <SharePointSiteIcon aria-hidden="true" />
+              {site_name}
+            </span>
+          );
+        }
+        return (
+          <span className="data-table-cell__icon-label">
+            <S3BucketIcon aria-hidden="true" />
+            {bucket_name}
+          </span>
+        );
+      },
+    },
+    {
       accessorKey: "size",
       header: "Size",
       enableGlobalFilter: false,
+      filterFn: (row, columnId, maxSize: number) =>
+        row.getValue<number>(columnId) <= maxSize,
+      meta: {
+        filterVariant: "range",
+        filterRange: { min: 0, max: MAX_FILE_SIZE_FILTER_BYTES, step: 1024 },
+      },
       cell: ({ row }) => formatFileSize(row.getValue("size")),
     },
     {
@@ -135,7 +155,7 @@ export const createFilesColumnDefs = (
           },
         },
       }) => (
-        <ChunksProgressBar
+        <ChunksProgress
           processedChunks={processedChunks}
           totalChunks={totalChunks}
         />
@@ -177,6 +197,7 @@ export const createFilesColumnDefs = (
     {
       id: "actions",
       header: () => <p className="data-table-cell__actions-header">Actions</p>,
+      meta: { pin: "right" },
       cell: ({
         row: {
           original: {
@@ -196,47 +217,68 @@ export const createFilesColumnDefs = (
 
         return (
           <div className="data-table-cell__actions">
-            <Button
-              data-testid="download-file-button"
-              size="sm"
-              onPress={() =>
-                downloadHandler(object_name, bucket_name, site_name)
+            <Tooltip
+              title={site_name ? "Open" : "Download"}
+              trigger={
+                <IconButton
+                  data-testid="download-file-button"
+                  icon={site_name ? "external-link" : "download"}
+                  size="sm"
+                  variant="default"
+                  aria-label={site_name ? "Open" : "Download"}
+                  onPress={() =>
+                    downloadHandler(object_name, bucket_name, site_name)
+                  }
+                />
               }
-            >
-              {site_name ? "Open" : "Download"}
-            </Button>
+            />
             <FileTextExtractionDialog uuid={id} fileName={object_name} />
             {status === "error" && (
-              <Button
-                data-testid="retry-file-button"
-                size="sm"
-                variant="outlined"
-                onPress={() => retryHandler(id)}
-              >
-                Retry
-              </Button>
+              <Tooltip
+                title="Retry"
+                trigger={
+                  <IconButton
+                    data-testid="retry-file-button"
+                    icon="refresh"
+                    size="sm"
+                    variant="outline"
+                    aria-label="Retry"
+                    onPress={() => retryHandler(id)}
+                  />
+                }
+              />
             )}
             {needsReingest && (
-              <Button
-                data-testid="reingest-file-button"
-                size="sm"
-                variant="outlined"
-                onPress={() => retryHandler(id)}
-              >
-                Reingest
-              </Button>
+              <Tooltip
+                title="Reingest"
+                trigger={
+                  <IconButton
+                    data-testid="reingest-file-button"
+                    icon="refresh"
+                    size="sm"
+                    variant="outline"
+                    aria-label="Reingest"
+                    onPress={() => retryHandler(id)}
+                  />
+                }
+              />
             )}
             {(bucket_name || site_name) && (
-              <Button
-                data-testid="delete-file-button"
-                size="sm"
-                color="error"
-                onPress={() =>
-                  deleteHandler(object_name, bucket_name, site_name)
+              <Tooltip
+                title="Delete"
+                trigger={
+                  <IconButton
+                    data-testid="delete-file-button"
+                    icon="delete"
+                    size="sm"
+                    variant="destructive"
+                    aria-label="Delete"
+                    onPress={() =>
+                      deleteHandler(object_name, bucket_name, site_name)
+                    }
+                  />
                 }
-              >
-                Delete
-              </Button>
+              />
             )}
           </div>
         );

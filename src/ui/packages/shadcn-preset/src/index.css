@@ -1,0 +1,323 @@
+/* Copyright (C) 2024-2026 Intel Corporation */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/* ERAG's live theme — every app and package imports or @references this file
+   (`@intel-enterprise-rag-ui/shadcn-preset/index.css`). The preview harness adds its
+   own extras on top in harness.css.
+
+   RE-THEMING: edit only the `:root` (light) and `.dark` blocks below. Components use
+   shadcn's semantic utilities only (bg-background, text-foreground, bg-primary, ...),
+   so changing a value here re-themes every app with no component edits. Variables:
+     --background / --foreground           page surface + body text
+     --card, --popover (+ -foreground)     raised surfaces: cards, menus, dialogs
+     --primary (+ -foreground)             solid brand fill: buttons, table headers
+     --secondary (+ -foreground)           tinted panels, list tiles
+     --muted (+ -foreground)               disabled fills, secondary/placeholder text
+     --accent (+ -foreground)              hover/selected tint for menu items + buttons
+     --info-foreground                     brand-coloured text on the page (links)
+     --destructive, --success (+ -fg)      status colours (used as text or 10% tints)
+     --border, --input, --ring             hairlines, form-control edges, focus ring
+     --sidebar-*, --chart-*                aliases of the above via var(), rarely edited
+     --scrollbar-thumb / --scrollbar-track mode-independent, :root only
+     --radius                              corner radius scale */
+
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Tailwind v4 wraps hover: in @media (hover: hover) by default, which some VDI/remote-desktop
+   environments report as unsupported even with a physical mouse attached — hover: utilities would
+   silently never apply there. Redefine it as a plain :hover selector (Tailwind v3 behavior). */
+@custom-variant hover (&:hover);
+
+@theme inline {
+  --color-scrollbar-thumb: var(--scrollbar-thumb);
+  --color-scrollbar-track: var(--scrollbar-track);
+  --font-heading: var(--font-sans);
+  /* ERAG's Task-04-hardened system-font stack — no webfont;
+     cross-platform guarantee for Windows 10+/macOS/Ubuntu 22.04+. */
+  --font-sans:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Ubuntu",
+    "Helvetica Neue", Arial, sans-serif;
+  --color-info-foreground: var(--info-foreground);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive: var(--destructive);
+  --color-success-foreground: var(--success-foreground);
+  --color-success: var(--success);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Palette below is ERAG's original light/dark tokens (from the retired
+   packages/tailwind-theme), parsed to OKLCH and mapped onto shadcn's semantic slots.
+   Grounded against real usage, not guessed: --border/--input/--ring reuse ERAG's
+   "light-border"/"light-focus" because that's what TextInput/SelectInput/CheckboxInput/
+   SearchBar/ProgressBar/focus-visible actually use for hairlines and focus rings — ERAG's
+   secondary "border-2" gray is the rare exception (Switch only), not the default. --accent/
+   --popover reuse ERAG's "bg-2" tint because Menu/SelectInput's own hover/selected item
+   background and Popover/SideMenu's panel background already use it — this does NOT match
+   ERAG's own unrelated "accent" token (light-accent #3D447F/dark-accent #FFFFFF, used as a
+   hover-overlay tint on a few IconButton variants), which is a different, unmapped role.
+   --card reuses AnchorCard's own bg-white (light) / bg-dark-bg-2 (dark). --success/
+   --success-foreground are an addition (not in shadcn's default scaffold) carrying over
+   ERAG's status-success token, kept for a future custom Button/Badge "success" variant.
+   --chart-* and --sidebar-* have no distinct ERAG equivalents (no chart data, no separate
+   sidebar palette — SideMenu just uses bg-2 like Popover) so they're aliased to the closest
+   already-mapped token via var() rather than inventing new colors (see the `:root, .dark`
+   alias block for why they're declared on both selectors). --radius
+   is untouched — this pass is colors/fonts only, not the mira sizing scale. */
+:root {
+  /* ERAG --color-light-bg-1, #F2F3FF, rgb(242 243 255) */
+  --background: oklch(0.9669 0.016 282.28);
+  /* ERAG --color-light-text-primary, #2B2C30, rgb(43 44 48) */
+  --foreground: oklch(0.2937 0.0074 274.72);
+  /* AnchorCard.scss light bg-white, #FFFFFF, rgb(255 255 255) */
+  --card: oklch(1 0 0);
+  /* ERAG --color-light-text-primary, #2B2C30, rgb(43 44 48) */
+  --card-foreground: oklch(0.2937 0.0074 274.72);
+  /* ERAG --color-light-bg-2, #E6E8FD, rgb(230 232 253) */
+  --popover: oklch(0.9357 0.0284 281.5);
+  /* ERAG --color-light-text-primary, #2B2C30, rgb(43 44 48) */
+  --popover-foreground: oklch(0.2937 0.0074 274.72);
+  /* ERAG --color-light-primary, #3D447F, rgb(61 68 127) */
+  --primary: oklch(0.4109 0.0982 276.09);
+  /* ERAG --color-light-bg-contrast, #FFFFFF, rgb(255 255 255) */
+  --primary-foreground: oklch(1 0 0);
+  /* Bare text-on-background role for the Alert/Toast "info" variant (Button's link variant
+     keeps sharing --primary directly per shadcn convention — see the dark block's comment
+     — but info needed an actual fix, not a convention call, since it's a real AA failure).
+     Light mode's --primary already passes this role, so this just aliases it. */
+  --info-foreground: var(--primary);
+  /* ERAG --color-light-bg-2, #E6E8FD, rgb(230 232 253) */
+  --secondary: oklch(0.9357 0.0284 281.5);
+  /* ERAG --color-light-text-primary, #2B2C30, rgb(43 44 48) */
+  --secondary-foreground: oklch(0.2937 0.0074 274.72);
+  /* ERAG --color-light-bg-disabled, #E9EAEB, rgb(233 234 235) */
+  --muted: oklch(0.9366 0.0017 247.84);
+  /* Darkened from ERAG --color-light-text-placeholder #6A6F78 (rgb(106 111 120)) — the
+     brand value is only 4.19:1 against --muted (#E9EAEB) at small text sizes, below
+     WCAG AA's 4.5:1. Same hue/chroma, lightness reduced to #646972, rgb(100 105 114). */
+  --muted-foreground: oklch(0.5205 0.0153 262.34);
+  /* ERAG --color-light-bg-2, #E6E8FD, rgb(230 232 253) */
+  --accent: oklch(0.9357 0.0284 281.5);
+  /* ERAG --color-light-text-primary, #2B2C30, rgb(43 44 48) */
+  --accent-foreground: oklch(0.2937 0.0074 274.72);
+  /* Darkened from ERAG --color-light-status-error #EB0004 (rgb(235 0 4)) — the brand
+     value is only 3.53:1 against the mira destructive-tint background (bg-destructive/10
+     over the app background), below WCAG AA's 4.5:1. Widened further (0.4944->0.4644) once
+     the Sonner error toast's --popover-tinted background was checked too — popover's own
+     light lavender is darker than page/card, tightening the margin. Same hue/chroma,
+     lightness reduced to #BC0000, rgb(188 0 0), verified against page/card/popover. */
+  --destructive: oklch(0.4644 0.2421 28.97);
+  /* ERAG --color-light-bg-contrast, #FFFFFF, rgb(255 255 255) */
+  --destructive-foreground: oklch(1 0 0);
+  /* Darkened from ERAG --color-light-status-success #3F9752 (rgb(63 151 82)) — used at a
+     10% tint (Sonner success toast) the brand value is only 2.98-3.27:1 against page/card,
+     below WCAG AA's 4.5:1 (green needs a bigger lightness swing than red for the same tint
+     ratio, since the WCAG luminance formula weights the green channel heavily). Same
+     hue/chroma, lightness reduced to #066E2B, rgb(6 110 43), verified against
+     page/card/popover (popover's darker lavender tightened the margin further). */
+  --success: oklch(0.4714 0.1332 148.23);
+  /* ERAG --color-light-bg-contrast, #FFFFFF, rgb(255 255 255) */
+  --success-foreground: oklch(1 0 0);
+  --border: var(--secondary);
+  /* ERAG --color-light-border, #3D447F, rgb(61 68 127) */
+  --input: oklch(0.4109 0.0982 276.09);
+  /* ERAG --color-light-focus, #3D447F, rgb(61 68 127) */
+  --ring: oklch(0.4109 0.0982 276.09);
+  --radius: 0.625rem;
+  /* Mode-independent translucent grey, carried over from tailwind-theme. */
+  --scrollbar-thumb: #a1a1a1cc;
+  --scrollbar-track: #a1a1a180;
+}
+
+/* Aliases are declared on both selectors because a custom property's var() resolves on the
+   element that declares it: declared on :root alone, they'd freeze at light values whenever
+   .dark sits below <html> (the apps put it on <body>). */
+:root,
+.dark {
+  --chart-1: var(--primary);
+  --chart-2: var(--success);
+  --chart-3: var(--destructive);
+  --chart-4: var(--muted-foreground);
+  --chart-5: var(--ring);
+  --sidebar: var(--popover);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+.dark {
+  /* ERAG --color-dark-bg-1, #090B1C, rgb(9 11 28) */
+  --background: oklch(0.1582 0.036 276.34);
+  /* ERAG --color-dark-text-primary, #FFFFFF, rgb(255 255 255) */
+  --foreground: oklch(1 0 0);
+  /* ERAG --color-dark-bg-2, #1F2133, rgb(31 33 51) (AnchorCard.scss dark) */
+  --card: oklch(0.2546 0.0341 278.8);
+  /* ERAG --color-dark-text-primary, #FFFFFF, rgb(255 255 255) */
+  --card-foreground: oklch(1 0 0);
+  /* ERAG --color-dark-bg-2, #1F2133, rgb(31 33 51) */
+  --popover: oklch(0.2546 0.0341 278.8);
+  /* ERAG --color-dark-text-primary, #FFFFFF, rgb(255 255 255) */
+  --popover-foreground: oklch(1 0 0);
+  /* ERAG --color-dark-primary, #4850B8, rgb(72 80 184). Known accepted AA gap: this same
+     value serves two roles shadcn shares one token for — solid button fill (white text on
+     it, 6.74:1, passes) and bare text-primary on the page background (e.g. Button's "link"
+     variant, 2.89:1, fails). No single lightness/chroma value can pass both roles at once
+     for this background (white needs fill-luminance <=0.183, text-on-bg needs >=0.187 —
+     mathematically disjoint). Button's link variant follows shadcn's own convention of
+     sharing one token here and accepts the gap, but the Alert/Toast "info" variant isn't a
+     stock-convention case — it's a real bare-text-on-background use with no reason to
+     accept a known AA failure, so it gets its own --info-foreground below instead. */
+  --primary: oklch(0.4843 0.162 275.25);
+  /* ERAG --color-dark-text-primary, #FFFFFF, rgb(255 255 255) */
+  --primary-foreground: oklch(1 0 0);
+  /* Same hue/chroma as --primary (275.25/0.162) but lightness raised to 0.61 — the point
+     where it clears WCAG AA (4.95:1 against dark --background, vs. --primary's 2.89:1)
+     while staying the same recognizable brand blue-purple. */
+  --info-foreground: oklch(0.61 0.162 275.25);
+  /* ERAG --color-dark-bg-2, #1F2133, rgb(31 33 51) */
+  --secondary: oklch(0.2546 0.0341 278.8);
+  /* ERAG --color-dark-text-primary, #FFFFFF, rgb(255 255 255) */
+  --secondary-foreground: oklch(1 0 0);
+  /* ERAG --color-dark-bg-disabled, #3C3E42, rgb(60 62 66) */
+  --muted: oklch(0.3634 0.0074 264.48);
+  /* Lightened from ERAG --color-dark-text-placeholder #6A6F78 — the brand value is only
+     1.9-3.5:1 against dark --muted/--card/--background, below WCAG AA's 4.5:1 (the
+     opposite direction from the light-mode fix: dark surfaces need a lighter gray, not
+     darker). Same hue/chroma, lightness raised to #A5ABB4, rgb(165 171 180). */
+  --muted-foreground: oklch(0.7385 0.0153 262.34);
+  /* ERAG --color-dark-bg-2, #1F2133, rgb(31 33 51) */
+  --accent: oklch(0.2546 0.0341 278.8);
+  /* ERAG --color-dark-text-primary, #FFFFFF, rgb(255 255 255) */
+  --accent-foreground: oklch(1 0 0);
+  /* Lightened from ERAG --color-dark-status-error #EB0004 — the brand value is only
+     2.1-2.9:1 against the mira destructive-tint background on dark surfaces, below WCAG
+     AA's 4.5:1 (opposite direction from the light-mode fix — dark tint needs a lighter
+     red, not darker). Same hue/chroma, lightness raised to #FF6E5B, rgb(255 110 91). */
+  --destructive: oklch(0.8024 0.2421 28.97);
+  /* ERAG --color-dark-bg-inverse, #FFFFFF, rgb(255 255 255) */
+  --destructive-foreground: oklch(1 0 0);
+  /* Lightened from ERAG --color-dark-status-success #3F9752 — the brand value is only
+     3.85-4.88:1 against a 10% tint on dark surfaces, below WCAG AA's 4.5:1. Same
+     hue/chroma, lightness raised to #4FA761, rgb(79 167 97). */
+  --success: oklch(0.6554 0.1332 148.23);
+  /* ERAG --color-dark-bg-inverse, #FFFFFF, rgb(255 255 255) */
+  --success-foreground: oklch(1 0 0);
+  --border: var(--secondary);
+  /* ERAG --color-dark-border, #4850B8, rgb(72 80 184) */
+  --input: oklch(0.4843 0.162 275.25);
+  /* ERAG --color-dark-focus, #FEF0D3, rgb(254 240 211) */
+  --ring: oklch(0.9587 0.0408 85.29);
+}
+
+* {
+  box-sizing: border-box;
+  transition: color 0.3s ease;
+  transition: border 0.3s ease;
+  transition: background-color 0.3s ease;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* App base rules below are unlayered, exactly as they were in the retired tailwind-theme
+   package, so their cascade position vs. utilities and component CSS is unchanged. */
+html {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body {
+  font-weight: normal;
+  font-size: 16px;
+}
+
+#root {
+  @apply bg-background text-foreground caret-foreground;
+}
+
+label {
+  @apply mb-2 inline-block;
+}
+
+h2 {
+  @apply mb-2 font-medium;
+}
+
+h3 {
+  @apply mb-1 font-medium;
+}
+
+/* A bare nested selector compiles to a descendant combinator, as the pre-v4 Sass did. */
+* *::-webkit-scrollbar {
+  @apply w-1.5;
+}
+
+* *::-webkit-scrollbar-track {
+  @apply bg-scrollbar-track my-2 rounded-xl;
+}
+
+* *::-webkit-scrollbar-thumb {
+  @apply bg-scrollbar-thumb rounded-xl;
+}
+
+*::selection {
+  @apply bg-primary text-primary-foreground;
+}
+
+*:focus-visible {
+  @apply outline-ring outline-2 outline-solid;
+}
+
+p.error {
+  @apply text-destructive;
+}

@@ -1,20 +1,18 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./SelectedServiceCard.scss";
+import "./SelectedServiceCard.css";
 
 import { Button } from "@intel-enterprise-rag-ui/components";
-import classNames from "classnames";
-import { Fragment, PropsWithChildren, ReactNode } from "react";
-import { PressEvent } from "react-aria-components";
+import { Fragment, MouseEvent, PropsWithChildren, ReactNode } from "react";
 
 import { ServiceStatusIndicator } from "@/components/ServiceStatusIndicator/ServiceStatusIndicator";
 import { ServiceDetails, ServiceStatus } from "@/types/index";
 
 export interface SelectedServiceCardFooterProps {
   isConfirmChangesButtonDisabled: boolean;
-  onConfirmChangesButtonClick: (event: PressEvent) => void;
-  onCancelChangesButtonClick: (event: PressEvent) => void;
+  onConfirmChangesButtonClick: (event: MouseEvent<HTMLButtonElement>) => void;
+  onCancelChangesButtonClick: (event: MouseEvent<HTMLButtonElement>) => void;
 }
 
 export interface SelectedServiceCardProps extends PropsWithChildren {
@@ -35,14 +33,6 @@ export const SelectedServiceCard = ({
   children,
   isReadOnly = false,
 }: SelectedServiceCardProps) => {
-  const contentClassNames = classNames([
-    "selected-service-card__content",
-    {
-      "selected-service-card__content--no-footer": !footerProps || isReadOnly,
-      "selected-service-card__content--with-footer": footerProps && !isReadOnly,
-    },
-  ]);
-
   return (
     <div className="selected-service-card">
       <div className="selected-service-card__wrapper">
@@ -53,7 +43,7 @@ export const SelectedServiceCard = ({
           </p>
           {DebugDialog}
         </header>
-        <div className={contentClassNames}>
+        <div className="selected-service-card__content">
           {serviceDetails && (
             <ServiceDetailsGrid serviceDetails={serviceDetails} />
           )}
@@ -97,20 +87,18 @@ const SelectedServiceCardFooter = ({
     <Button
       data-testid="confirm-service-changes-button"
       size="sm"
-      color="success"
+      variant="success"
       isDisabled={isConfirmChangesButtonDisabled}
       onPress={onConfirmChangesButtonClick}
-      fullWidth
     >
       Confirm Changes
     </Button>
     <Button
       data-testid="cancel-service-changes-button"
       size="sm"
-      variant="outlined"
+      variant="outline"
       isDisabled={isConfirmChangesButtonDisabled}
       onPress={onCancelChangesButtonClick}
-      fullWidth
     >
       Cancel
     </Button>

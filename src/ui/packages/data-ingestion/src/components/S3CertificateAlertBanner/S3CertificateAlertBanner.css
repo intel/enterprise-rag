@@ -1,0 +1,14 @@
+/* Copyright (C) 2024-2026 Intel Corporation */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+@reference "@intel-enterprise-rag-ui/shadcn-preset/index.css";
+
+.s3-certificate-alert-banner {
+  @apply mb-4;
+}
+.s3-certificate-alert-banner .s3-certificate-alert-banner__dismiss-hint {
+  @apply my-2;
+}
+.s3-certificate-alert-banner .s3-certificate-alert-banner__dismiss-button {
+  @apply mt-2;
+}

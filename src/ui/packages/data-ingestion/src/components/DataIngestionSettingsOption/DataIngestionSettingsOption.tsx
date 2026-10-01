@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./DataIngestionSettingsOption.scss";
+import "./DataIngestionSettingsOption.css";
 
 import { ReactNode } from "react";
 
@@ -11,7 +11,7 @@ interface DataIngestionSettingsOptionProps {
   description: string;
 }
 
-const DataIngestionSettingsOption = ({
+export const DataIngestionSettingsOption = ({
   name,
   input,
   description,

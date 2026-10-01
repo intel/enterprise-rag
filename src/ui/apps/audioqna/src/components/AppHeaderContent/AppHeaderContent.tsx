@@ -3,69 +3,69 @@
 
 import { keycloakService } from "@intel-enterprise-rag-ui/auth";
 import {
-  selectIsChatSideMenuOpen,
-  toggleChatSideMenu,
+  selectIsChatSidebarOpen,
+  toggleChatSidebar,
 } from "@intel-enterprise-rag-ui/chat";
 import {
-  AppHeaderLeftSideContent as SharedAppHeaderLeftSideContent,
-  AppHeaderRightSideContent as SharedAppHeaderRightSideContent,
+  AppHeaderProps,
+  SidePanelFooter,
+  SidePanelHeader,
 } from "@intel-enterprise-rag-ui/layouts";
-import { useLocation } from "react-router-dom";
 
 import ViewSwitchButton from "@/components/ViewSwitchButton/ViewSwitchButton";
-import { paths } from "@/config/paths";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { resetStore } from "@/store/utils";
 import { getAudioQnAAppEnv } from "@/utils";
 
-const viewSwitchButton = <ViewSwitchButton />;
+export const viewSwitchButton = <ViewSwitchButton />;
 
-const APP_NAME = "Intel® AI for Enterprise RAG";
+const APP_DISPLAY_NAME = "AudioQnA";
+const PROJECT_NAME = "Intel® AI for Enterprise RAG";
 const APP_VERSION =
   getAudioQnAAppEnv("ERAG_VERSION") || import.meta.env.VITE_APP_VERSION;
 const MAINTENANCE_MODE = getAudioQnAAppEnv("MAINTENANCE_MODE");
 const USER_GUIDE_URL = `https://github.com/opea-project/Enterprise-RAG/blob/release-${APP_VERSION}/docs/Intel_AI_for_Enterprise_RAG_AudioQnA_User_Guide.pdf`;
 
-export const AppHeaderLeftSideContent = () => {
-  const location = useLocation();
-  const isChatRoute = location.pathname.startsWith(paths.chat);
-  const isChatSideMenuOpen = useAppSelector(selectIsChatSideMenuOpen);
+/** Side panel is now available on every route, not just chat — the toggle in the header-left is
+ * unconditional, and the same `chatSidebar` open/closed state now covers the whole app. */
+export const useSidebarState = () => {
+  const isSidebarOpen = useAppSelector(selectIsChatSidebarOpen);
   const dispatch = useAppDispatch();
-
-  return (
-    <SharedAppHeaderLeftSideContent
-      appName={APP_NAME}
-      maintenanceMode={MAINTENANCE_MODE === "true"}
-      isChatRoute={isChatRoute}
-      isChatSideMenuOpen={isChatSideMenuOpen}
-      onToggleChatSideMenu={() => dispatch(toggleChatSideMenu())}
-    />
-  );
+  return {
+    isSidebarOpen,
+    onToggleSidebar: () => dispatch(toggleChatSidebar()),
+  };
 };
 
-export const AppHeaderRightSideContent = ({
-  onNewChat,
-}: {
-  onNewChat?: () => void;
-}) => {
-  const location = useLocation();
-  const isSpecificChatRoute =
-    location.pathname.startsWith(paths.chat) &&
-    location.pathname !== paths.chat;
+export const useAppHeaderProps = (): AppHeaderProps => {
+  const { isSidebarOpen, onToggleSidebar } = useSidebarState();
 
-  return (
-    <SharedAppHeaderRightSideContent
-      appName={APP_NAME}
-      appVersion={APP_VERSION}
-      userGuideUrl={USER_GUIDE_URL}
-      username={keycloakService.getUsername()}
-      onLogout={() => {
-        resetStore();
-        keycloakService.redirectToLogout();
-      }}
-      showNewChatButton={isSpecificChatRoute}
-      onNewChat={onNewChat}
-      renderViewSwitchButton={viewSwitchButton}
-    />
-  );
+  return {
+    maintenanceMode: MAINTENANCE_MODE === "true",
+    isSidebarOpen,
+    onToggleSidebar,
+  };
 };
+
+/** Rendered as the side panel's own top header row — see SidePanelHeader. */
+export const SidePanelHeaderContent = () => (
+  <SidePanelHeader
+    title={APP_DISPLAY_NAME}
+    subtitle={`${PROJECT_NAME} v${APP_VERSION}`}
+    appName={PROJECT_NAME}
+    appVersion={APP_VERSION}
+    userGuideUrl={USER_GUIDE_URL}
+  />
+);
+
+/** Rendered in the side panel's footer (not the header) — see SidePanelFooter. */
+export const SidePanelFooterContent = () => (
+  <SidePanelFooter
+    username={keycloakService.getUsername()}
+    userEmail={keycloakService.getEmail()}
+    onLogout={() => {
+      resetStore();
+      keycloakService.redirectToLogout();
+    }}
+  />
+);

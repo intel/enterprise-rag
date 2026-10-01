@@ -1,28 +1,25 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./AnchorCard.scss";
+import "./AnchorCard.css";
 
 import {
   ExternalLinkIcon,
   IconName,
   icons,
 } from "@intel-enterprise-rag-ui/icons";
-import { isSafeHref, sanitizeHref } from "@intel-enterprise-rag-ui/utils";
-import classNames from "classnames";
-import {
-  Link as AriaLink,
-  LinkProps as AriaLinkProps,
-  PressEvent as AriaPressEvent,
-} from "react-aria-components";
+import { cn, isSafeHref, sanitizeHref } from "@intel-enterprise-rag-ui/utils";
+import { AnchorHTMLAttributes, MouseEvent } from "react";
 
-interface AnchorCardProps extends AriaLinkProps {
+interface AnchorCardProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
   /** Text to display in the anchor card */
   text: string;
   /** Name of the icon to display */
   icon?: IconName;
   /** If true, additional icon for indicating external links is displayed */
   isExternal?: boolean;
+  /** Callback fired when the anchor card is pressed */
+  onPress?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }
 
 /**
@@ -41,13 +38,8 @@ export const AnchorCard = ({
   const isSafe = isSafeHref(href);
   const safeHref = isSafe ? sanitizeHref(href) : undefined;
   const rel = target === "_blank" ? "noopener noreferrer" : undefined;
-  const anchorCardClassNames = classNames([
-    "anchor-card",
-    { invalid: !isSafe },
-    className,
-  ]);
 
-  const handlePress = (event: AriaPressEvent) => {
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (onPress && isSafe) {
       onPress(event);
     }
@@ -56,14 +48,14 @@ export const AnchorCard = ({
   const IconComponent = icon ? icons[icon] : null;
 
   return (
-    <AriaLink
+    <a
       {...rest}
       href={safeHref}
       target={target}
       rel={rel}
-      className={anchorCardClassNames}
+      className={cn("anchor-card", !isSafe && "invalid", className)}
       aria-disabled={!isSafe}
-      onPress={handlePress}
+      onClick={handleClick}
     >
       <span className="anchor-card__content">
         {IconComponent ? <IconComponent /> : null}
@@ -73,6 +65,6 @@ export const AnchorCard = ({
         </p>
         {isExternal && <ExternalLinkIcon fontSize={12} />}
       </span>
-    </AriaLink>
+    </a>
   );
 };

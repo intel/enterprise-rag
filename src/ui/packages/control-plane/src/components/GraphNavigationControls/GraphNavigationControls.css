@@ -1,0 +1,9 @@
+/* Copyright (C) 2024-2026 Intel Corporation */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+@reference "@intel-enterprise-rag-ui/shadcn-preset/index.css";
+
+.graph-navigation-controls {
+  @apply flex items-center gap-1 rounded p-1;
+  @apply bg-background/70;
+}

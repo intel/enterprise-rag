@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./UnauthorizedRoute.scss";
+import "./UnauthorizedRoute.css";
 
 import { keycloakService } from "@intel-enterprise-rag-ui/auth";
 import { Button } from "@intel-enterprise-rag-ui/components";
@@ -19,7 +19,7 @@ const UnauthorizedRoute = () => {
         application. Please contact your administrator to request an admin,
         user, or maintainer role.
       </p>
-      <Button variant="outlined" onPress={handleLogout}>
+      <Button variant="outline" onPress={handleLogout}>
         Sign Out
       </Button>
     </div>

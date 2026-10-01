@@ -1,14 +1,14 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./TextExtractionDialog.scss";
+import "./TextExtractionDialog.css";
 
 import {
   Button,
-  CheckboxInput,
+  Checkbox,
   Dialog,
+  Input,
   LoadingFallback,
-  TextInput,
 } from "@intel-enterprise-rag-ui/components";
 import { useDebug } from "@intel-enterprise-rag-ui/utils";
 import classNames from "classnames";
@@ -65,7 +65,7 @@ export const TextExtractionForm = ({
 
   return (
     <div className="text-extraction-dialog__content-form-column">
-      <CheckboxInput
+      <Checkbox
         label="Use Parameters"
         name="use-parameters"
         isSelected={isFormEnabled}
@@ -73,7 +73,7 @@ export const TextExtractionForm = ({
         onChange={handleEnableFormCheckboxChange}
       />
       <form onSubmit={handleSubmit}>
-        <TextInput
+        <Input
           data-testid="chunk-size-input"
           label="Chunk Size (0-9999)"
           type="number"
@@ -82,7 +82,7 @@ export const TextExtractionForm = ({
           isDisabled={isFormDisabled}
           onChange={handleRangeInputChange}
         />
-        <TextInput
+        <Input
           data-testid="chunk-overlap-input"
           label="Chunk Overlap (0-9999)"
           type="number"
@@ -91,7 +91,7 @@ export const TextExtractionForm = ({
           isDisabled={isFormDisabled}
           onChange={handleRangeInputChange}
         />
-        <CheckboxInput
+        <Checkbox
           label="Use Semantic Chunking"
           name="use_semantic_chunking"
           isSelected={formData.use_semantic_chunking}
@@ -153,7 +153,7 @@ const ExtractedText = ({ extractedText, isError }: ExtractedTextProps) => {
         <Button
           data-testid="load-more-text-button"
           size="sm"
-          variant="outlined"
+          variant="outline"
           onPress={handleLoadMoreTextButtonPress}
           fullWidth
         >
@@ -198,7 +198,7 @@ const TextExtractionDialog = ({
     <Button
       data-testid="extract-text-trigger-button"
       size="sm"
-      variant="outlined"
+      variant="outline"
       onPress={handlePress}
     >
       Extract Text

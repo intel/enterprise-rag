@@ -1,13 +1,13 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./BatchActionsDropdown.scss";
+import "./BatchActionsDropdown.css";
 
 import {
   Button,
-  Menu,
-  MenuItem,
-  MenuTrigger,
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@intel-enterprise-rag-ui/components";
 import { DeleteIcon, RefreshIcon } from "@intel-enterprise-rag-ui/icons";
 
@@ -42,7 +42,7 @@ const BatchActionsDropdown = ({
   const isReingestDisabled = reingestableCount === 0;
 
   return (
-    <MenuTrigger
+    <DropdownMenuTrigger
       trigger={
         <Button
           data-testid="batch-actions-button"
@@ -54,7 +54,7 @@ const BatchActionsDropdown = ({
       ariaLabel="Batch Actions Menu"
       placement="bottom end"
     >
-      <Menu
+      <DropdownMenu
         className="batch-actions-menu"
         onAction={(key) => {
           if (key === "retry") onRetry();
@@ -62,33 +62,33 @@ const BatchActionsDropdown = ({
           if (key === "delete") onDelete();
         }}
       >
-        <MenuItem
+        <DropdownMenuItem
           id="retry"
           className={`batch-actions-menu__item ${isRetryDisabled ? "batch-actions-menu__item--disabled" : ""}`}
           isDisabled={isRetryDisabled}
         >
           <RefreshIcon className="batch-actions-menu__icon" />
           <span>Retry{retryableCount > 0 ? ` (${retryableCount})` : ""}</span>
-        </MenuItem>
+        </DropdownMenuItem>
         {reingestableCount > 0 && onReingest && (
-          <MenuItem
+          <DropdownMenuItem
             id="reingest"
             className={`batch-actions-menu__item ${isReingestDisabled ? "batch-actions-menu__item--disabled" : ""}`}
             isDisabled={isReingestDisabled}
           >
             <RefreshIcon className="batch-actions-menu__icon" />
             <span>Reingest ({reingestableCount})</span>
-          </MenuItem>
+          </DropdownMenuItem>
         )}
-        <MenuItem
+        <DropdownMenuItem
           id="delete"
           className="batch-actions-menu__item batch-actions-menu__item--delete"
         >
           <DeleteIcon className="batch-actions-menu__icon" />
           <span>Delete ({selectedCount})</span>
-        </MenuItem>
-      </Menu>
-    </MenuTrigger>
+        </DropdownMenuItem>
+      </DropdownMenu>
+    </DropdownMenuTrigger>
   );
 };
 

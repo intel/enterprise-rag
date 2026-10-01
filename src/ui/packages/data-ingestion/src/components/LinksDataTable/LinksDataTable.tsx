@@ -1,12 +1,14 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./LinksDataTable.scss";
+import "./LinksDataTable.css";
 
 import {
   DataTable,
+  IconButton,
   RowSelectionState,
   SearchBar,
+  Tooltip,
 } from "@intel-enterprise-rag-ui/components";
 import { useCallback, useMemo, useState } from "react";
 
@@ -17,6 +19,7 @@ import {
 } from "@/api/edpApi";
 import BatchActionsDropdown from "@/components/BatchActionsDropdown/BatchActionsDropdown";
 import BatchDeleteDialog from "@/components/BatchDeleteDialog/BatchDeleteDialog";
+import RefreshButton from "@/components/RefreshButton/RefreshButton";
 import useConditionalPolling from "@/hooks/useConditionalPolling";
 import { selectIsAutorefreshEnabled } from "@/store/dataIngestionSettings.slice";
 import { LinkDataItem } from "@/types";
@@ -35,6 +38,7 @@ const LinksDataTable = ({ getAppEnv }: LinksDataTableProps) => {
   const [filter, setFilter] = useState("");
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
   const retryHandler = useCallback(
     (uuid: string) => {
@@ -111,31 +115,55 @@ const LinksDataTable = ({ getAppEnv }: LinksDataTableProps) => {
   return (
     <div className="links-data-table-wrapper">
       <div className="links-data-table-wrapper__header">
-        <SearchBar
-          data-testid="links-search-bar"
-          value={filter}
-          placeholder="Filter links by status or link"
-          onChange={setFilter}
-        />
-        <BatchActionsDropdown
-          selectedCount={selectedLinks.length}
-          retryableCount={retryableLinks.length}
-          reingestableCount={reingestableLinks.length}
-          onRetry={handleBatchRetry}
-          onReingest={handleBatchReingest}
-          onDelete={() => setIsDeleteDialogOpen(true)}
-        />
+        <div className="links-data-table-wrapper__header-group">
+          <div className="links-data-table-wrapper__filter-toggle">
+            <Tooltip
+              title={showFilters ? "Hide filters" : "Show filters"}
+              trigger={
+                <IconButton
+                  data-testid="links-toggle-filters-button"
+                  icon={showFilters ? "filter" : "filter-active"}
+                  size="sm"
+                  variant="ghost"
+                  aria-label={showFilters ? "Hide filters" : "Show filters"}
+                  aria-pressed={showFilters}
+                  onPress={() => setShowFilters((current) => !current)}
+                />
+              }
+            />
+          </div>
+          <RefreshButton />
+          <SearchBar
+            data-testid="links-search-bar"
+            value={filter}
+            placeholder="Filter links by status or link"
+            onChange={setFilter}
+            className="links-data-table-wrapper__search"
+          />
+        </div>
+        <div className="links-data-table-wrapper__header-group">
+          <BatchActionsDropdown
+            selectedCount={selectedLinks.length}
+            retryableCount={retryableLinks.length}
+            reingestableCount={reingestableLinks.length}
+            onRetry={handleBatchRetry}
+            onReingest={handleBatchReingest}
+            onDelete={() => setIsDeleteDialogOpen(true)}
+          />
+        </div>
       </div>
       <DataTable
         defaultData={defaultData}
         columns={linksTableColumns}
         isDataLoading={isLoading}
         globalFilter={filter}
-        className="links-data-table"
+        className="links-data-table data-table--plain-header"
         rowSelection={rowSelection}
         onRowSelectionChange={setRowSelection}
         getRowId={getRowId}
+        showFilterRow={showFilters}
         enableRowSelection
+        fillHeight
       />
       <BatchDeleteDialog
         isOpen={isDeleteDialogOpen}

@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./ListHeader.scss";
+import "./ListHeader.css";
 
 import { Button } from "@intel-enterprise-rag-ui/components";
 import classNames from "classnames";
@@ -21,7 +21,7 @@ const ListHeader = ({ title, onClearListBtnPress }: ListHeaderProps) => (
     {title && <h3>{title}</h3>}
     <Button
       data-testid="delete-all-button"
-      color="error"
+      variant="destructive"
       size="sm"
       onPress={onClearListBtnPress}
     >

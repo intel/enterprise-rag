@@ -3,6 +3,7 @@
 
 import { fileURLToPath } from "node:url";
 
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { dirname, resolve } from "path";
 import { defineConfig } from "vite";
@@ -38,7 +39,7 @@ export default defineConfig({
       },
     },
   },
-  plugins: [react(), viteTsconfigPaths(), dts()],
+  plugins: [tailwindcss(), react(), viteTsconfigPaths(), dts()],
   resolve: {
     alias: {
       "@/": resolve(__dirname, "./src/"),

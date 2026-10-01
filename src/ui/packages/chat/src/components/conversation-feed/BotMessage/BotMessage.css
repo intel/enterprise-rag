@@ -1,0 +1,27 @@
+/* Copyright (C) 2024-2026 Intel Corporation */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+@reference "@intel-enterprise-rag-ui/shadcn-preset/index.css";
+
+.bot-message {
+  @apply mx-auto px-9 md:px-0;
+  @apply self-start;
+  @apply w-full md:w-[42rem];
+}
+.bot-message.bot-message--waiting {
+  @apply mb-6;
+}
+.bot-message.bot-message--completed {
+  @apply mb-8;
+}
+.bot-message .bot-message__text {
+  @apply max-w-[calc(100vw_-_8rem)] md:max-w-[40rem];
+  @apply text-sm/relaxed;
+}
+.bot-message .bot-message__text .bot-message__footer {
+  @apply flex items-center justify-start gap-2 pt-3;
+}
+.bot-message .bot-message__waiting {
+  @apply flex h-10 w-4 items-center justify-center;
+  @apply text-primary;
+}
