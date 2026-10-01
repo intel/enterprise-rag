@@ -25,6 +25,7 @@ import uuid
 
 import allure
 import pytest
+from playwright.async_api import TimeoutError as PlaywrightTimeout
 
 from tests.e2e.ui.conftest import requires_chatqna
 from tests.e2e.validation.buildcfg import cfg
@@ -692,9 +693,19 @@ async def test_download_admin_bucket_file_via_ui(chat_ui_helper):
         row = page.locator(f'tr:has-text("{file_name}")')
         assert await row.count() > 0, f"Row '{file_name}' not found in the table"
         download_btn = row.first.locator('[data-testid="download-file-button"]')
-        async with page.expect_download(timeout=15000) as download_info:
-            await download_btn.click()
-        download = await download_info.value
+        try:
+            async with page.expect_download(timeout=15000) as download_info:
+                await download_btn.click()
+            download = await download_info.value
+        except PlaywrightTimeout:
+            # No download event means the browser never received the file: the UI issued the S3 GET
+            # without the RBAC bearer token, SeaweedFS answered 403, and the fetch never resolved to
+            # a blob. Convert the raw Playwright timeout into a clean assertion failure so the test
+            # reports as failed (red) rather than broken (errored/yellow) in Allure.
+            pytest.fail(
+                "No browser download was triggered for the only-admin file within 15s — the UI did "
+                "not authorize the S3 GET (missing RBAC bearer token)"
+            )
         assert download is not None, (
             "No browser download was triggered for the only-admin file — the UI did not authorize "
             "the S3 GET (missing RBAC bearer token)"
