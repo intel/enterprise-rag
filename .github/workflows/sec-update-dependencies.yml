@@ -3,15 +3,14 @@ name: "Sec :: Dep updater"
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
 
 permissions:
   contents: read
 
 jobs:
+  # Downstream jobs need this one, so they are skipped too on other branches.
   read-images:
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/read-images-reusable.yml
 
   update-uv-locks:
@@ -38,7 +37,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.head_ref || github.ref_name }}
           persist-credentials: false
 
       - name: Configure Git
@@ -192,14 +190,11 @@ jobs:
           UV_UPDATED_SERVICES: ${{ needs.update-uv-locks.outputs.updated_services }}
           UV_COMMIT_COUNT: ${{ needs.update-uv-locks.outputs.commit_count }}
           BRANCH_NAME: ${{ needs.update-uv-locks.outputs.branch_name }}
-          # On pull_request runs ref_name is "<n>/merge", not a branch
-          BASE_BRANCH: ${{ github.head_ref || github.ref_name }}
         with:
           script: |
             const uvUpdatedServices = process.env.UV_UPDATED_SERVICES || '';
             const uvCommitCount = parseInt(process.env.UV_COMMIT_COUNT || '0');
             const branchName = process.env.BRANCH_NAME;
-            const baseBranch = process.env.BASE_BRANCH;
 
             const prBody = `## Dependency Updates for CVE Mitigation\n\n` +
               `This PR automatically updates Python dependencies with ${uvCommitCount} commit(s).\n\n` +
@@ -214,6 +209,6 @@ jobs:
               repo: context.repo.repo,
               title: prTitle,
               head: branchName,
-              base: baseBranch,
+              base: 'main',
               body: prBody
             });
