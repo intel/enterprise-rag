@@ -38,6 +38,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.head_ref || github.ref_name }}
           persist-credentials: false
 
       - name: Configure Git
@@ -191,7 +192,8 @@ jobs:
           UV_UPDATED_SERVICES: ${{ needs.update-uv-locks.outputs.updated_services }}
           UV_COMMIT_COUNT: ${{ needs.update-uv-locks.outputs.commit_count }}
           BRANCH_NAME: ${{ needs.update-uv-locks.outputs.branch_name }}
-          BASE_BRANCH: ${{ github.ref_name }}
+          # On pull_request runs ref_name is "<n>/merge", not a branch
+          BASE_BRANCH: ${{ github.head_ref || github.ref_name }}
         with:
           script: |
             const uvUpdatedServices = process.env.UV_UPDATED_SERVICES || '';
