@@ -1,0 +1,214 @@
+---
+name: "Sec :: Dep updater"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  read-images:
+    uses: ./.github/workflows/read-images-reusable.yml
+
+  update-uv-locks:
+    needs: read-images
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    outputs:
+      branch_name: ${{ steps.branch_info.outputs.branch_name }}
+      commit_count: ${{ steps.update_locks.outputs.commit_count }}
+      updated_services: ${{ steps.update_locks.outputs.updated_services }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Harden the runner (audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      # Credentials are not persisted: `uv lock` may build sdists, i.e. run
+      # third-party code. The token is handed to the push step only.
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Create branch for UV updates
+        id: branch_info
+        run: |
+          BRANCH_NAME="automated-uv-lock-updates-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH_NAME"
+          echo "BRANCH_NAME=$BRANCH_NAME" >> "$GITHUB_ENV"
+          echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.8.17"
+          enable-cache: false
+
+      - name: Update UV lock files
+        id: update_locks
+        env:
+          IMAGES_MATRIX: ${{ needs.read-images.outputs.matrix }}
+        run: |
+          set -e
+
+          UPDATED_SERVICES=""
+          COMMIT_COUNT=0
+
+          echo "Processing images from read-images-reusable..."
+
+          # Parse the matrix JSON output
+          IMAGES=$(echo "$IMAGES_MATRIX" | jq -c '.include[]')
+
+          for IMAGE in $IMAGES; do
+            IMAGE_NAME=$(echo "$IMAGE" | jq -r '.name')
+            DOCKERFILE_DIR=$(echo "$IMAGE" | jq -r '.dockerfile_dir')
+
+            echo "Processing image: $IMAGE_NAME"
+            echo "  Dockerfile directory: $DOCKERFILE_DIR"
+
+            # Check for compliance-conf.yml or compliance-conf.yaml
+            COMPLIANCE_FILE=""
+            if [[ -f "$DOCKERFILE_DIR/compliance-conf.yml" ]]; then
+              COMPLIANCE_FILE="$DOCKERFILE_DIR/compliance-conf.yml"
+            elif [[ -f "$DOCKERFILE_DIR/compliance-conf.yaml" ]]; then
+              COMPLIANCE_FILE="$DOCKERFILE_DIR/compliance-conf.yaml"
+            fi
+
+            if [[ -z "$COMPLIANCE_FILE" ]]; then
+              echo "  No compliance-conf file found in $DOCKERFILE_DIR"
+              continue
+            fi
+
+            echo "  Found compliance file: $COMPLIANCE_FILE"
+
+            # Check if pip-uv is in dependencies
+            if grep -q "pip-uv" "$COMPLIANCE_FILE"; then
+              echo "  Found pip-uv dependency!"
+
+              # The lock file lives next to the Dockerfile unless the pip-uv section
+              # overrides it with a 'file' value, relative to the Dockerfile directory
+              # (e.g. src/edp declares 'file: "app/uv.lock"')
+              UV_FILE=$(yq '.["pip-uv"].file // ""' "$COMPLIANCE_FILE")
+
+              if [[ -n "$UV_FILE" ]]; then
+                UV_DIR=$(dirname "$DOCKERFILE_DIR/$UV_FILE")
+                UV_LOCK="$DOCKERFILE_DIR/$UV_FILE"
+                echo "  pip-uv.file override: $UV_FILE (lock file: $UV_LOCK)"
+              else
+                UV_DIR="$DOCKERFILE_DIR"
+                UV_LOCK="$DOCKERFILE_DIR/uv.lock"
+              fi
+
+              # Check if pyproject.toml exists
+              if [[ ! -f "$UV_DIR/pyproject.toml" ]]; then
+                echo "  Warning: pyproject.toml not found in $UV_DIR, skipping"
+                continue
+              fi
+
+              echo "  Running uv lock --upgrade in $UV_DIR..."
+
+              # Run uv lock --upgrade
+              cd "$UV_DIR"
+              if uv lock --upgrade; then
+                echo "  Successfully updated lock file in $UV_DIR"
+
+                # Check if there are changes to commit
+                cd "$GITHUB_WORKSPACE"
+                if [[ -n $(git status --porcelain -- "$UV_LOCK") ]]; then
+                  echo "  Committing changes for $IMAGE_NAME..."
+
+                  git add "$UV_LOCK"
+
+                  COMMIT_MSG="Upgrade deps for $IMAGE_NAME"
+                  git commit -m "$COMMIT_MSG"
+
+                  COMMIT_COUNT=$((COMMIT_COUNT + 1))
+                  UPDATED_SERVICES="$UPDATED_SERVICES\n- $IMAGE_NAME ($DOCKERFILE_DIR)"
+                  echo "  Committed successfully"
+                else
+                  echo "  No changes to commit for $IMAGE_NAME"
+                fi
+              else
+                echo "  Warning: Failed to update lock file in $UV_DIR"
+                cd "$GITHUB_WORKSPACE"
+              fi
+            else
+              echo "  No pip-uv dependency found"
+            fi
+
+            echo ""
+          done
+
+          # Save updated services info
+          {
+            echo "updated_services<<EOF"
+            echo -e "$UPDATED_SERVICES"
+            echo "EOF"
+            echo "commit_count=$COMMIT_COUNT"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Push changes
+        if: steps.update_locks.outputs.commit_count != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $AUTH" \
+            push origin "$BRANCH_NAME"
+
+  create-pr:
+    name: "Create PR for dependency updates"
+    needs: update-uv-locks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write
+    if: needs.update-uv-locks.outputs.commit_count != '0'
+    steps:
+      - name: Harden the runner (audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Create PR for dependency updates
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          UV_UPDATED_SERVICES: ${{ needs.update-uv-locks.outputs.updated_services }}
+          UV_COMMIT_COUNT: ${{ needs.update-uv-locks.outputs.commit_count }}
+          BRANCH_NAME: ${{ needs.update-uv-locks.outputs.branch_name }}
+          BASE_BRANCH: ${{ github.ref_name }}
+        with:
+          script: |
+            const uvUpdatedServices = process.env.UV_UPDATED_SERVICES || '';
+            const uvCommitCount = parseInt(process.env.UV_COMMIT_COUNT || '0');
+            const branchName = process.env.BRANCH_NAME;
+            const baseBranch = process.env.BASE_BRANCH;
+
+            const prBody = `## Dependency Updates for CVE Mitigation\n\n` +
+              `This PR automatically updates Python dependencies with ${uvCommitCount} commit(s).\n\n` +
+              `### Python Dependencies (UV Lock Files)\n\n` +
+              `Updated ${uvCommitCount} service(s):\n${uvUpdatedServices}\n\n` +
+              `Each service was committed separately for better traceability. These updates help mitigate known CVEs by upgrading to the latest compatible dependency versions.\n`;
+
+            const prTitle = 'Update Python dependencies (UV locks) for CVE mitigation';
+
+            await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: prTitle,
+              head: branchName,
+              base: baseBranch,
+              body: prBody
+            });
