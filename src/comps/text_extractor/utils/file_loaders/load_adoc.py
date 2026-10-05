@@ -3,6 +3,7 @@
 
 
 import os
+import subprocess
 
 from comps.cores.mega.logger import get_erag_logger
 from comps.text_extractor.utils.file_loaders.load_html import LoadHtml
@@ -20,7 +21,7 @@ class LoadAsciiDoc(LoadHtml):
         dir_path = os.path.dirname(self.file_path)
         adoc_html_output_file = os.path.join(dir_path, "temp_output.html")
         try:
-            os.system(f"asciidoctor -b html5 -o {adoc_html_output_file} {self.file_path}")
+            subprocess.run(["asciidoctor", "-b", "html5", "-o", adoc_html_output_file, self.file_path], check=True)
             logger.info(f"Converted adoc to html. Created temporary file: {adoc_html_output_file}")
 
             original_file_path = self.file_path

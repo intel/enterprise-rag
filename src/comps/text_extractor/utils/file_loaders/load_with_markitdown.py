@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+import subprocess
 from typing import BinaryIO, Any
 
 from charset_normalizer import from_bytes
@@ -85,7 +86,7 @@ class LoadWithMarkitdown(AbstractLoader):
         temp_html_file = os.path.join(temp_dir, f"temp_output_{os.path.basename(self.file_path)}.html")
         
         try:
-            os.system(f"asciidoctor -b html5 -o {temp_html_file} {self.file_path}")
+            subprocess.run(["asciidoctor", "-b", "html5", "-o", temp_html_file, self.file_path], check=True)
             logger.info(f"Converted adoc to html. Created temporary file: {temp_html_file}")
             
             result = self.md.convert(temp_html_file)
@@ -105,7 +106,7 @@ class LoadWithMarkitdown(AbstractLoader):
         pptx_path = self.file_path + "x"
         
         try:
-            os.system(f"libreoffice --headless --invisible --convert-to pptx --outdir {os.path.dirname(pptx_path)} {self.file_path}")
+            subprocess.run(["libreoffice", "--headless", "--invisible", "--convert-to", "pptx", "--outdir", os.path.dirname(pptx_path), self.file_path])
             
             if not os.path.exists(pptx_path):
                 err_msg = f"Failed to convert PPT file: {self.file_path} - PPTX file not created"

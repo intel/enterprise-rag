@@ -3,6 +3,7 @@
 
 import os
 import re
+import subprocess
 import uuid
 import zipfile
 
@@ -302,7 +303,11 @@ class LoadPpt(AbstractLoader):
         """Convert ppt file to pptx file."""
         pptx_path = ppt_path + "x"
         convert_log_file = f'/tmp/convert_{uuid.uuid4()}.log'
-        exit_code = os.system(f"libreoffice --headless --invisible --convert-to pptx --outdir {os.path.dirname(pptx_path)} '{ppt_path}' > {convert_log_file} 2>&1")
+        with open(convert_log_file, 'w') as log:
+            exit_code = subprocess.run(
+                ["libreoffice", "--headless", "--invisible", "--convert-to", "pptx", "--outdir", os.path.dirname(pptx_path), ppt_path],
+                stdout=log, stderr=subprocess.STDOUT
+            ).returncode
         if exit_code != 0 or not os.path.exists(pptx_path):
             error = ""
             logger.error(f"Failed to convert {ppt_path} to pptx format. Exit code: {exit_code}")
