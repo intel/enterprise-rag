@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+import shutil
 import subprocess
 from typing import BinaryIO, Any
 
@@ -16,6 +17,9 @@ from comps.text_extractor.utils.file_loaders.abstract_loader import AbstractLoad
 
 
 logger = get_erag_logger(f"{__file__.split('comps/')[1].split('/', 1)[0]}_microservice")
+
+ASCIIDOCTOR_BIN = shutil.which("asciidoctor") or "/usr/bin/asciidoctor"
+LIBREOFFICE_BIN = shutil.which("libreoffice") or "/usr/bin/libreoffice"
 
 
 class RobustPlainTextConverter(PlainTextConverter):
@@ -86,7 +90,7 @@ class LoadWithMarkitdown(AbstractLoader):
         temp_html_file = os.path.join(temp_dir, f"temp_output_{os.path.basename(self.file_path)}.html")
         
         try:
-            subprocess.run(["asciidoctor", "-b", "html5", "-o", temp_html_file, self.file_path], check=True)
+            subprocess.run([ASCIIDOCTOR_BIN, "-b", "html5", "-o", temp_html_file, self.file_path], check=True)
             logger.info(f"Converted adoc to html. Created temporary file: {temp_html_file}")
             
             result = self.md.convert(temp_html_file)
@@ -106,7 +110,7 @@ class LoadWithMarkitdown(AbstractLoader):
         pptx_path = self.file_path + "x"
         
         try:
-            subprocess.run(["libreoffice", "--headless", "--invisible", "--convert-to", "pptx", "--outdir", os.path.dirname(pptx_path), self.file_path])
+            subprocess.run([LIBREOFFICE_BIN, "--headless", "--invisible", "--convert-to", "pptx", "--outdir", os.path.dirname(pptx_path), self.file_path])
             
             if not os.path.exists(pptx_path):
                 err_msg = f"Failed to convert PPT file: {self.file_path} - PPTX file not created"

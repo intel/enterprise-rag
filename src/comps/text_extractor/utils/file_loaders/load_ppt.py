@@ -3,6 +3,7 @@
 
 import os
 import re
+import shutil
 import subprocess
 import uuid
 import zipfile
@@ -17,6 +18,8 @@ from comps.text_extractor.utils.file_loaders.load_image import LoadImage
 
 
 logger = get_erag_logger(f"{__file__.split('comps/')[1].split('/', 1)[0]}_microservice")
+
+LIBREOFFICE_BIN = shutil.which("libreoffice") or "/usr/bin/libreoffice"
 change_erag_logger_level(logger, log_level=os.getenv("ERAG_LOGGER_LEVEL", "INFO"))
 
 class LoadPpt(AbstractLoader):
@@ -305,7 +308,7 @@ class LoadPpt(AbstractLoader):
         convert_log_file = f'/tmp/convert_{uuid.uuid4()}.log'
         with open(convert_log_file, 'w') as log:
             exit_code = subprocess.run(
-                ["libreoffice", "--headless", "--invisible", "--convert-to", "pptx", "--outdir", os.path.dirname(pptx_path), ppt_path],
+                [LIBREOFFICE_BIN, "--headless", "--invisible", "--convert-to", "pptx", "--outdir", os.path.dirname(pptx_path), ppt_path],
                 stdout=log, stderr=subprocess.STDOUT
             ).returncode
         if exit_code != 0 or not os.path.exists(pptx_path):
