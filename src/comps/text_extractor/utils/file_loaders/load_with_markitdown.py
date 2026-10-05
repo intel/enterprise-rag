@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+import shutil
+import subprocess  # nosec B404 # fixed argv, no shell; converters are trusted local binaries
 from typing import BinaryIO, Any
 
 from charset_normalizer import from_bytes
@@ -85,7 +87,13 @@ class LoadWithMarkitdown(AbstractLoader):
         temp_html_file = os.path.join(temp_dir, f"temp_output_{os.path.basename(self.file_path)}.html")
         
         try:
-            os.system(f"asciidoctor -b html5 -o {temp_html_file} {self.file_path}")
+            asciidoctor = shutil.which("asciidoctor")
+            if asciidoctor is None:
+                raise FileNotFoundError("asciidoctor executable not found on PATH")
+            subprocess.run(  # nosec B603 # fixed argv, no shell; paths come from the local upload directory
+                [asciidoctor, "-b", "html5", "-o", temp_html_file, self.file_path],
+                check=True, capture_output=True, text=True, timeout=300,
+            )
             logger.info(f"Converted adoc to html. Created temporary file: {temp_html_file}")
             
             result = self.md.convert(temp_html_file)
@@ -105,7 +113,14 @@ class LoadWithMarkitdown(AbstractLoader):
         pptx_path = self.file_path + "x"
         
         try:
-            os.system(f"libreoffice --headless --invisible --convert-to pptx --outdir {os.path.dirname(pptx_path)} {self.file_path}")
+            libreoffice = shutil.which("libreoffice")
+            if libreoffice is None:
+                raise FileNotFoundError("libreoffice executable not found on PATH")
+            subprocess.run(  # nosec B603 # fixed argv, no shell; paths come from the local upload directory
+                [libreoffice, "--headless", "--invisible", "--convert-to", "pptx",
+                 "--outdir", os.path.dirname(pptx_path), self.file_path],
+                check=True, capture_output=True, text=True, timeout=300,
+            )
             
             if not os.path.exists(pptx_path):
                 err_msg = f"Failed to convert PPT file: {self.file_path} - PPTX file not created"
