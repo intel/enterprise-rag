@@ -62,7 +62,7 @@ function PromptInput({
         // items-end keeps the send button pinned to the bottom as the textarea grows past
         // one line. This py matches a single line's own box height to the button's (size-8,
         // 32px) so the 1-line case still looks vertically centered against it.
-        className="field-sizing-content placeholder:text-muted-foreground max-h-60 flex-1 resize-none bg-transparent px-1 py-1 text-sm/relaxed outline-none"
+        className="placeholder:text-muted-foreground field-sizing-content max-h-60 flex-1 resize-none bg-transparent px-1 py-1 text-sm/relaxed outline-none"
         onChange={(event) => onValueChange(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey) {

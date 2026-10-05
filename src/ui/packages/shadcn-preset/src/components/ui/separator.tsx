@@ -17,7 +17,7 @@ function Separator({
         // real, visible line regardless of what surface it sits on, in either mode
         // (verified: 3.07:1 light / 4.50:1 dark against --popover, clearing the 3:1 WCAG
         // 1.4.11 non-text minimum with margin).
-        "data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch shrink-0 bg-[color-mix(in_oklch,var(--border),var(--foreground)_50%)]",
+        "shrink-0 bg-[color-mix(in_oklch,var(--border),var(--foreground)_50%)] data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch",
         className,
       )}
       {...props}

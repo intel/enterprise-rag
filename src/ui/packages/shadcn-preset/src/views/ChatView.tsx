@@ -95,7 +95,7 @@ function ChatHistorySection({
   return (
     <div className="flex flex-col gap-1">
       <button
-        className="text-muted-foreground flex items-center gap-1 px-2 text-xs font-medium uppercase tracking-wide"
+        className="text-muted-foreground flex items-center gap-1 px-2 text-xs font-medium tracking-wide uppercase"
         onClick={() => setOpen((o) => !o)}
       >
         <CaretDownIcon

@@ -14,7 +14,7 @@ function Tabs({
       data-slot="tabs"
       data-orientation={orientation}
       className={cn(
-        "group/tabs data-horizontal:flex-col flex gap-2",
+        "group/tabs flex gap-2 data-horizontal:flex-col",
         className,
       )}
       {...props}
@@ -54,7 +54,7 @@ function TabsIndicator({
         // exactly (rather than following ERAG's original dark-accent, which diverges to
         // white in dark mode) — the active tab reads as the same "primary" affordance as a
         // primary button, consistently across light/dark.
-        "bg-primary absolute left-[var(--active-tab-left)] top-[var(--active-tab-top)] z-0 h-[var(--active-tab-height)] w-[var(--active-tab-width)] rounded-md",
+        "bg-primary absolute top-[var(--active-tab-top)] left-[var(--active-tab-left)] z-0 h-[var(--active-tab-height)] w-[var(--active-tab-width)] rounded-md",
         className,
       )}
       // index.css has an unlayered `* { transition: background-color ... }` rule (from
@@ -103,13 +103,13 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
         // Active-state color change (text-muted-foreground -> text-primary-foreground) is
         // delayed to match the sliding indicator's 200ms travel time (see TabsIndicator) —
         // otherwise the text turns white before the background pill finishes moving under it.
-        "text-muted-foreground group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start group-data-vertical/tabs:py-1.5 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 dark:hover:text-foreground data-active:delay-200 relative z-10 inline-flex h-[calc(100%-1px)] flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-transparent px-2 py-1 text-sm font-medium transition-all focus-visible:outline-1 focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-        "group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent group-data-[variant=line]/tabs-list:bg-transparent",
+        "text-muted-foreground hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:hover:text-foreground relative z-10 inline-flex h-[calc(100%-1px)] flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-all group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start group-data-vertical/tabs:py-1.5 focus-visible:ring-2 focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-active:delay-200 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent",
         // primary-foreground (white) pairs with the indicator's bg-primary fill in both
         // modes now (see TabsIndicator). No border — the active background itself lives on
         // the shared, sliding TabsIndicator instead of toggling per trigger, so switching
         // tabs animates as one chip moving rather than a hard swap.
-        "data-active:border-transparent data-active:text-primary-foreground",
+        "data-active:text-primary-foreground data-active:border-transparent",
         // Active tab keeps its text color static on hover (no change needed, it's already
         // primary-foreground). It must still show the normal focus-visible ring/border/
         // outline like any other tab — WCAG 2.4.7 requires a visible focus indicator on
@@ -117,7 +117,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
         // focus-visible entirely for the active tab, which made tabbing to the selected tab
         // show no focus indicator at all.
         "data-active:hover:text-primary-foreground",
-        "after:bg-foreground group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:-bottom-1 group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100 after:absolute after:opacity-0 after:transition-opacity",
+        "after:bg-foreground after:absolute after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:-bottom-1 group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
         className,
       )}
       {...props}
