@@ -3,7 +3,7 @@
 
 import os
 import shutil
-import subprocess  # nosec B404 # fixed argv, no shell; converters are trusted local binaries
+import subprocess
 from typing import BinaryIO, Any
 
 from charset_normalizer import from_bytes
@@ -17,6 +17,9 @@ from comps.text_extractor.utils.file_loaders.abstract_loader import AbstractLoad
 
 
 logger = get_erag_logger(f"{__file__.split('comps/')[1].split('/', 1)[0]}_microservice")
+
+ASCIIDOCTOR_BIN = shutil.which("asciidoctor") or "/usr/bin/asciidoctor"
+LIBREOFFICE_BIN = shutil.which("libreoffice") or "/usr/bin/libreoffice"
 
 
 class RobustPlainTextConverter(PlainTextConverter):
@@ -87,13 +90,7 @@ class LoadWithMarkitdown(AbstractLoader):
         temp_html_file = os.path.join(temp_dir, f"temp_output_{os.path.basename(self.file_path)}.html")
         
         try:
-            asciidoctor = shutil.which("asciidoctor")
-            if asciidoctor is None:
-                raise FileNotFoundError("asciidoctor executable not found on PATH")
-            subprocess.run(  # nosec B603 # fixed argv, no shell; paths come from the local upload directory
-                [asciidoctor, "-b", "html5", "-o", temp_html_file, self.file_path],
-                check=True, capture_output=True, text=True, timeout=300,
-            )
+            subprocess.run([ASCIIDOCTOR_BIN, "-b", "html5", "-o", temp_html_file, self.file_path], check=True)
             logger.info(f"Converted adoc to html. Created temporary file: {temp_html_file}")
             
             result = self.md.convert(temp_html_file)
@@ -113,14 +110,7 @@ class LoadWithMarkitdown(AbstractLoader):
         pptx_path = self.file_path + "x"
         
         try:
-            libreoffice = shutil.which("libreoffice")
-            if libreoffice is None:
-                raise FileNotFoundError("libreoffice executable not found on PATH")
-            subprocess.run(  # nosec B603 # fixed argv, no shell; paths come from the local upload directory
-                [libreoffice, "--headless", "--invisible", "--convert-to", "pptx",
-                 "--outdir", os.path.dirname(pptx_path), self.file_path],
-                check=True, capture_output=True, text=True, timeout=300,
-            )
+            subprocess.run([LIBREOFFICE_BIN, "--headless", "--invisible", "--convert-to", "pptx", "--outdir", os.path.dirname(pptx_path), self.file_path])
             
             if not os.path.exists(pptx_path):
                 err_msg = f"Failed to convert PPT file: {self.file_path} - PPTX file not created"
