@@ -7,6 +7,7 @@ import {
   forwardRef,
   PropsWithChildren,
   ReactNode,
+  useCallback,
   useEffect,
   useId,
   useImperativeHandle,
@@ -77,18 +78,21 @@ export const Dialog = forwardRef<DialogRef, DialogProps>(
       }
     }, [isOpen]);
 
-    const handleOpenChange = (next: boolean) => {
-      if (!next && preventClose) {
-        return;
-      }
-      setOpen(next);
-      onOpenChange?.(next);
-      if (!next && !isClosingRef.current) {
-        isClosingRef.current = true;
-        onClose?.();
-        isClosingRef.current = false;
-      }
-    };
+    const handleOpenChange = useCallback(
+      (next: boolean) => {
+        if (!next && preventClose) {
+          return;
+        }
+        setOpen(next);
+        onOpenChange?.(next);
+        if (!next && !isClosingRef.current) {
+          isClosingRef.current = true;
+          onClose?.();
+          isClosingRef.current = false;
+        }
+      },
+      [preventClose, onOpenChange, onClose],
+    );
 
     useImperativeHandle(
       forwardedRef,

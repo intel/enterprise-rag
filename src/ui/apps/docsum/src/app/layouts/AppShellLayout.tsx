@@ -12,9 +12,9 @@ import { Outlet, useLocation } from "react-router-dom";
 import {
   SidePanelFooterContent,
   SidePanelHeaderContent,
-  useAppHeaderProps,
-  viewSwitchButton,
 } from "@/components/AppHeaderContent/AppHeaderContent";
+import { useAppHeaderProps } from "@/components/AppHeaderContent/useAppHeaderProps";
+import ViewSwitchButton from "@/components/ViewSwitchButton/ViewSwitchButton";
 import { paths } from "@/config/paths";
 import { getDocSumAppEnv } from "@/utils";
 
@@ -87,7 +87,7 @@ const AppShellLayout = () => {
       isOpen={isSidebarOpen}
       ariaLabel="Admin Panel Sidebar"
       headerContent={<SidePanelHeaderContent />}
-      viewSwitchButton={viewSwitchButton}
+      viewSwitchButton={<ViewSwitchButton />}
       footerContent={<SidePanelFooterContent />}
       hasHeader
     >
@@ -104,7 +104,7 @@ const AppShellLayout = () => {
       isOpen={isSidebarOpen}
       ariaLabel="Document Summarization Sidebar"
       headerContent={<SidePanelHeaderContent />}
-      viewSwitchButton={viewSwitchButton}
+      viewSwitchButton={<ViewSwitchButton />}
       footerContent={<SidePanelFooterContent />}
       hasHeader
     >

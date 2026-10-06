@@ -20,9 +20,9 @@ import { toast } from "sonner";
 import {
   SidePanelFooterContent,
   SidePanelHeaderContent,
-  useAppHeaderProps,
-  viewSwitchButton,
 } from "@/components/AppHeaderContent/AppHeaderContent";
+import { useAppHeaderProps } from "@/components/AppHeaderContent/useAppHeaderProps";
+import ViewSwitchButton from "@/components/ViewSwitchButton/ViewSwitchButton";
 import { paths } from "@/config/paths";
 import {
   useChangeChatNameMutation,
@@ -178,7 +178,7 @@ const AppShellLayout = () => {
         isOpen={isChatSidebarOpen}
         ariaLabel="Admin Panel Sidebar"
         headerContent={<SidePanelHeaderContent />}
-        viewSwitchButton={viewSwitchButton}
+        viewSwitchButton={<ViewSwitchButton />}
         footerContent={<SidePanelFooterContent />}
         hasHeader
       >
@@ -197,7 +197,7 @@ const AppShellLayout = () => {
         isOpen={isChatSidebarOpen}
         ariaLabel="Chat Sidebar"
         headerContent={<SidePanelHeaderContent />}
-        viewSwitchButton={viewSwitchButton}
+        viewSwitchButton={<ViewSwitchButton />}
         footerContent={<SidePanelFooterContent />}
         hasHeader
       />
@@ -215,7 +215,7 @@ const AppShellLayout = () => {
         onRename={handleRename}
         headerContent={<SidePanelHeaderContent />}
         footerContent={<SidePanelFooterContent />}
-        viewSwitchButton={viewSwitchButton}
+        viewSwitchButton={<ViewSwitchButton />}
         onNewChat={handleNewChat}
       />
     );

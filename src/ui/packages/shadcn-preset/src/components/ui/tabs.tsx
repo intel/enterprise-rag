@@ -140,6 +140,8 @@ export {
   TabsContent,
   TabsIndicator,
   TabsList,
+  // Exporting the cva variants alongside the component is the upstream shadcn API.
+  // eslint-disable-next-line react-refresh/only-export-components
   tabsListVariants,
   TabsTrigger,
 };

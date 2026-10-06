@@ -3,42 +3,18 @@
 
 import { keycloakService } from "@intel-enterprise-rag-ui/auth";
 import {
-  AppHeaderProps,
   SidePanelFooter,
   SidePanelHeader,
 } from "@intel-enterprise-rag-ui/layouts";
 
-import ViewSwitchButton from "@/components/ViewSwitchButton/ViewSwitchButton";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { selectIsSidebarOpen, toggleSidebar } from "@/store/sidebar.slice";
 import { resetStore } from "@/store/utils";
 import { getDocSumAppEnv } from "@/utils";
-
-export const viewSwitchButton = <ViewSwitchButton />;
 
 const APP_DISPLAY_NAME = "DocSum";
 const PROJECT_NAME = "Intel® AI for Enterprise RAG";
 const APP_VERSION =
   getDocSumAppEnv("ERAG_VERSION") || import.meta.env.VITE_APP_VERSION;
 const USER_GUIDE_URL = `https://github.com/opea-project/Enterprise-RAG/blob/release-${APP_VERSION}/docs/Intel_AI_for_Enterprise_RAG_DocSum_User_Guide.pdf`;
-
-export const useSidebarState = () => {
-  const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
-  const dispatch = useAppDispatch();
-  return {
-    isSidebarOpen,
-    onToggleSidebar: () => dispatch(toggleSidebar()),
-  };
-};
-
-export const useAppHeaderProps = (): AppHeaderProps => {
-  const { isSidebarOpen, onToggleSidebar } = useSidebarState();
-
-  return {
-    isSidebarOpen,
-    onToggleSidebar,
-  };
-};
 
 /** Rendered as the side panel's own top header row — see SidePanelHeader. */
 export const SidePanelHeaderContent = () => (

@@ -74,4 +74,6 @@ const Button = React.forwardRef<
   );
 });
 
+// Exporting the cva variants alongside the component is the upstream shadcn API.
+// eslint-disable-next-line react-refresh/only-export-components
 export { Button, buttonVariants };
