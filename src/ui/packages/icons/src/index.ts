@@ -48,6 +48,7 @@ export { FileXlsxIcon } from "@/icons/FileXlsxIcon";
 export { FilterActiveIcon } from "@/icons/FilterActiveIcon";
 export { FilterIcon } from "@/icons/FilterIcon";
 export { FitViewIcon } from "@/icons/FitViewIcon";
+export { HistoryIcon } from "@/icons/HistoryIcon";
 export { IdentityProviderIcon } from "@/icons/IdentityProviderIcon";
 export { InfoFilledIcon } from "@/icons/InfoFilledIcon";
 export { InfoIcon } from "@/icons/InfoIcon";

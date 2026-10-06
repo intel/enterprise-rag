@@ -7,10 +7,31 @@ import {
   FileMdIcon,
   FilePdfIcon,
   FileTextIcon,
+  IconName,
   PlainTextIcon,
 } from "@intel-enterprise-rag-ui/icons";
 
 import { HistoryItemData } from "@/features/docsum/types/history";
+
+const fileIconNames: Record<string, IconName> = {
+  pdf: "file-pdf",
+  docx: "file-docx",
+  doc: "file-doc",
+  md: "file-md",
+};
+
+export const getItemIconName = (
+  itemData: HistoryItemData,
+): IconName | undefined => {
+  if (itemData.sourceType === "file") {
+    const fileExtension = itemData.title.split(".").pop()?.toLowerCase() ?? "";
+    return fileIconNames[fileExtension] ?? "file-text";
+  } else if (itemData.sourceType === "plainText") {
+    return "plain-text";
+  } else {
+    return undefined;
+  }
+};
 
 export const getFileIcon = (fileName: string) => {
   const fileExtension = fileName.split(".").pop()?.toLowerCase();

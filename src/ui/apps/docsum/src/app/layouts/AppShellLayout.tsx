@@ -46,9 +46,19 @@ const ADMIN_PANEL_NAV_ITEMS = [
 ];
 
 const DOCSUM_NAV_ITEMS = [
-  { name: "Paste Text", path: "paste-text", id: "paste-text" },
-  { name: "Upload File", path: "upload-file", id: "upload-file" },
-  { name: "History", path: "history", id: "history" },
+  {
+    name: "Paste Text",
+    path: "paste-text",
+    icon: "plain-text" as const,
+    id: "paste-text",
+  },
+  {
+    name: "Upload File",
+    path: "upload-file",
+    icon: "upload" as const,
+    id: "upload-file",
+  },
+  { name: "History", path: "history", icon: "history" as const, id: "history" },
 ];
 
 /**

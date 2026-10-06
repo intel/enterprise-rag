@@ -46,6 +46,7 @@ import { FileXlsxIcon } from "@/icons/FileXlsxIcon";
 import { FilterActiveIcon } from "@/icons/FilterActiveIcon";
 import { FilterIcon } from "@/icons/FilterIcon";
 import { FitViewIcon } from "@/icons/FitViewIcon";
+import { HistoryIcon } from "@/icons/HistoryIcon";
 import { IdentityProviderIcon } from "@/icons/IdentityProviderIcon";
 import { InfoFilledIcon } from "@/icons/InfoFilledIcon";
 import { InfoIcon } from "@/icons/InfoIcon";
@@ -126,6 +127,7 @@ export const icons: Record<string, ComponentType<IconProps>> = {
   "filter-active": FilterActiveIcon,
   pin: PinIcon,
   "pin-filled": PinFilledIcon,
+  history: HistoryIcon,
   "identity-provider": IdentityProviderIcon,
   info: InfoIcon,
   "info-filled": InfoFilledIcon,

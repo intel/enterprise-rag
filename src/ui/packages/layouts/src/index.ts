@@ -9,6 +9,7 @@ export * from "@/AppError/AppError";
 export * from "@/AppHeader/AppHeader";
 export * from "@/AppNameText/AppNameText";
 export { bootstrapApp } from "@/bootstrap";
+export * from "@/HistoryItem/HistoryItem";
 export * from "@/PageLayout/PageLayout";
 export * from "@/RootLayout/RootLayout";
 export * from "@/Sidebar/Sidebar";
