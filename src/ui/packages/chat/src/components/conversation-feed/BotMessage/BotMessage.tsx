@@ -45,7 +45,8 @@ const BotMessage = ({
   const isWaitingForAnswer = isPending && (answer === "" || error !== null);
   // The raw answer goes to <Markdown>: parseMarkdown sanitizes the rendered HTML, which is the
   // XSS boundary. Sanitizing the markdown source here would mangle code (`->`, `<vector>`).
-  const showActions = !isPending && (answer !== "" || error !== null);
+  const answerText = answer ?? "";
+  const showActions = !isPending && (answerText !== "" || error !== null);
   const showSources = showActions && Array.isArray(sources);
 
   const botResponse =
@@ -59,10 +60,10 @@ const BotMessage = ({
         className="max-w-[calc(100vw_-_8rem)] text-sm/relaxed md:max-w-[40rem]"
         data-testid="bot-message__text"
       >
-        <Markdown text={answer} />
+        <Markdown text={answerText} />
         {showActions && (
           <footer className="flex items-center justify-start gap-2 pt-3">
-            <CopyButton textToCopy={answer} />
+            <CopyButton textToCopy={answerText} />
             {onPlayMessage && (
               <PlaySpeechButton
                 turnId={id}
