@@ -26,6 +26,6 @@ test = [
     "opentelemetry-exporter-otlp==1.40.0",
     "opentelemetry-sdk==1.40.0",
     "h11==0.16.0",
-    "anyio>=4.14.2",
+    "anyio>=4.14.2,<5.0.0",
     "pillow>=12.3.0",
 ]

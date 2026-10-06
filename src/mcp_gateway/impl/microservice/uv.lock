@@ -253,7 +253,7 @@ security-overrides = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anyio", specifier = "==4.14.2" },
+    { name = "anyio", specifier = ">=4.14.2,<5.0.0" },
     { name = "certifi", specifier = ">=2024.8.30" },
     { name = "h11", specifier = "==0.16.0" },
     { name = "httpx", specifier = "==0.28.1" },

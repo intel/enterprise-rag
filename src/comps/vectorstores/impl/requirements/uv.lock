@@ -432,7 +432,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", marker = "extra == 'test'", specifier = ">=3.14.3,<4.0.0" },
-    { name = "anyio", marker = "extra == 'test'", specifier = ">=4.14.2" },
+    { name = "anyio", marker = "extra == 'test'", specifier = ">=4.14.2,<5.0.0" },
     { name = "docarray", extras = ["full"], marker = "extra == 'test'", specifier = "==0.40.0" },
     { name = "fastapi", marker = "extra == 'test'", specifier = "==0.136.3" },
     { name = "h11", marker = "extra == 'test'", specifier = "==0.16.0" },
