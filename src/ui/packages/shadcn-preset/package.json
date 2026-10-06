@@ -32,7 +32,7 @@
     "axe-core": "^4.13.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.5.4",
-    "vite": "^6.4.2",
+    "vite": "^6.4.3",
     "vite-tsconfig-paths": "^5.1.4"
   }
 }

@@ -35,7 +35,7 @@
     "sonner": "^2.0.8"
   },
   "devDependencies": {
-    "vitest": "^2.1.9"
+    "vitest": "^4.1.11"
   },
   "peerDependencies": {
     "@reduxjs/toolkit": ">=2.0.0",
