@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./BucketsDropdown.css";
-
 import {
   Select,
   SelectChangeHandler,
@@ -50,7 +48,7 @@ const BucketsDropdown = ({
       isDisabled={isDisabled}
       isInvalid={isInvalid}
       placeholder="Please select bucket to upload files"
-      className="buckets-dropdown"
+      className="px-4 pt-3"
       onChange={onBucketChange}
     />
   );

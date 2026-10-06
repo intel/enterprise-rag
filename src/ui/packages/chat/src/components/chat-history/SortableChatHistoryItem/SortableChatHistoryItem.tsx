@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./SortableChatHistoryItem.css";
-
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import classNames from "classnames";
@@ -38,8 +36,8 @@ export const SortableChatHistoryItem = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={classNames("sortable-chat-history-item", {
-        "sortable-chat-history-item--dragging": isDragging,
+      className={classNames("touch-none", {
+        "relative z-10 opacity-80": isDragging,
       })}
       {...attributes}
       {...listeners}

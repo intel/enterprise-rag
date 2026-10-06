@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./UploadFileTab.css";
-
 import {
   FileInput,
   FileInputHandle,
@@ -154,9 +152,9 @@ const UploadFileTab = () => {
   };
 
   return (
-    <div className="upload-file-tab">
-      <div className="upload-file-tab__upload-col">
-        <p>File to Summarize</p>
+    <div className="grid h-[calc(100vh-8rem)] grid-cols-2 gap-8 px-16 pt-6 pb-16">
+      <div className="flex flex-col">
+        <p className="mb-2 font-medium">File to Summarize</p>
         {fileData && (
           <FileSelectedToSummarize
             fileName={fileData.name}
@@ -183,7 +181,7 @@ const UploadFileTab = () => {
           className="mt-4"
         />
       </div>
-      <div className="upload-file-tab__summary-col">
+      <div className="h-full min-h-0 flex-1 overflow-y-auto">
         <GeneratedSummary
           summary={summary}
           isLoading={isLoading}

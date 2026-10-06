@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./dataTableCells.css";
-
 import { titleCaseString } from "@intel-enterprise-rag-ui/utils";
 import { ColumnDef } from "@tanstack/react-table";
 
@@ -37,6 +35,6 @@ export const filesSyncColumns: ColumnDef<FileSyncDataItem>[] = [
       row: {
         original: { object_name: fileName },
       },
-    }) => <div className="data-table-cell__wrap">{fileName}</div>,
+    }) => <div className="text-wrap [overflow-wrap:anywhere]">{fileName}</div>,
   },
 ];

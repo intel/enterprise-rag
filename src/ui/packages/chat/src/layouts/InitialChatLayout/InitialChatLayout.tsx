@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./InitialChatLayout.css";
-
 import { AiIcon } from "@intel-enterprise-rag-ui/icons";
 import { ChangeEventHandler } from "react";
 
@@ -28,10 +26,12 @@ export const InitialChatLayout = ({
   onSpeechToText,
   onSpeechToTextError,
 }: InitialChatLayoutProps) => (
-  <div className="initial-chat-layout">
-    <div className="initial-chat-layout__greeting-row">
-      <p className="initial-chat-layout__greeting">How can I help?</p>
-      <AiIcon weight="fill" className="initial-chat-layout__chat-bot-icon" />
+  <div className="relative mx-auto mb-24 flex h-full w-full max-w-[calc(100%_-_8rem)] flex-col items-center justify-center">
+    <div className="mb-9 flex items-start justify-center gap-3">
+      <p className="text-foreground text-center text-[2.5rem] leading-[3rem] font-semibold">
+        How can I help?
+      </p>
+      <AiIcon weight="fill" className="text-primary shrink-0 text-[2.5rem]" />
     </div>
     <PromptInput
       prompt={userInput}

@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./SourcesGrid.css";
-
 import { Button } from "@intel-enterprise-rag-ui/components";
 import { useState } from "react";
 
@@ -36,7 +34,7 @@ export const SourcesGrid = ({ sources, onFileDownload }: SourcesGridProps) => {
 
   return (
     <>
-      <div className="sources-grid">
+      <div className="mt-2 grid grid-cols-3 gap-2">
         {visibleSources.map((source, index) => {
           if (source.type === "file") {
             return (
@@ -57,7 +55,7 @@ export const SourcesGrid = ({ sources, onFileDownload }: SourcesGridProps) => {
           data-testid="show-all-sources-button"
           variant="outline"
           size="sm"
-          className="sources-grid__show-more-btn"
+          className="float-right mt-2"
           onPress={handleBtnPress}
         >
           Show {allSourcesVisible ? "less" : "all"} sources

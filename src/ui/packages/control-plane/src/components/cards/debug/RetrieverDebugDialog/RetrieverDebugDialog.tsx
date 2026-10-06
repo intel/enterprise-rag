@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./RetrieverDebugDialog.css";
-
 import {
   ChatTurn,
   ConversationFeed,
@@ -206,15 +204,15 @@ export const RetrieverDebugDialog = ({
         <Button
           data-testid="retriever-debug-trigger-button"
           size="sm"
-          className="retriever-debug-dialog__trigger-button"
+          className="absolute top-4 right-4"
         >
           Debug
         </Button>
       }
       title="Retriever Debug"
     >
-      <div className="retriever-debug-dialog__container">
-        <div className="retriever-debug-dialog__left-panel">
+      <div className="grid grid-cols-[14rem_1fr]">
+        <div className="h-[calc(100vh_-_12rem)] [scrollbar-gutter:stable] overflow-y-auto pr-3 pl-1">
           <RetrieverDebugParamsForm
             retrieverArgumentsForm={retrieverArgumentsForm}
             rerankerArgumentsForm={rerankerArgumentsForm}
@@ -243,7 +241,7 @@ export const RetrieverDebugDialog = ({
             onChange={handleSearchByParamChange}
           />
           {!isSearchByJSONValid() && (
-            <p className="retriever-debug-dialog__error-message">
+            <p className="mb-2 text-xs text-[color:var(--error-color,#dc2626)] italic">
               Invalid search_by parameter. It won&apos;t be included in the
               query.
             </p>
@@ -258,8 +256,8 @@ export const RetrieverDebugDialog = ({
             Format JSON
           </Button>
         </div>
-        <div className="retriever-debug-dialog__right-panel">
-          <div className="retriever-debug-dialog__chat-grid">
+        <div className="flex h-[calc(100vh_-_12rem)] flex-col text-sm">
+          <div className="grid h-full grid-rows-[1fr_auto]">
             <RetrieverDebugChat
               conversationTurns={conversationTurns}
               query={query}
@@ -302,8 +300,8 @@ const RetrieverDebugParamsForm = ({
 
   return (
     <>
-      <p className="retriever-debug-dialog__params-heading">Parameters</p>
-      <p className="retriever-debug-dialog__section-heading">Retriever</p>
+      <p className="text-lg font-medium">Parameters</p>
+      <p className="mt-3 mb-2">Retriever</p>
       <ServiceArgumentSelect
         {...retrieverFormConfig.search_type}
         value={retrieverArgumentsForm.search_type}
@@ -367,7 +365,7 @@ const RetrieverDebugParamsForm = ({
         value={retrieverArgumentsForm.metadata_extraction_mode}
         onArgumentValueChange={onRetrieverArgumentValueChange}
       />
-      <p className="retriever-debug-dialog__section-heading">Reranker</p>
+      <p className="mt-3 mb-2">Reranker</p>
       <Checkbox
         data-testid="reranker-enabled-checkbox"
         label="Enable Reranker"

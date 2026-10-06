@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./ChatHistoryItemMenu.css";
-
 import {
   DropdownMenu,
   DropdownMenuItem,
@@ -75,7 +73,7 @@ export const ChatHistoryItemMenu = ({
                 icon="more-options"
                 size="sm"
                 aria-label="Manage Chat"
-                className="chat-history-item-menu__trigger"
+                className="hover:bg-background rounded-full"
               />
             }
           />

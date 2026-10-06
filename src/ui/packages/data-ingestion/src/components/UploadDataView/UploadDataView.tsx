@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./UploadDataView.css";
-
 import { Label, Select } from "@intel-enterprise-rag-ui/components";
 import {
   S3BucketIcon,
@@ -203,19 +201,16 @@ export const UploadDataView = ({
   const isSelectInvalid = files.length > 0 && !selectedDestination;
 
   return (
-    <section
-      className="upload-data-view"
-      data-testid="data-ingestion-upload-view"
-    >
-      <div className="upload-data-view__content">
-        <div className="upload-data-view__destination-label">
+    <section className="h-full pb-6" data-testid="data-ingestion-upload-view">
+      <div className="relative">
+        <div className="pt-3">
           <Label>Upload to</Label>
           {hasSites && (
-            <div className="upload-data-view__legend">
-              <span className="upload-data-view__legend-item">
+            <div className="text-foreground mb-1 flex gap-4 pt-1 text-xs">
+              <span className="flex items-center gap-1">
                 <S3BucketIcon aria-hidden="true" /> S3 Bucket
               </span>
-              <span className="upload-data-view__legend-item">
+              <span className="flex items-center gap-1">
                 <SharePointSiteIcon aria-hidden="true" /> SharePoint Site
               </span>
             </div>
@@ -230,12 +225,12 @@ export const UploadDataView = ({
           isInvalid={isSelectInvalid}
           aria-label="Upload destination"
           placeholder="Please select destination to upload files"
-          className="upload-data-view__destination-select"
+          className="pt-1"
           renderValue={(key) => {
             const item = destinationItems.find((d) => d.value === key);
             if (!item) return null;
             return (
-              <span className="upload-data-view__destination-option">
+              <span className="flex items-center gap-2">
                 {item.type === "s3" ? (
                   <S3BucketIcon aria-hidden="true" />
                 ) : (
@@ -249,7 +244,7 @@ export const UploadDataView = ({
             const item = destinationItems.find((d) => d.value === value);
             if (!item) return value;
             return (
-              <span className="upload-data-view__destination-option">
+              <span className="flex items-center gap-2">
                 {item.type === "s3" ? (
                   <S3BucketIcon aria-hidden="true" />
                 ) : (
@@ -264,11 +259,13 @@ export const UploadDataView = ({
             return item?.label ?? value;
           }}
         />
-        <div className="upload-data-view__ingestion-panels-grid">
+        <div className="grid grid-cols-1 gap-4 pb-3 lg:grid-cols-2">
           <FilesIngestionPanel files={files} setFiles={setFiles} />
           <LinksIngestionPanel links={links} setLinks={setLinks} />
         </div>
-        {isUploading && <div className="upload-data-view__blur-overlay"></div>}
+        {isUploading && (
+          <div className="absolute top-0 h-full w-full bg-black/25 backdrop-blur-[0.375rem]"></div>
+        )}
       </div>
       <UploadDataDialogFooter
         uploadErrors={uploadErrors}

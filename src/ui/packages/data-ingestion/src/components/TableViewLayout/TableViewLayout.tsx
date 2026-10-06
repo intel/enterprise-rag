@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./TableViewLayout.css";
-
 import { Outlet } from "react-router-dom";
 
 /**
@@ -14,7 +12,7 @@ import { Outlet } from "react-router-dom";
  * (e.g. the table's pinned edge columns), not by re-padding the whole view.
  */
 export const TableViewLayout = () => (
-  <div className="table-view-layout">
+  <div className="-mx-16 flex h-full min-h-0 flex-1 flex-col">
     <Outlet />
   </div>
 );

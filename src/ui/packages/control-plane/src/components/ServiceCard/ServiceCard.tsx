@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./ServiceCard.css";
-
 import { useDebug } from "@intel-enterprise-rag-ui/utils";
 import { Node } from "@xyflow/react";
 
@@ -128,8 +126,10 @@ export const ServiceCard = ({
 const NoServiceSelectedCard = () => (
   <div
     data-testid="no-service-selected-card"
-    className="no-service-selected-card"
+    className="bg-card border-l-border flex h-full items-center justify-center border-l"
   >
-    <p>Select service from the graph to see its details</p>
+    <p className="text-foreground w-[14rem] text-center text-sm">
+      Select service from the graph to see its details
+    </p>
   </div>
 );

@@ -3,23 +3,8 @@
 
 @reference "@intel-enterprise-rag-ui/shadcn-preset/index.css";
 
-.control-plane-panel {
-  @apply bg-background relative grid grid-cols-1;
-  @apply h-full overflow-hidden;
-}
-.control-plane-panel__not-renderable {
-  @apply flex h-full w-full items-center justify-center;
-}
-
-.config-panel-card {
-  @apply absolute top-4 right-4 z-20 w-[22rem] shadow-md;
-}
-.config-panel-card__header {
-  @apply items-center;
-}
-.config-panel-card__body {
-  @apply max-h-[70vh] overflow-y-auto;
-}
+/* Only the rules Tailwind utilities can't express cleanly stay here (keyframes,
+   reduced-motion media query, radial-gradient, descendant override of xyflow's CSS). */
 
 .control-plane-panel__dots-bg {
   @apply absolute inset-0 z-0 opacity-20;
@@ -45,10 +30,7 @@
   }
 }
 
-.graph-wrapper {
-  @apply relative z-10 h-full w-full;
-}
 .graph-wrapper .react-flow {
-  /* transparent so the animated dots-grid on .control-plane-panel shows through */
+  /* transparent so the animated dots-grid on the panel shows through */
   background: transparent;
 }

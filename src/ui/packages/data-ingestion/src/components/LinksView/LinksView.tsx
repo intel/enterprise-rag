@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./LinksView.css";
-
 import LinksDataTable from "@/components/LinksDataTable/LinksDataTable";
 
 export interface LinksViewProps {
@@ -10,7 +8,10 @@ export interface LinksViewProps {
 }
 
 export const LinksView = ({ getAppEnv }: LinksViewProps) => (
-  <section className="links-view" data-testid="data-ingestion-links-view">
+  <section
+    className="flex h-full min-h-0 flex-col pb-6"
+    data-testid="data-ingestion-links-view"
+  >
     <LinksDataTable getAppEnv={getAppEnv} />
   </section>
 );

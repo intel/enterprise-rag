@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./DataItemStatus.css";
-
 import { Tooltip } from "@intel-enterprise-rag-ui/components";
 import {
   BlockedIcon,
@@ -16,8 +14,7 @@ import {
   SuccessIcon,
   UploadIcon,
 } from "@intel-enterprise-rag-ui/icons";
-import { titleCaseString } from "@intel-enterprise-rag-ui/utils";
-import classNames from "classnames";
+import { cn, titleCaseString } from "@intel-enterprise-rag-ui/utils";
 import { memo, ReactNode } from "react";
 
 import { DataStatus } from "@/types";
@@ -38,6 +35,19 @@ const statusIconMap: Record<DataStatus, ReactNode> = {
   blocked: <BlockedIcon weight="fill" />,
 };
 
+const statusColorClassNames: Partial<Record<DataStatus, string>> = {
+  uploaded: "text-success",
+  embedding: "text-foreground",
+  text_extracting: "text-foreground",
+  text_compression: "text-foreground",
+  text_splitting: "text-foreground",
+  late_chunking: "text-foreground",
+  ingested: "text-foreground",
+  deleting: "text-destructive",
+  error: "text-destructive",
+  processing: "text-muted-foreground",
+};
+
 const formatStatus = (status: DataStatus): string =>
   status
     .split("_")
@@ -54,16 +64,16 @@ const DataItemStatus = memo(
     const statusIcon = statusIconMap[status];
     const statusText = !status ? "Unknown" : formatStatus(status);
     const isStatusMessageEmpty = statusMessage === "";
-    const statusClassNames = classNames({
-      "data-item-status": true,
-      [`data-item-status--${status}`]: true,
-      "data-item-status--with-tooltip": !isStatusMessageEmpty,
-    });
+    const statusClassNames = cn(
+      "mr-2 inline-flex cursor-default flex-nowrap items-center gap-2",
+      statusColorClassNames[status],
+      !isStatusMessageEmpty && "cursor-help",
+    );
 
     const itemStatusIndicator = (
       <div className={statusClassNames}>
         {statusIcon}
-        <p className="data-item-status__text">{statusText}</p>
+        <p className="text-xs">{statusText}</p>
       </div>
     );
 

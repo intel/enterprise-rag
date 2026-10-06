@@ -23,7 +23,7 @@ export const SidePanelFooter = ({
   userEmail,
   onLogout,
 }: SidePanelFooterProps) => (
-  <div className="mx-2 flex flex-1 items-center justify-between gap-2">
+  <div className="flex flex-1 items-center justify-between gap-2">
     <div className="flex min-w-0 flex-col">
       <UserInfoText text={username} />
       {userEmail && <UserInfoText text={userEmail} />}

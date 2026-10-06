@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./ChatHistoryList.css";
-
 import {
   closestCenter,
   DndContext,
@@ -80,7 +78,7 @@ const SortableChatItems = ({
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-        <div className="chat-history-list__items">
+        <div className="flex flex-col gap-1">
           {items.map((item) => (
             <SortableChatHistoryItem key={item.id} id={item.id}>
               {renderItem(item)}
@@ -149,9 +147,12 @@ export const ChatHistoryList = ({
     ? "No chat history matches your search."
     : "No chat history available.";
 
-  const chatHistoryListClass = classNames("chat-history-list", {
-    "chat-history-list--empty": isChatHistoryEmpty,
-  });
+  const chatHistoryListClass = classNames(
+    "flex max-h-[calc(100vh_-_10rem)] [scrollbar-gutter:stable] flex-col overflow-y-auto",
+    {
+      "h-32 items-center justify-center": isChatHistoryEmpty,
+    },
+  );
 
   const { pinnedChats, groupedUnpinnedChats } = useMemo(() => {
     const pinned: ChatHistoryItemData[] = [];
@@ -198,7 +199,7 @@ export const ChatHistoryList = ({
 
   return (
     <aside aria-label="Chat History List">
-      <div className="chat-history-list__search-bar">
+      <div className="mb-4 flex h-16 items-center">
         <SearchBar
           data-testid="chat-history-search-bar"
           value={searchFilter}
@@ -209,15 +210,15 @@ export const ChatHistoryList = ({
       <div className={chatHistoryListClass}>
         {isLoading && <LoadingFallback />}
         {!isLoading && isChatHistoryEmpty && (
-          <p className="chat-history-list__empty-message">
-            {emptyStateMessage}
-          </p>
+          <p className="text-xs text-gray-500">{emptyStateMessage}</p>
         )}
         {!isLoading && !isChatHistoryEmpty && (
           <>
             {hasPinnedChats && (
-              <div className="chat-history-list__section">
-                <p className="chat-history-list__pinned-title">Pinned</p>
+              <div className="flex flex-col not-last:mb-4">
+                <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+                  Pinned
+                </p>
                 <SortableChatItems
                   items={pinnedChats}
                   onReorder={reorderPinnedChats}
@@ -240,22 +241,21 @@ export const ChatHistoryList = ({
               const isExpanded = !collapsedGroups.has(group.label);
 
               return (
-                <div key={group.label} className="chat-history-list__section">
+                <div key={group.label} className="flex flex-col not-last:mb-4">
                   <button
                     type="button"
-                    className="chat-history-list__section-title-button"
+                    className="mb-2 flex w-full cursor-pointer items-center justify-between gap-1 border-none bg-transparent p-0 text-left"
                     aria-expanded={isExpanded}
                     onClick={() => toggleGroup(group.label)}
                   >
-                    <span className="chat-history-list__section-title">
+                    <span className="text-muted-foreground ml-2 text-xs font-medium normal-case">
                       {group.label}
                     </span>
                     <DisclosureIcon
                       className={classNames(
-                        "chat-history-list__section-chevron",
+                        "text-muted-foreground size-3.5 shrink-0 transition-transform duration-150",
                         {
-                          "chat-history-list__section-chevron--collapsed":
-                            !isExpanded,
+                          "-rotate-90": !isExpanded,
                         },
                       )}
                     />

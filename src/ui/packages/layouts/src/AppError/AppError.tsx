@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./AppError.css";
-
 import {
   Anchor,
   Card,
@@ -38,13 +36,16 @@ export const AppError = ({
   const isNotFound = status === 404;
 
   return (
-    <div className="app-error" data-testid="app-error">
-      <Card className="app-error__card">
+    <div
+      className="flex h-screen w-full items-center justify-center"
+      data-testid="app-error"
+    >
+      <Card className="w-full max-w-sm text-center">
         <CardHeader>
           {isNotFound ? (
-            <WarningIcon className="app-error__icon" />
+            <WarningIcon className="mx-auto size-8" />
           ) : (
-            <ErrorIcon className="app-error__icon app-error__icon--destructive" />
+            <ErrorIcon className="text-destructive mx-auto size-8" />
           )}
           <CardTitle>
             {isNotFound ? "Page not found" : "Something went wrong"}
@@ -57,7 +58,7 @@ export const AppError = ({
         </CardHeader>
         {!isNotFound && status !== undefined && (
           <CardContent>
-            <p className="app-error__detail">
+            <p className="text-muted-foreground text-sm">
               Error code: {status}
               {statusText && <> — {statusText}</>}
             </p>

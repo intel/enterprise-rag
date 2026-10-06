@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./S3CertificateAlertBanner.css";
-
 import {
   Alert,
   AlertDescription,
@@ -68,7 +66,7 @@ const S3CertificateAlertBanner = ({
   return (
     <Alert
       variant="error"
-      className="s3-certificate-alert-banner"
+      className="mb-4"
       data-testid="s3-certificate-alert-banner"
     >
       <ErrorIcon />
@@ -87,7 +85,7 @@ const S3CertificateAlertBanner = ({
         >
           {s3Url}
         </Anchor>
-        <p className="s3-certificate-alert-banner__dismiss-hint">
+        <p className="my-2">
           If you believe this is a false positive, you can dismiss this alert
           using the button below.
         </p>
@@ -97,7 +95,7 @@ const S3CertificateAlertBanner = ({
         variant="outline"
         size="sm"
         onPress={handleDismissBtnPress}
-        className="s3-certificate-alert-banner__dismiss-button"
+        className="mt-2"
       >
         Dismiss
       </Button>

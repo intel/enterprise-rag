@@ -1,9 +1,7 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./PageLayout.css";
-
-import classNames from "classnames";
+import { cn } from "@intel-enterprise-rag-ui/utils";
 import { PropsWithChildren, ReactNode } from "react";
 
 import { AppHeader, AppHeaderProps } from "@/AppHeader/AppHeader";
@@ -43,15 +41,16 @@ export const PageLayout = ({
     rightSidebar ?? {};
 
   return (
-    <div className="page-layout__root">
+    <div className="relative flex h-full w-full flex-row-reverse">
       <div
-        className={classNames("page-layout__content", {
-          "page-layout__content--left-sidebar-open": isLeftSidebarOpen,
-          "page-layout__content--right-sidebar-open": isRightSidebarOpen,
-        })}
+        className={cn(
+          "flex h-full max-w-full flex-1 flex-col overflow-hidden transition-[margin] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+          isLeftSidebarOpen && "ml-64",
+          isRightSidebarOpen && "mr-64",
+        )}
       >
         <AppHeader {...appHeaderProps} />
-        <main className="page-layout__main-outlet" id="main">
+        <main className="flex h-[calc(100vh_-_4rem)] flex-col" id="main">
           {children}
         </main>
       </div>

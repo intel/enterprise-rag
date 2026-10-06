@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./SidePanelHeader.css";
-
 import { AboutDialog } from "@/AboutDialog/AboutDialog";
 
 export interface SidePanelHeaderProps {
@@ -28,10 +26,14 @@ export const SidePanelHeader = ({
   appVersion,
   userGuideUrl,
 }: SidePanelHeaderProps) => (
-  <div className="side-panel-header">
-    <div className="side-panel-header__identity">
-      <p className="side-panel-header__title">{title}</p>
-      <p className="side-panel-header__subtitle">{subtitle}</p>
+  <div className="flex w-full min-w-0 items-center justify-between gap-2">
+    <div className="flex min-w-0 flex-col justify-center">
+      <p className="text-foreground mb-0.5 truncate text-sm leading-5 font-bold">
+        {title}
+      </p>
+      <p className="text-muted-foreground truncate text-xs leading-4">
+        {subtitle}
+      </p>
     </div>
     <AboutDialog
       appName={appName}

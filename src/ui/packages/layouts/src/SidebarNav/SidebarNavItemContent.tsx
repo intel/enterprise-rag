@@ -33,7 +33,7 @@ export const SidebarNavItemContent = ({
     <span
       className={
         isChild
-          ? "sidebar-nav__link-content--child"
+          ? "flex flex-1 items-center gap-2 pl-[1.375rem]"
           : "flex flex-1 items-center gap-2"
       }
     >

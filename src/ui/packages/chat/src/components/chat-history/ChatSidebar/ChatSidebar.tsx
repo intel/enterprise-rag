@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./ChatSidebar.css";
-
 import { Sidebar } from "@intel-enterprise-rag-ui/layouts";
 import { ReactNode } from "react";
 
@@ -57,7 +55,7 @@ export const ChatSidebar = ({
     footerContent={footerContent}
     viewSwitchButton={viewSwitchButton}
   >
-    <div className="chat-sidebar__new-chat">
+    <div className="mb-3">
       <NewChatButton onPress={onNewChat} />
     </div>
     <ChatHistoryList

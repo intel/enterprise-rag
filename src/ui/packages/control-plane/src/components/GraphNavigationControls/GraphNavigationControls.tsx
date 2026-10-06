@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./GraphNavigationControls.css";
-
 import { IconButton, Tooltip } from "@intel-enterprise-rag-ui/components";
 import { FitViewOptions, Panel, useReactFlow } from "@xyflow/react";
 import classNames from "classnames";
@@ -25,7 +23,7 @@ export const GraphNavigationControls = ({
   return (
     <Panel
       position="bottom-left"
-      className="graph-navigation-controls"
+      className="bg-background/70 flex items-center gap-1 rounded p-1"
       data-testid="graph-navigation-controls"
     >
       <Tooltip

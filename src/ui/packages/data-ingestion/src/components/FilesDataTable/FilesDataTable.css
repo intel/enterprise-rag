@@ -1,38 +1,10 @@
-/* FilesDataTable.scss */
 /* Copyright (C) 2024-2026 Intel Corporation */
 /* SPDX-License-Identifier: Apache-2.0 */
 
 @reference "@intel-enterprise-rag-ui/shadcn-preset/index.css";
 
-.files-data-table-wrapper {
-  @apply flex h-full min-h-0 flex-1 flex-col gap-2;
-}
-.files-data-table-wrapper__header {
-  @apply flex shrink-0 items-center justify-between gap-2;
-}
-.files-data-table-wrapper__header-group {
-  @apply flex items-center gap-4;
-}
-/* Same width + left padding as column 1 (checkbox — see the column-order comment below), so the
-   filters toggle button lines up exactly with the checkbox column it controls. */
-.files-data-table-wrapper__filter-toggle {
-  @apply flex w-[6.5rem] items-center pl-16;
-}
-/* Matches the last column's pr-16 so the batch-actions button lines up with the Actions column
-   above it, instead of being pushed past the true right edge by TableViewLayout's bled-out width
-   (justify-between would otherwise place it 4rem beyond the visible view). */
-.files-data-table-wrapper__header-group:last-child {
-  @apply pr-16;
-}
-.files-data-table-wrapper__search {
-  @apply max-w-[500px];
-}
-.files-data-table-wrapper__legend {
-  @apply text-foreground flex gap-4 px-2 py-1 text-xs;
-}
-.files-data-table-wrapper__legend-item {
-  @apply flex items-center gap-1;
-}
+/* Kept in CSS: per-column widths/pinned offsets target the th/td cells DataTable renders
+   internally, which no className on this component reaches. Wrapper/header styles are inline. */
 
 /* Column order: (1) checkbox (2) Name (3) Status (4) Source (5) Size (6) Chunks
    (7) Processing Time (8) Actions. (1)/(2)/(8) are pinned (see meta.pin in

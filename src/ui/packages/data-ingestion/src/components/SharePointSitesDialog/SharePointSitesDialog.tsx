@@ -192,7 +192,7 @@ const SharePointSitesDialog = () => {
       title="SharePoint Sites"
       footer={
         syncData && (
-          <footer className="sharepoint-sites-dialog__footer">
+          <footer className="flex items-center justify-end gap-4 text-sm">
             {!hasActionableFiles && (
               <p>Manual synchronization is not required</p>
             )}
@@ -211,8 +211,8 @@ const SharePointSitesDialog = () => {
         )
       }
     >
-      <div className="sharepoint-sites-dialog__content">
-        <p className="sharepoint-sites-dialog__description">
+      <div className="h-full w-full text-sm">
+        <p className="mb-4">
           Below you can see the SharePoint sites that are registered for
           synchronization.
           <br />
@@ -221,11 +221,9 @@ const SharePointSitesDialog = () => {
         <AddSharePointSiteForm onSiteAdded={onSiteAdded} />
         {sitesContent}
 
-        <div className="sharepoint-sites-dialog__sync-section">
-          <h4 className="sharepoint-sites-dialog__sync-title">
-            File Synchronization
-          </h4>
-          <p className="sharepoint-sites-dialog__sync-description">
+        <div className="sharepoint-sites-dialog__sync-section border-border mt-6 border-t pt-4">
+          <h4 className="mb-2 text-base font-semibold">File Synchronization</h4>
+          <p className="mb-3">
             Check for file changes across all tracked SharePoint sites. Each
             site is stored in its own bucket for clear separation.
           </p>
@@ -239,7 +237,7 @@ const SharePointSitesDialog = () => {
             {syncBtnContent}
           </Button>
           {syncData && (
-            <div className="sharepoint-sites-dialog__sync-results">
+            <div className="mt-3">
               <Checkbox
                 label="Show all files"
                 size="sm"

@@ -32,11 +32,17 @@ const LinksList = ({
       <ListHeader onClearListBtnPress={clearList} />
       <ul>
         {links.map(({ id, value }) => (
-          <li key={id} className="link-list-item">
+          <li
+            key={id}
+            className="mb-3 grid h-10 grid-cols-[1fr_2.5rem] items-center gap-2"
+          >
             <p
-              className={classNames("link-list-item__url", {
-                highlighted: id === highlightedLinkId,
-              })}
+              className={classNames(
+                "link-list-item__url bg-secondary border-border h-10 overflow-hidden rounded border px-3.5 py-2 text-ellipsis whitespace-nowrap",
+                {
+                  highlighted: id === highlightedLinkId,
+                },
+              )}
             >
               {value}
             </p>

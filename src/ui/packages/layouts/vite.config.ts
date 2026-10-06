@@ -37,13 +37,6 @@ export default defineConfig({
       },
     },
   },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        api: "modern",
-      },
-    },
-  },
   plugins: [tailwindcss(), react(), viteTsconfigPaths(), dts()],
   resolve: {
     alias: {

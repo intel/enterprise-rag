@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./BotMessage.css";
-
 import {
   Alert,
   AlertDescription,
@@ -57,10 +55,13 @@ const BotMessage = ({
         <AlertDescription>{error}</AlertDescription>
       </Alert>
     ) : (
-      <div className="bot-message__text" data-testid="bot-message__text">
+      <div
+        className="max-w-[calc(100vw_-_8rem)] text-sm/relaxed md:max-w-[40rem]"
+        data-testid="bot-message__text"
+      >
         <Markdown text={answer} />
         {showActions && (
-          <footer className="bot-message__footer">
+          <footer className="flex items-center justify-start gap-2 pt-3">
             <CopyButton textToCopy={answer} />
             {onPlayMessage && (
               <PlaySpeechButton
@@ -77,15 +78,18 @@ const BotMessage = ({
       </div>
     );
 
-  const className = classNames("bot-message", {
-    "bot-message--waiting": isWaitingForAnswer,
-    "bot-message--completed": !isWaitingForAnswer,
-  });
+  const className = classNames(
+    "mx-auto w-full self-start px-9 md:w-[42rem] md:px-0",
+    {
+      "mb-6": isWaitingForAnswer,
+      "mb-8": !isWaitingForAnswer,
+    },
+  );
 
   return (
     <div className={className} data-testid={`bot-message-${id}`}>
       {isWaitingForAnswer ? (
-        <div className="bot-message__waiting">
+        <div className="text-primary flex h-10 w-4 items-center justify-center">
           <AnimatedAiIcon />
         </div>
       ) : (

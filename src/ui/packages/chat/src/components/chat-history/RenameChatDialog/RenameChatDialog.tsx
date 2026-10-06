@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./RenameChatDialog.css";
-
 import { AlertDialog, Input } from "@intel-enterprise-rag-ui/components";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 
@@ -75,7 +73,7 @@ export const RenameChatDialog = ({
         label="Chat Name"
         onChange={handleChatNameChange}
       />
-      <p className="rename-chat-dialog__char-count">
+      <p className="text-right text-xs">
         {newChatName.length} / {CHAT_NAME_CHAR_LIMIT} characters
       </p>
     </AlertDialog>

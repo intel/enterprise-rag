@@ -1,14 +1,12 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./SidebarNav.css";
-
 import {
   DisclosureIcon,
   ExternalLinkIcon,
   IconName,
 } from "@intel-enterprise-rag-ui/icons";
-import { isSafeHref, sanitizeHref } from "@intel-enterprise-rag-ui/utils";
+import { cn, isSafeHref, sanitizeHref } from "@intel-enterprise-rag-ui/utils";
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -129,16 +127,12 @@ const NavGroup = ({
       onPress={onToggle}
       trailing={
         <DisclosureIcon
-          className={
-            isExpanded
-              ? "sidebar-nav__chevron"
-              : "sidebar-nav__chevron sidebar-nav__chevron--collapsed"
-          }
+          className={cn("size-3.5 shrink-0", !isExpanded && "-rotate-90")}
         />
       }
     />
     {isExpanded && (
-      <div className="sidebar-nav__children">
+      <div className="mt-2 flex flex-col gap-1">
         {item.children!.map((child) => (
           <NavItem key={child.id} item={child} basePath={basePath} isChild />
         ))}
@@ -189,7 +183,7 @@ export const SidebarNav = ({
 
   return (
     <nav
-      className="sidebar-nav"
+      className="flex flex-col gap-[5px]"
       aria-label={ariaLabel}
       data-testid={dataTestId}
     >

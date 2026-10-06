@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./DataIngestionLayout.css";
-
 import { InfoIcon } from "@intel-enterprise-rag-ui/icons";
 import { Outlet } from "react-router-dom";
 
@@ -25,10 +23,10 @@ export const DataIngestionLayout = ({
   appApiErrors,
   onResetAppApiState,
 }: DataIngestionLayoutProps) => (
-  <div className="data-ingestion-layout">
-    <div className="data-ingestion-layout__info-banner">
-      <InfoIcon />
-      <p>
+  <div className="flex h-full min-h-0 flex-col px-16 pt-6">
+    <div className="bg-secondary border-border mb-4 flex shrink-0 items-start gap-3 rounded-md border px-4 py-3 text-sm">
+      <InfoIcon className="text-foreground mt-0.5 shrink-0 text-base" />
+      <p className="text-foreground">
         This interface is designed for lightweight administrative management:
         monitoring ingestion jobs, checking processing results, and adding small
         sample files or links when needed. For best performance and reliability,
@@ -42,7 +40,7 @@ export const DataIngestionLayout = ({
       onResetAppApiState={onResetAppApiState}
     />
     <EmbeddingModelMigrationBanner getAppEnv={getAppEnv} />
-    <div className="data-ingestion-layout__outlet">
+    <div className="min-h-0 flex-1 overflow-y-auto">
       <Outlet />
     </div>
   </div>

@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./BucketSynchronizationView.css";
-
 import {
   Button,
   Checkbox,
@@ -75,10 +73,10 @@ export const BucketSynchronizationView = () => {
 
   return (
     <section
-      className="bucket-synchronization-view"
+      className="flex h-full min-h-0 flex-col pb-6 text-sm"
       data-testid="data-ingestion-bucket-sync-view"
     >
-      <p className="bucket-synchronization-view__description">
+      <p className="mb-4 shrink-0">
         Below you can see files that need actions to be synchronized inside S3
         buckets.
         <br />
@@ -105,7 +103,7 @@ export const BucketSynchronizationView = () => {
           />
         </>
       )}
-      <footer className="bucket-synchronization-view__footer">
+      <footer className="mt-4 flex shrink-0 items-center justify-end gap-4 text-sm">
         {!hasActionableFiles && <p>Manual synchronization is not required</p>}
         {postFilesSyncError && (
           <p className="error">{ERROR_MESSAGES.POST_FILES_SYNC}</p>

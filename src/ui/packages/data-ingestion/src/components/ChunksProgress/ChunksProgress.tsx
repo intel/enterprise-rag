@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./ChunksProgress.css";
-
 import { Progress } from "@intel-enterprise-rag-ui/components";
 import { memo } from "react";
 
@@ -17,14 +15,14 @@ const ChunksProgress = memo(
       totalChunks > 0 ? Math.round((processedChunks / totalChunks) * 100) : 0;
 
     return (
-      <div className="chunks-progress-bar">
+      <div className="flex flex-nowrap items-center gap-2">
         <Progress
           data-testid="chunks-progress-bar"
           value={processedChunks}
           maxValue={totalChunks}
           aria-label="Processed Chunks"
         />
-        <p className="chunks-progress-bar__count">
+        <p className="text-xs">
           {processedChunks}&nbsp;/&nbsp;{totalChunks}&nbsp;({percentValue}%)
         </p>
       </div>

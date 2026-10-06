@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./dataTableCells.css";
-
 import { IconButton, Tooltip } from "@intel-enterprise-rag-ui/components";
 import {
   S3BucketIcon,
@@ -63,16 +61,14 @@ export const createFilesColumnDefs = (
         },
       }) => {
         const tooltipContent = (
-          <div className="data-table-cell__tooltip">
-            <p className="data-table-cell__tooltip-title">Embedding Model</p>
-            <p className="data-table-cell__tooltip-value">
-              {embedding_model || "unknown"}
-            </p>
+          <div className="text-xs">
+            <p className="mb-1 font-semibold">Embedding Model</p>
+            <p className="font-mono">{embedding_model || "unknown"}</p>
           </div>
         );
 
         return (
-          <div className="data-table-cell__name">
+          <div className="flex items-center text-wrap [overflow-wrap:anywhere]">
             <EmbeddingModelIndicator
               itemEmbeddingModel={embedding_model}
               getAppEnv={getAppEnv}
@@ -80,11 +76,7 @@ export const createFilesColumnDefs = (
             <Tooltip
               title={tooltipContent}
               placement="top"
-              trigger={
-                <span className="data-table-cell__name-trigger">
-                  {fileName}
-                </span>
-              }
+              trigger={<span className="cursor-help">{fileName}</span>}
             />
           </div>
         );
@@ -117,14 +109,14 @@ export const createFilesColumnDefs = (
       }) => {
         if (site_name) {
           return (
-            <span className="data-table-cell__icon-label">
+            <span className="flex items-center gap-1">
               <SharePointSiteIcon aria-hidden="true" />
               {site_name}
             </span>
           );
         }
         return (
-          <span className="data-table-cell__icon-label">
+          <span className="flex items-center gap-1">
             <S3BucketIcon aria-hidden="true" />
             {bucket_name}
           </span>
@@ -196,7 +188,7 @@ export const createFilesColumnDefs = (
     },
     {
       id: "actions",
-      header: () => <p className="data-table-cell__actions-header">Actions</p>,
+      header: () => <p className="w-full text-center">Actions</p>,
       meta: { pin: "right" },
       cell: ({
         row: {
@@ -216,7 +208,7 @@ export const createFilesColumnDefs = (
           status === "ingested";
 
         return (
-          <div className="data-table-cell__actions">
+          <div className="flex items-center justify-end gap-2">
             <Tooltip
               title={site_name ? "Open" : "Download"}
               trigger={

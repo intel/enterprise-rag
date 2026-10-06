@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./SelectedServiceCard.css";
-
 import { Button } from "@intel-enterprise-rag-ui/components";
 import { Fragment, MouseEvent, PropsWithChildren, ReactNode } from "react";
 
@@ -34,16 +32,14 @@ export const SelectedServiceCard = ({
   isReadOnly = false,
 }: SelectedServiceCardProps) => {
   return (
-    <div className="selected-service-card">
-      <div className="selected-service-card__wrapper">
-        <header className="selected-service-card__header">
+    <div>
+      <div className="flex flex-col">
+        <header className="bg-card sticky top-0 z-10 grid grid-cols-[1rem_auto] items-center justify-items-start gap-2 pb-2">
           <ServiceStatusIndicator status={serviceStatus} />
-          <p className="selected-service-card__header__service-name">
-            {serviceName}
-          </p>
+          <p className="font-medium">{serviceName}</p>
           {DebugDialog}
         </header>
-        <div className="selected-service-card__content">
+        <div className="flex flex-col gap-1">
           {serviceDetails && (
             <ServiceDetailsGrid serviceDetails={serviceDetails} />
           )}
@@ -67,11 +63,13 @@ const ServiceDetailsGrid = ({ serviceDetails }: ServiceDetailsGridProps) => {
   }
 
   return (
-    <section className="service-details-grid">
+    <section className="mt-2 grid auto-rows-[1.75rem] grid-cols-2 items-center justify-items-start gap-x-2 gap-y-1">
       {Object.entries(serviceDetails).map(([label, value]) => (
         <Fragment key={label}>
-          <p className="service-detail-label">{label}</p>
-          <p className="service-detail-value">{value}</p>
+          <p className="text-xs font-medium">{label}</p>
+          <p className="w-full overflow-hidden text-xs text-ellipsis whitespace-nowrap">
+            {value}
+          </p>
         </Fragment>
       ))}
     </section>
@@ -83,7 +81,7 @@ const SelectedServiceCardFooter = ({
   onConfirmChangesButtonClick,
   onCancelChangesButtonClick,
 }: SelectedServiceCardFooterProps) => (
-  <footer className="selected-service-card__footer">
+  <footer className="bg-card sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t pt-2">
     <Button
       data-testid="confirm-service-changes-button"
       size="sm"

@@ -113,10 +113,10 @@ const LinksDataTable = ({ getAppEnv }: LinksDataTableProps) => {
   const getRowId = useCallback((row: LinkDataItem) => row.id, []);
 
   return (
-    <div className="links-data-table-wrapper">
-      <div className="links-data-table-wrapper__header">
-        <div className="links-data-table-wrapper__header-group">
-          <div className="links-data-table-wrapper__filter-toggle">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-2">
+      <div className="flex shrink-0 items-center justify-between gap-2">
+        <div className="flex items-center gap-4">
+          <div className="flex w-[6.5rem] items-center pl-16">
             <Tooltip
               title={showFilters ? "Hide filters" : "Show filters"}
               trigger={
@@ -138,10 +138,12 @@ const LinksDataTable = ({ getAppEnv }: LinksDataTableProps) => {
             value={filter}
             placeholder="Filter links by status or link"
             onChange={setFilter}
-            className="links-data-table-wrapper__search"
+            className="max-w-[500px]"
           />
         </div>
-        <div className="links-data-table-wrapper__header-group">
+        {/* pr-16 matches the last column's pr-16 so the batch-actions button lines up with the
+            Actions column instead of being pushed past TableViewLayout's bled-out right edge. */}
+        <div className="flex items-center gap-4 pr-16">
           <BatchActionsDropdown
             selectedCount={selectedLinks.length}
             retryableCount={retryableLinks.length}

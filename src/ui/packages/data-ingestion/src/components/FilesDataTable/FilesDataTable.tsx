@@ -215,10 +215,10 @@ const FilesDataTable = ({
   const getRowId = useCallback((row: FileDataItem) => row.id, []);
 
   return (
-    <div className="files-data-table-wrapper">
-      <div className="files-data-table-wrapper__header">
-        <div className="files-data-table-wrapper__header-group">
-          <div className="files-data-table-wrapper__filter-toggle">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-2">
+      <div className="flex shrink-0 items-center justify-between gap-2">
+        <div className="flex items-center gap-4">
+          <div className="flex w-[6.5rem] items-center pl-16">
             <Tooltip
               title={showFilters ? "Hide filters" : "Show filters"}
               trigger={
@@ -240,10 +240,12 @@ const FilesDataTable = ({
             value={filter}
             placeholder="Filter files by status, bucket, or name"
             onChange={setFilter}
-            className="files-data-table-wrapper__search"
+            className="max-w-[500px]"
           />
         </div>
-        <div className="files-data-table-wrapper__header-group">
+        {/* pr-16 matches the last column's pr-16 so the batch-actions button lines up with the
+            Actions column instead of being pushed past TableViewLayout's bled-out right edge. */}
+        <div className="flex items-center gap-4 pr-16">
           <BatchActionsDropdown
             selectedCount={selectedFiles.length}
             retryableCount={retryableFiles.length}
@@ -255,11 +257,11 @@ const FilesDataTable = ({
         </div>
       </div>
       {Object.keys(sourceMap).length > 0 && (
-        <div className="files-data-table-wrapper__legend">
-          <span className="files-data-table-wrapper__legend-item">
+        <div className="text-foreground flex gap-4 px-2 py-1 text-xs">
+          <span className="flex items-center gap-1">
             <S3BucketIcon aria-hidden="true" /> S3 Bucket
           </span>
-          <span className="files-data-table-wrapper__legend-item">
+          <span className="flex items-center gap-1">
             <SharePointSiteIcon aria-hidden="true" /> SharePoint Site
           </span>
         </div>

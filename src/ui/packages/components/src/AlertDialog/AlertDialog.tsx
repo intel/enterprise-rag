@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./AlertDialog.css";
-
 import { useRef, useState } from "react";
 
 import { Button, ButtonVariant } from "@/Button/Button";
@@ -74,7 +72,7 @@ export const AlertDialog = ({
     >
       <div className="action-dialog">
         {children}
-        <div className="action-dialog__actions">
+        <div className="mt-4 flex justify-end gap-2">
           <Button
             size="sm"
             variant={confirmVariant}

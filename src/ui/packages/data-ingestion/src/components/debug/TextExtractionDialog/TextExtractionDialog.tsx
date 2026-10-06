@@ -10,8 +10,7 @@ import {
   Input,
   LoadingFallback,
 } from "@intel-enterprise-rag-ui/components";
-import { useDebug } from "@intel-enterprise-rag-ui/utils";
-import classNames from "classnames";
+import { cn, useDebug } from "@intel-enterprise-rag-ui/utils";
 import { ChangeEventHandler, FormEvent, useMemo, useState } from "react";
 
 import { PostToExtractTextQueryParams } from "@/types/api";
@@ -64,7 +63,7 @@ export const TextExtractionForm = ({
   const isFormDisabled = isLoadingExtractedText || !isFormEnabled;
 
   return (
-    <div className="text-extraction-dialog__content-form-column">
+    <div className="text-extraction-dialog__content-form-column sticky top-3 self-start">
       <Checkbox
         label="Use Parameters"
         name="use-parameters"
@@ -72,7 +71,7 @@ export const TextExtractionForm = ({
         isDisabled={isLoadingExtractedText}
         onChange={handleEnableFormCheckboxChange}
       />
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="px-7 pb-2">
         <Input
           data-testid="chunk-size-input"
           label="Chunk Size (0-9999)"
@@ -142,12 +141,14 @@ const ExtractedText = ({ extractedText, isError }: ExtractedTextProps) => {
     setVisibleTextOffset((prevOffset) => prevOffset + linesPerPage);
   };
 
-  const preClassNames = classNames({
-    "error-message": isError,
-  });
+  const preClassNames = cn(
+    "text-foreground w-full p-3 text-sm text-wrap [overflow-wrap:anywhere]",
+    // mb-3/min-h-14/italic used to come from control-plane's global .error-message rule
+    isError && "error-message text-destructive mb-3 min-h-14 italic",
+  );
 
   return (
-    <div className="extracted-text">
+    <div className="bg-card flex w-full flex-col items-start p-3">
       <pre className={preClassNames}>{visibleFormattedExtractedText}</pre>
       {isLoadMoreButtonVisible && (
         <Button
@@ -230,7 +231,7 @@ const TextExtractionDialog = ({
       title={dialogTitle}
       data-testid="text-extraction-dialog"
     >
-      <div className="text-extraction-dialog__content">
+      <div className="grid grid-cols-[16rem_1fr]">
         <TextExtractionForm
           isLoadingExtractedText={isLoading}
           onFormSubmit={onFormSubmit}

@@ -244,9 +244,12 @@ export const PromptInput = ({
 
   return (
     <form
-      className={classNames("prompt-input__form", {
-        "prompt-input__form--spark": showSparkAnimation,
-      })}
+      className={classNames(
+        "border-input bg-card focus-within:border-ring focus-within:ring-ring/30 z-10 mx-4 flex w-[calc(100%_-_2rem)] max-w-full items-end gap-2 rounded-md border p-2 focus-within:ring-2 md:mx-auto md:w-[46rem]",
+        {
+          "prompt-input__form--spark": showSparkAnimation,
+        },
+      )}
       onSubmit={handleSubmit}
       data-testid="prompt-input-form"
     >
@@ -258,7 +261,7 @@ export const PromptInput = ({
         placeholder="Enter your prompt..."
         maxLength={PROMPT_MAX_LENGTH}
         rows={1}
-        className="prompt-input"
+        className="placeholder:text-muted-foreground field-sizing-content max-h-60 flex-1 resize-none overflow-y-auto bg-transparent px-1 py-1 text-sm/relaxed outline-none! placeholder:not-italic"
         data-testid="prompt-input-textarea"
         onChange={onChange}
         onKeyDown={handleKeyDown}

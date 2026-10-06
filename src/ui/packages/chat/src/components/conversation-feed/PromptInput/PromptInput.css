@@ -1,18 +1,10 @@
 /* Copyright (C) 2024-2026 Intel Corporation */
 /* SPDX-License-Identifier: Apache-2.0 */
 
-@reference "@intel-enterprise-rag-ui/shadcn-preset/index.css";
-
-.prompt-input__form {
-  @apply border-input bg-input/20 flex items-end gap-2 rounded-md border p-2;
-  @apply focus-within:ring-ring/30 focus-within:ring-2;
-  @apply mx-4 md:mx-auto;
-  @apply z-10 w-[calc(100%_-_2rem)] max-w-full md:w-[46rem];
-}
-
 /* Focal "spark" — a soft breathing glow ring drawing attention to the input on the initial (empty)
    chat view, until the first prompt is sent. Stops for good because the parent unmounts this
-   component once that happens, not via a class toggle here. */
+   component once that happens, not via a class toggle here. Kept in CSS: keyframes, a
+   reduced-motion media query and color-mix() box-shadows. */
 .prompt-input__form--spark {
   animation: prompt-input-spark 2.4s ease-in-out infinite;
 }
@@ -31,14 +23,10 @@
 @media (prefers-reduced-motion: reduce) {
   .prompt-input__form--spark {
     animation: none;
+  }
+  /* :not(:focus-within) so the form's focus-within:ring-2 utility still shows on focus — it used to
+     win on specificity when both rules were unlayered BEM CSS. */
+  .prompt-input__form--spark:not(:focus-within) {
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 40%, transparent);
   }
-}
-
-.prompt-input {
-  @apply field-sizing-content max-h-60 flex-1 resize-none overflow-y-auto bg-transparent px-1 py-1;
-  @apply text-sm/relaxed outline-none;
-}
-.prompt-input::placeholder {
-  @apply text-muted-foreground not-italic;
 }

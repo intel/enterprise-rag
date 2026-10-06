@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./PromptTemplateCard.css";
-
 import { getValidationErrorMessage } from "@intel-enterprise-rag-ui/input-validation";
 import { sanitizeString } from "@intel-enterprise-rag-ui/utils";
 import { ChangeEventHandler, useEffect, useState } from "react";
@@ -92,7 +90,7 @@ export const PromptTemplateCard = ({
       }}
       isReadOnly={isReadOnly}
     >
-      <div className="form-container">
+      <div className="grid h-full grid-rows-[1fr_1fr_auto] gap-4 pt-4 text-xs">
         <ServiceArgumentTextarea
           value={promptTemplateForm.system_prompt_template ?? ""}
           placeholder="Enter system prompt template..."
@@ -110,7 +108,7 @@ export const PromptTemplateCard = ({
           isDisabled={isReadOnly}
         />
         <div>
-          <p className="error error-message">{error}</p>
+          <p className="error mb-3 min-h-14 text-xs italic">{error}</p>
         </div>
       </div>
     </SelectedServiceCard>

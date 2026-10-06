@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./AppHeader.css";
-
 import {
   ColorSchemeSwitch,
   IconButton,
@@ -10,7 +8,7 @@ import {
   useInlineRename,
 } from "@intel-enterprise-rag-ui/components";
 import { IconName, icons } from "@intel-enterprise-rag-ui/icons";
-import classNames from "classnames";
+import { cn } from "@intel-enterprise-rag-ui/utils";
 
 import { AppNameText } from "@/AppNameText/AppNameText";
 import { SidebarToggleButton } from "@/Sidebar/Sidebar";
@@ -52,8 +50,8 @@ export const AppHeader = ({
   });
 
   return (
-    <header className="app-header">
-      <div className="app-header__actions">
+    <header className="bg-background flex h-16 items-center justify-between gap-4 px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
         {!maintenanceMode && onToggleSidebar && (
           <SidebarToggleButton
             isSidebarOpen={isSidebarOpen}
@@ -62,9 +60,11 @@ export const AppHeader = ({
         )}
         {title && (
           <div
-            className={classNames("app-header__title", {
-              "app-header__title--editable": isTitleEditable,
-            })}
+            className={cn(
+              "flex min-w-0 flex-1 items-center gap-2 overflow-hidden",
+              isTitleEditable &&
+                "group/title hover:bg-muted focus-within:bg-muted -mx-2 rounded-md px-2 transition-colors",
+            )}
             onDoubleClick={
               isTitleEditable
                 ? (event) => {
@@ -80,7 +80,7 @@ export const AppHeader = ({
                 {...inputProps}
                 aria-label="Rename title"
                 data-testid="app-header-title-input"
-                className="app-header__title-input"
+                className="max-w-full min-w-0 shrink border-b border-dashed border-current bg-transparent text-sm font-medium outline-none!"
                 size={Math.max(inputProps.value.length, 1)}
                 onClick={(event) => event.stopPropagation()}
                 onMouseDown={(event) => event.stopPropagation()}
@@ -88,7 +88,10 @@ export const AppHeader = ({
               />
             ) : (
               <>
-                <AppNameText appName={title} />
+                <AppNameText
+                  appName={title}
+                  className="overflow-hidden text-ellipsis whitespace-nowrap"
+                />
                 {isTitleEditable && (
                   <Tooltip
                     title="Rename"
@@ -98,7 +101,7 @@ export const AppHeader = ({
                         size="sm"
                         variant="ghost"
                         aria-label="Rename"
-                        className="app-header__rename-button"
+                        className="opacity-0 transition-opacity group-focus-within/title:opacity-100 group-hover/title:opacity-100"
                         onPress={startEditing}
                       />
                     }

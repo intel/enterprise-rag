@@ -71,7 +71,7 @@ export const ControlPlanePanel = ({
         );
       } else {
         return (
-          <div className="control-plane-panel__not-renderable">
+          <div className="flex h-full w-full items-center justify-center">
             <p>Pipeline graph cannot be rendered</p>
           </div>
         );
@@ -86,16 +86,21 @@ export const ControlPlanePanel = ({
       : "Show config panel";
 
   return (
-    <div className="control-plane-panel" data-testid="control-plane-panel">
+    <div
+      className="bg-background relative grid h-full grid-cols-1 overflow-hidden"
+      data-testid="control-plane-panel"
+    >
       <div className="control-plane-panel__dots-bg" aria-hidden="true" />
-      <div className="graph-wrapper">{getControlPlaneContent()}</div>
+      <div className="graph-wrapper relative z-10 h-full w-full">
+        {getControlPlaneContent()}
+      </div>
       {ConfigPanel && (
         <Card
           size="sm"
-          className="config-panel-card"
+          className="absolute top-4 right-4 z-20 w-[22rem] shadow-md"
           data-testid="config-panel-card"
         >
-          <CardHeader className="config-panel-card__header">
+          <CardHeader className="items-center">
             {isConfigPanelVisible && (
               <CardTitle>Service Configuration</CardTitle>
             )}
@@ -119,7 +124,7 @@ export const ControlPlanePanel = ({
           </CardHeader>
           {isConfigPanelVisible && (
             <CardContent
-              className="config-panel-card__body"
+              className="max-h-[70vh] overflow-y-auto"
               data-testid="config-panel-body"
             >
               {ConfigPanel}

@@ -1,17 +1,9 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./ChatHistoryItem.css";
-
-import {
-  Anchor,
-  Button,
-  Tooltip,
-  useInlineRename,
-} from "@intel-enterprise-rag-ui/components";
+import { Button, Tooltip } from "@intel-enterprise-rag-ui/components";
 import { PinFilledIcon } from "@intel-enterprise-rag-ui/icons";
-import classNames from "classnames";
-import { useState } from "react";
+import { HistoryItem } from "@intel-enterprise-rag-ui/layouts";
 
 import type { OnPinChangeHandler } from "@/components/chat-history/ChatHistoryItemMenu/ChatHistoryItemMenu";
 import { ChatHistoryItemMenu } from "@/components/chat-history/ChatHistoryItemMenu/ChatHistoryItemMenu";
@@ -47,102 +39,47 @@ export const ChatHistoryItem = ({
   onExport,
   onRename,
 }: ChatHistoryItemProps) => {
-  const { name } = itemData;
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const { isEditing, startEditing, inputProps } = useInlineRename({
-    value: name,
-    onSubmit: (newName) => onRename(itemData.id, newName),
-    maxLength: CHAT_NAME_CHAR_LIMIT,
-  });
-
-  const handleItemPress = () => {
-    if (isActive) return;
-    onPress(itemData.id);
-  };
-
-  const className = classNames("chat-history-item", {
-    "chat-history-item--active": isActive,
-    "chat-history-item--has-menu-open": isMenuOpen,
-    "chat-history-item--pinned": pinned,
-    "chat-history-item--unpinned": !pinned,
-  });
-
-  const titleOverflowLimit = pinned
-    ? PINNED_TITLE_OVERFLOW_LIMIT
-    : TITLE_OVERFLOW_LIMIT;
-
-  let titleElement;
-  if (isEditing) {
-    titleElement = (
-      <input
-        {...inputProps}
-        aria-label="Rename chat"
-        data-testid="chat-history-item-title-input"
-        className="chat-history-item__title-input"
-        onClick={(event) => event.stopPropagation()}
-        onMouseDown={(event) => event.stopPropagation()}
-        autoFocus
-      />
-    );
-  } else {
-    const titleNode = (
-      <p
-        className="chat-history-item__title"
-        onClick={(event) => event.stopPropagation()}
-        onDoubleClick={(event) => {
-          event.stopPropagation();
-          startEditing();
-        }}
-      >
-        {name}
-      </p>
-    );
-    titleElement =
-      name.length > titleOverflowLimit ? (
-        <Tooltip title={name} trigger={titleNode} placement="right" />
-      ) : (
-        titleNode
-      );
-  }
+  const pinButton = pinned && (
+    <Tooltip
+      title="Unpin"
+      trigger={
+        <Button
+          data-testid="unpin-chat-button"
+          aria-label="Unpin chat"
+          className="text-foreground hover:text-foreground flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center border-none bg-transparent p-0 transition-colors hover:bg-transparent"
+          onPress={onPinChange}
+        >
+          <PinFilledIcon />
+        </Button>
+      }
+    />
+  );
 
   return (
-    <Anchor
+    <HistoryItem
       data-testid="chat-history-item"
-      className={className}
-      onPress={handleItemPress}
-    >
-      {pinned && (
-        <Tooltip
-          title="Unpin"
-          trigger={
-            <Button
-              data-testid="unpin-chat-button"
-              aria-label="Unpin chat"
-              className="chat-history-item__pin-icon"
-              onPress={onPinChange}
-            >
-              <PinFilledIcon />
-            </Button>
-          }
-        />
-      )}
-      {titleElement}
-      {!isEditing && (
-        <div className="chat-history-item__title-fade" aria-hidden="true" />
-      )}
-      <div className="chat-history-item__menu-wrapper">
+      title={itemData.name}
+      isActive={isActive}
+      onPress={() => onPress(itemData.id)}
+      leading={pinButton}
+      titleOverflowLimit={
+        pinned ? PINNED_TITLE_OVERFLOW_LIMIT : TITLE_OVERFLOW_LIMIT
+      }
+      onRename={(newName) => onRename(itemData.id, newName)}
+      renameMaxLength={CHAT_NAME_CHAR_LIMIT}
+      renameAriaLabel="Rename chat"
+      renderMenu={({ isOpen, onOpenChange }) => (
         <ChatHistoryItemMenu
           itemData={itemData}
-          isOpen={isMenuOpen}
-          onOpenChange={setIsMenuOpen}
+          isOpen={isOpen}
+          onOpenChange={onOpenChange}
           pinned={pinned}
           onPinChange={onPinChange}
           onDelete={onDelete}
           onExport={onExport}
           onRename={onRename}
         />
-      </div>
-    </Anchor>
+      )}
+    />
   );
 };

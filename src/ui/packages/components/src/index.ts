@@ -6,7 +6,6 @@ import "./index.css";
 export * from "@/Alert/Alert";
 export * from "@/AlertDialog/AlertDialog";
 export * from "@/Anchor/Anchor";
-export * from "@/AnchorCard/AnchorCard";
 export * from "@/AppProvider/AppProvider";
 export * from "@/Button/Button";
 export * from "@/Card/Card";

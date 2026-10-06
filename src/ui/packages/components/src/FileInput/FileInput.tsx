@@ -1,10 +1,8 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./FileInput.css";
-
 import { FileIcon } from "@intel-enterprise-rag-ui/icons";
-import classNames from "classnames";
+import { cn } from "@intel-enterprise-rag-ui/utils";
 import {
   DragEvent,
   forwardRef,
@@ -85,9 +83,10 @@ export const FileInput = forwardRef<FileInputHandle, FileInputProps>(
       fileInputRef.current!.click();
     }, []);
 
-    const fileInputBoxClassNames = classNames("file-input__box", {
-      "file-input__box--drag-over": isDragOver,
-    });
+    const fileInputBoxClassNames = cn(
+      "bg-secondary border-input flex h-48 w-full flex-col items-center justify-center gap-2.5 rounded border border-dashed p-6 text-center select-none",
+      isDragOver && "bg-secondary/50",
+    );
 
     const fileInputAccept = useMemo(
       () =>
@@ -136,7 +135,7 @@ export const FileInput = forwardRef<FileInputHandle, FileInputProps>(
             <>
               <FileIcon fontSize={20} />
               <p>Drag and Drop File{multiple && "s"}</p>
-              <p className="file-input__box__caption">or</p>
+              <p className="text-xs">or</p>
               <Button
                 data-testid="browse-files-button"
                 size="sm"
@@ -145,7 +144,7 @@ export const FileInput = forwardRef<FileInputHandle, FileInputProps>(
                 Browse Files
               </Button>
               {totalSizeLimit && (
-                <p className="file-input__box__caption">{`Single upload size limit: ${totalSizeLimit}MB`}</p>
+                <p className="text-xs">{`Single upload size limit: ${totalSizeLimit}MB`}</p>
               )}
             </>
           )}
@@ -155,7 +154,7 @@ export const FileInput = forwardRef<FileInputHandle, FileInputProps>(
             ref={fileInputRef}
             type="file"
             accept={fileInputAccept}
-            className="file-input__box__input"
+            className="hidden"
             multiple={multiple}
             aria-label={ariaLabel}
             aria-describedby={hasErrorMessage ? errorMessageId : undefined}
@@ -167,7 +166,7 @@ export const FileInput = forwardRef<FileInputHandle, FileInputProps>(
           <Alert
             variant="error"
             id={errorMessageId}
-            className="file-input__error-message"
+            className="-mt-2 rounded-t-none text-center"
           >
             <AlertDescription>
               {(errorMessage ?? "").split("\n").map((msg, index) => (
@@ -180,9 +179,7 @@ export const FileInput = forwardRef<FileInputHandle, FileInputProps>(
           </Alert>
         )}
         {supportedFileFormatsMsg && (
-          <p className="file-input__supported-formats-message">
-            {supportedFileFormatsMsg}
-          </p>
+          <p className="pt-2 text-xs">{supportedFileFormatsMsg}</p>
         )}
       </div>
     );

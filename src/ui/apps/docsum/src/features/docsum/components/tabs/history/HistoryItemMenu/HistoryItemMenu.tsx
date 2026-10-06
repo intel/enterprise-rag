@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./HistoryItemMenu.css";
-
 import {
   DropdownMenu,
   DropdownMenuItem,
@@ -54,7 +52,7 @@ const HistoryItemMenu = ({
                 icon="more-options"
                 size="sm"
                 aria-label="Manage Summary"
-                className="history-item-menu__trigger"
+                className="hover:bg-background rounded-full"
               />
             }
           />

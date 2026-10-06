@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./GenericScannerInputs.css";
-
 import { useId } from "react";
 
 import { ServiceArgumentCheckbox } from "@/components/ServiceArgumentCheckbox/ServiceArgumentCheckbox";
@@ -123,8 +121,8 @@ export const GenericScannerInputs = <
   const isExpanded = Boolean(previousArgumentsValues.enabled);
 
   return (
-    <div className="generic-scanner-inputs">
-      <div className="generic-scanner-inputs__header">
+    <div className="ring-foreground/10 mt-3 rounded-md ring-1">
+      <div className="px-3">
         <ServiceArgumentCheckbox
           {...enabledFieldConfig}
           label={titleCasedName}
@@ -136,7 +134,7 @@ export const GenericScannerInputs = <
         />
       </div>
       {isExpanded && (
-        <div id={panelId} className="generic-scanner-inputs__panel">
+        <div id={panelId} className="border-foreground/10 border-t px-3 pb-1">
           {Object.entries(otherFieldsConfig).map(([fieldName, fieldConfig]) =>
             renderArgumentInput(
               fieldName,

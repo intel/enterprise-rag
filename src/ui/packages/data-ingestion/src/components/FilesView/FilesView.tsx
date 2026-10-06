@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./FilesView.css";
-
 import FilesDataTable from "@/components/FilesDataTable/FilesDataTable";
 import { GetFilePresignedUrl } from "@/types";
 
@@ -19,7 +17,10 @@ export const FilesView = ({
   downloadFile,
   deleteFile,
 }: FilesViewProps) => (
-  <section className="files-view" data-testid="data-ingestion-files-view">
+  <section
+    className="flex h-full min-h-0 flex-col pb-6"
+    data-testid="data-ingestion-files-view"
+  >
     <FilesDataTable
       getAppEnv={getAppEnv}
       getFilePresignedUrl={getFilePresignedUrl}
