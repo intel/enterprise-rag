@@ -642,10 +642,7 @@ async def _select_named_destination(page, name: str) -> bool:
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_download_admin_bucket_file_via_ui(chat_ui_helper):
-    """UI regression guard: downloading a file from the RBAC-protected ``only-admin`` bucket through
-    the browser must succeed. The UI must attach the Keycloak bearer token to the S3 GET; if it does
-    not, SeaweedFS returns 403 and no browser download is triggered. Replicates the reported flow
-    (admin uploads to only-admin, clicks Download). RBAC-only."""
+    """Admin downloads a file from the RBAC-protected only-admin bucket via the UI; the S3 GET must succeed."""
     if not cfg.get("edp_rbac_enabled"):
         pytest.skip("EDP RBAC is disabled; the only-admin bucket is not meaningful")
 
@@ -687,17 +684,9 @@ async def test_download_admin_bucket_file_via_ui(chat_ui_helper):
         # Best-effort wait for ingestion (backend processing is out of the UI's control)
         await _wait_for_row_in_table(chat_ui_helper, file_name)
 
-        # The actual check: click Download and confirm the browser receives the file.
-        # If the UI omits the bearer token on the S3 GET, SeaweedFS returns 403, the fetch
-        # never resolves to a blob, and no download event fires -> expect_download times out.
         row = page.locator(f'tr:has-text("{file_name}")')
         assert await row.count() > 0, f"Row '{file_name}' not found in the table"
         download_btn = row.first.locator('[data-testid="download-file-button"]')
-        # Observe the S3 GET the browser issues for the file rather than waiting for a download
-        # event. With the bug present the UI omits the RBAC bearer token and SeaweedFS answers 4xx
-        # (so no file and no download); when fixed the GET is authorized (2xx) and the file
-        # downloads. Asserting on the response status fails fast with the real HTTP code instead of
-        # timing out on a download that never fires.
         try:
             async with page.expect_response(
                 lambda r: r.request.method == "GET" and file_name in r.url,
