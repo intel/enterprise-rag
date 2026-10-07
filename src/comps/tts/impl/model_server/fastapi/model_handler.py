@@ -58,7 +58,7 @@ class TTSModel:
             "microsoft/speecht5_hifigan"
         ).to(DEVICE)
 
-        self.embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
+        self.embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", revision="refs/convert/parquet", split="validation")
 
         self.speaker_embeddings_cache = {}
         for voice, idx in SPEECH_T5_SUPPORTED_VOICES.items():
