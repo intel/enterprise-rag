@@ -260,6 +260,7 @@ test = [
 
 [package.dev-dependencies]
 security-overrides = [
+    { name = "pyjwt" },
     { name = "urllib3" },
 ]
 
@@ -283,7 +284,10 @@ requires-dist = [
 provides-extras = ["test"]
 
 [package.metadata.requires-dev]
-security-overrides = [{ name = "urllib3", specifier = ">=2.6.3" }]
+security-overrides = [
+    { name = "pyjwt", specifier = ">=2.14.0" },
+    { name = "urllib3", specifier = ">=2.8.0" },
+]
 
 [[package]]
 name = "jsonschema"

@@ -32,5 +32,6 @@ asyncio_mode = "auto"
 
 [dependency-groups]
 security-overrides = [
-    "urllib3>=2.6.3",
+    "urllib3>=2.8.0",
+    "pyjwt>=2.14.0",
 ]
