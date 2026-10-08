@@ -31,7 +31,7 @@ LLM_WORKLOAD_POD_LABEL_SELECTOR = (
     "kserve.io/component=workload,app.kubernetes.io/name=llama3-8b-awq"
 )
 EMBEDDING_WORKLOAD_POD_LABEL_SELECTOR = (
-    "kserve.io/component=workload,app.kubernetes.io/name=bge-base-en"
+    "kserve.io/component=workload,app.kubernetes.io/name=nomic-embed"
 )
 RERANKER_WORKLOAD_POD_LABEL_SELECTOR = (
     "kserve.io/component=workload,app.kubernetes.io/name=bge-reranker"
@@ -130,7 +130,7 @@ def test_llm_recovery_after_pod_deletion(chatqa_api_helper, k8s_helper):
 @allure.testcase("IEASG-TODO")
 def test_embedding_recovery_after_pod_deletion(chatqa_api_helper, k8s_helper):
     """
-    Kill the embedding workload pod (bge-base-en) and verify the chatqa pipeline
+    Kill the embedding workload pod (nomic-embed) and verify the chatqa pipeline
     recovers: the pod comes back Ready and answers a real question again.
     """
     _verify_recovery_after_pod_deletion(
