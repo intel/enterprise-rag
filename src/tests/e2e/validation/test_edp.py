@@ -562,7 +562,7 @@ def test_edp_extractor_pod_restart_during_extraction(edp_helper, k8s_helper):
     logger.info(f"File correctly transitioned to error state. job_message: {result.get('job_message')}")
 
     logger.info("Waiting for new ingestion pod to become ready...")
-    k8s_helper.wait_for_pod_ready(namespace=EDP_NAMESPACE, label_selector=TEXT_EXTRACTOR_POD_LABEL_SELECTOR, timeout=300)
+    k8s_helper.wait_for_fresh_pod_ready(namespace=EDP_NAMESPACE, label_selector=TEXT_EXTRACTOR_POD_LABEL_SELECTOR, timeout=300)
     logger.info("Ingestion pod is ready.")
 
 @allure.testcase("IEASG-T614")

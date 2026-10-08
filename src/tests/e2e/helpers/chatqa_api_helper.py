@@ -103,6 +103,39 @@ class ChatQaApiHelper(ApiRequestHelper):
         logger.info(f"ChatQA API call duration: {api_call_duration}")
         return ApiResponse(response, api_call_duration)
 
+    def ask_and_assert_answer(self, question, context="", retries=0, retry_delay=10):
+        """Ask a question via /api/v1/chatqna and assert a successful, non-empty answer.
+
+        Returns the answer text. `context` is a short label included in assertion
+        messages (e.g. "baseline", "after recovery") to make failures easier to
+        diagnose. Useful for smoke/resilience checks that a functional answer is
+        produced end-to-end.
+
+        `retries` (with `retry_delay` seconds between attempts) tolerates the
+        window after a pod restart where the pod is already Ready but the model
+        server (vLLM) has not finished starting its HTTP listener yet — a request
+        then fails with a 5xx / connection error even though recovery is on
+        track. Default 0 keeps a single-shot check (e.g. for baseline).
+        """
+        prefix = f"{context}: " if context else ""
+        last = None
+        for attempt in range(retries + 1):
+            response = self.call_chatqa(question)
+            if response.status_code == 200:
+                answer = self.get_text(response)
+                if answer and answer.strip():
+                    logger.info(f"{prefix}ChatQA answer: {answer}")
+                    return answer
+                last = f"{prefix}chatqa returned an empty answer"
+            else:
+                last = (f"{prefix}expected HTTP 200 from /api/v1/chatqna, "
+                        f"got {response.status_code}. Body: {response.text}")
+            if attempt < retries:
+                logger.info(f"{prefix}chatqa not ready yet (attempt {attempt + 1}/{retries + 1}): "
+                            f"{last} — retrying in {retry_delay}s")
+                time.sleep(retry_delay)
+        raise AssertionError(last)
+
     def get_reranked_docs(self, response):
         """Extract the reranked_docs from the response"""
         _, reranked_docs = self.format_response(response)

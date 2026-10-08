@@ -5,6 +5,7 @@
 
 import base64
 import logging
+import time
 
 import kr8s
 import kr8s.objects
@@ -131,6 +132,63 @@ class K8sHelper:
         if deleted == 0:
             raise ResourceNotFound(f"No pods found with label '{label_selector}' in namespace '{namespace}'.")
 
+    def delete_one_pod_by_label(self, namespace, label_selector):
+        """Delete a single pod matching a label selector and return its name.
+
+        Unlike delete_pods_by_label (which deletes ALL matching pods), this
+        deletes only the first match. Intended for failover scenarios where the
+        workload has multiple replicas and we want to kill one while the others
+        keep serving traffic.
+        """
+        logger.debug(f"Deleting one pod with label selector '{label_selector}' in namespace '{namespace}'")
+        pod = self.get_pod_by_label(namespace, label_selector)
+        logger.debug(f"Deleting pod '{pod.name}'")
+        pod.delete()
+        return pod.name
+
+    def wait_for_pod_gone(self, namespace, pod_name, timeout=120, poll_interval=2):
+        """Wait until a specific pod no longer exists in the namespace.
+
+        Useful right after deleting a pod: a controller's replica-count status
+        can still report the old (Terminating) pod as Ready for a moment, so
+        confirming the pod is actually gone before checking for full
+        availability avoids a race where the check passes prematurely.
+        """
+        logger.debug(f"Waiting for pod '{pod_name}' in namespace '{namespace}' to disappear")
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            names = [pod.name for pod in kr8s.get("pods", namespace=namespace)]
+            if pod_name not in names:
+                logger.debug(f"Pod '{pod_name}' is gone")
+                return
+            time.sleep(poll_interval)
+        raise ResourceNotFound(
+            f"Pod '{pod_name}' in namespace '{namespace}' still exists after {timeout}s"
+        )
+
+    def wait_for_deployment_available(self, namespace, name, timeout=300, poll_interval=3):
+        """Wait until a Deployment has all its desired replicas Ready.
+
+        Polls .status.readyReplicas against .spec.replicas. Intended for failover
+        scenarios: after killing one replica, confirm the Deployment returns to
+        full strength.
+        """
+        logger.debug(f"Waiting for deployment '{name}' in namespace '{namespace}' to be fully available")
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            deployments = list(kr8s.get("deployments", namespace=namespace, field_selector={"metadata.name": name}))
+            if deployments:
+                deploy = deployments[0]
+                desired = deploy.spec.replicas
+                ready = deploy.status.get("readyReplicas", 0)
+                logger.debug(f"Deployment '{name}': {ready}/{desired} replicas ready")
+                if ready == desired:
+                    return deploy
+            time.sleep(poll_interval)
+        raise ResourceNotFound(
+            f"Deployment '{name}' in namespace '{namespace}' did not reach full availability within {timeout}s"
+        )
+
     def wait_for_pod_ready(self, namespace, label_selector, timeout=300):
         """Wait until a pod matching label_selector is Ready.
         Already terminating pods are skipped."""
@@ -146,6 +204,29 @@ class K8sHelper:
         raise ResourceNotFound(
             f"No pods found with label '{label_selector}' in namespace '{namespace}'"
         )
+
+    def wait_for_fresh_pod_ready(self, namespace, label_selector, timeout=300, poll_interval=3):
+        """Wait for a freshly-created pod matching label_selector to become Ready.
+
+        Unlike wait_for_pod_ready, this tolerates the short window right after a
+        pod is deleted where only the Terminating pod matches the selector and
+        the ReplicaSet has not yet created its replacement. wait_for_pod_ready
+        skips Terminating pods and would raise ResourceNotFound in that window;
+        here we retry until the replacement appears or the timeout elapses.
+        Intended for pod-restart / recovery scenarios.
+        """
+        logger.debug(f"Waiting for a fresh pod with label '{label_selector}' in namespace '{namespace}'")
+        deadline = time.monotonic() + timeout
+        last_exc = None
+        while time.monotonic() < deadline:
+            remaining = int(deadline - time.monotonic())
+            try:
+                return self.wait_for_pod_ready(namespace, label_selector, timeout=remaining)
+            except ResourceNotFound as exc:
+                last_exc = exc
+                logger.debug("Replacement pod not visible yet, retrying...")
+                time.sleep(poll_interval)
+        raise last_exc
 
     def get_pod_logs(self, namespace, label_selector, since_seconds=None):
         """Get logs from all pods matching a label selector"""

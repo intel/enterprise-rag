@@ -22,6 +22,7 @@ LLM_USVC_POD_LABEL = "app.kubernetes.io/name=llm-usvc"
 EMBEDDING_USVC_POD_LABEL = "app.kubernetes.io/name=embedding-usvc"
 RERANKING_USVC_POD_LABEL = "app.kubernetes.io/name=reranking-usvc"
 LLM_INFERENCE_NAMESPACE = "llm-inference"
+VDB_NAMESPACE = "vdb"
 
 # Backup and restore. The engine lives in the installer; these mirror what it
 # labels its objects with (roles/backup/defaults/main.yaml) and what
