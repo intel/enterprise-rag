@@ -24,19 +24,6 @@ if cfg.get("pipeline_type") != "chatqna":
 
 logger = logging.getLogger(__name__)
 
-# Narrow selectors: each isolates the model-server workload pod (the one that
-# loads the model weights) from the co-located router-scheduler pod, which
-# shares the app.kubernetes.io/name label but is a separate Deployment.
-LLM_WORKLOAD_POD_LABEL_SELECTOR = (
-    "kserve.io/component=workload,app.kubernetes.io/name=llama3-8b-awq"
-)
-EMBEDDING_WORKLOAD_POD_LABEL_SELECTOR = (
-    "kserve.io/component=workload,app.kubernetes.io/name=nomic-embed"
-)
-RERANKER_WORKLOAD_POD_LABEL_SELECTOR = (
-    "kserve.io/component=workload,app.kubernetes.io/name=bge-reranker"
-)
-
 # chatqa microservice selectors (thin proxies, single replica unless noted).
 RETRIEVER_SVC_POD_LABEL_SELECTOR = "app=retriever-svc"
 # llm-svc runs 2 replicas -> failover candidate.
@@ -73,6 +60,29 @@ BASELINE_QUESTION = "What is the capital of France?"
 VDB_FACT_FILE = "test_chunks.txt"
 VDB_FACT_QUESTION = "What is Corwenshirel?"
 VDB_FACT_KEYWORD = "alderwynthiel"
+
+
+def _model_workload_selector(role):
+    """Label selector for the model-server workload pod serving `role`.
+
+    The model name is read from the deployed catalog (config inference_models)
+    instead of being hardcoded, because a cluster may serve any model for a
+    given role. The KServe workload pod carries that name in
+    app.kubernetes.io/name; kserve.io/component=workload narrows the selector to
+    the pod that loads the model weights, excluding the co-located
+    router-scheduler pod, which shares the name label but is a separate
+    Deployment.
+
+    Skips when no model is configured for the role — a pipeline variant may
+    undeploy one (the upload variant is embedding-only).
+    """
+    model = next(
+        (m["name"] for m in cfg.get("inference_models", []) if m.get("role") == role), None
+    )
+    if not model:
+        pytest.skip(f"No model with role '{role}' in the deployed inference_models catalog")
+    logger.info(f"Role '{role}' is served by model '{model}'")
+    return f"kserve.io/component=workload,app.kubernetes.io/name={model}"
 
 
 def _verify_recovery_after_pod_deletion(
@@ -117,39 +127,42 @@ def _verify_recovery_after_pod_deletion(
 @allure.testcase("IEASG-TODO")
 def test_llm_recovery_after_pod_deletion(chatqa_api_helper, k8s_helper):
     """
-    Kill the LLM workload pod (llama3-8b-awq) and verify the chatqa pipeline
-    recovers: the pod comes back Ready and answers a real question again.
+    Kill the LLM workload pod (whatever model serves the 'llm' role) and verify
+    the chatqa pipeline recovers: the pod comes back Ready and answers a real
+    question again.
     """
     _verify_recovery_after_pod_deletion(
         chatqa_api_helper, k8s_helper,
         component="LLM", namespace=LLM_INFERENCE_NAMESPACE,
-        label_selector=LLM_WORKLOAD_POD_LABEL_SELECTOR,
+        label_selector=_model_workload_selector("llm"),
     )
 
 
 @allure.testcase("IEASG-TODO")
 def test_embedding_recovery_after_pod_deletion(chatqa_api_helper, k8s_helper):
     """
-    Kill the embedding workload pod (nomic-embed) and verify the chatqa pipeline
-    recovers: the pod comes back Ready and answers a real question again.
+    Kill the embedding workload pod (whatever model serves the 'embedding'
+    role) and verify the chatqa pipeline recovers: the pod comes back Ready and
+    answers a real question again.
     """
     _verify_recovery_after_pod_deletion(
         chatqa_api_helper, k8s_helper,
         component="embedding", namespace=LLM_INFERENCE_NAMESPACE,
-        label_selector=EMBEDDING_WORKLOAD_POD_LABEL_SELECTOR,
+        label_selector=_model_workload_selector("embedding"),
     )
 
 
 @allure.testcase("IEASG-TODO")
 def test_reranker_recovery_after_pod_deletion(chatqa_api_helper, k8s_helper):
     """
-    Kill the reranker workload pod (bge-reranker) and verify the chatqa pipeline
-    recovers: the pod comes back Ready and answers a real question again.
+    Kill the reranker workload pod (whatever model serves the 'reranking'
+    role) and verify the chatqa pipeline recovers: the pod comes back Ready and
+    answers a real question again.
     """
     _verify_recovery_after_pod_deletion(
         chatqa_api_helper, k8s_helper,
         component="reranker", namespace=LLM_INFERENCE_NAMESPACE,
-        label_selector=RERANKER_WORKLOAD_POD_LABEL_SELECTOR,
+        label_selector=_model_workload_selector("reranking"),
     )
 
 
