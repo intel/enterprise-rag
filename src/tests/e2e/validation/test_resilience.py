@@ -124,7 +124,7 @@ def _verify_recovery_after_pod_deletion(
     )
 
 
-@allure.testcase("IEASG-TODO")
+@allure.testcase("IEASG-T732")
 def test_llm_recovery_after_pod_deletion(chatqa_api_helper, k8s_helper):
     """
     Kill the LLM workload pod (whatever model serves the 'llm' role) and verify
@@ -138,7 +138,7 @@ def test_llm_recovery_after_pod_deletion(chatqa_api_helper, k8s_helper):
     )
 
 
-@allure.testcase("IEASG-TODO")
+@allure.testcase("IEASG-T733")
 def test_embedding_recovery_after_pod_deletion(chatqa_api_helper, k8s_helper):
     """
     Kill the embedding workload pod (whatever model serves the 'embedding'
@@ -152,7 +152,7 @@ def test_embedding_recovery_after_pod_deletion(chatqa_api_helper, k8s_helper):
     )
 
 
-@allure.testcase("IEASG-TODO")
+@allure.testcase("IEASG-T734")
 def test_reranker_recovery_after_pod_deletion(chatqa_api_helper, k8s_helper):
     """
     Kill the reranker workload pod (whatever model serves the 'reranking'
@@ -166,7 +166,7 @@ def test_reranker_recovery_after_pod_deletion(chatqa_api_helper, k8s_helper):
     )
 
 
-@allure.testcase("IEASG-TODO")
+@allure.testcase("IEASG-T735")
 def test_retriever_svc_recovery_after_pod_deletion(chatqa_api_helper, k8s_helper):
     """
     Kill the retriever microservice pod (chatqa namespace) and verify the
@@ -182,7 +182,7 @@ def test_retriever_svc_recovery_after_pod_deletion(chatqa_api_helper, k8s_helper
     )
 
 
-@allure.testcase("IEASG-TODO")
+@allure.testcase("IEASG-T736")
 def test_llm_svc_failover_on_single_replica_deletion(chatqa_api_helper, k8s_helper):
     """
     Failover test: llm-svc runs 2 replicas. Kill ONE replica and verify chatqa
@@ -223,7 +223,7 @@ def test_llm_svc_failover_on_single_replica_deletion(chatqa_api_helper, k8s_help
     logger.info("llm-svc deployment is fully available again")
 
 
-@allure.testcase("IEASG-TODO")
+@allure.testcase("IEASG-T737")
 def test_vdb_data_survives_pod_deletion(chatqa_api_helper, edp_helper, k8s_helper):
     """
     Kill a vdb-redis-cluster member and verify ingested data survives the
