@@ -46,11 +46,13 @@ VDB_POD_NAME_LABEL = "statefulset.kubernetes.io/pod-name"
 MODEL_SERVER_RECOVERY_TIMEOUT = 300
 # Taking a component down kills every replica it has, and the replacements warm
 # up at the same time, competing for CPU: the first replica was Ready after
-# ~160 s where one or two were killed, but ~390 s where four restarted at once.
-# So the budget grows with the number of replicas taken down, rather than the
-# ceiling being raised for everyone — which would hide a regression on a
-# single-replica cluster.
-RECOVERY_TIMEOUT_PER_EXTRA_REPLICA = 100
+# ~160 s where one or two were killed, but 390 s and 492 s on two runs where
+# four restarted at once. So the budget grows with the number of replicas taken
+# down, rather than the ceiling being raised for everyone — which would hide a
+# regression on a single-replica cluster. 180 s per extra replica keeps roughly
+# the same ~1.7x headroom over the slowest four-replica run as the ceiling above
+# has over a single-replica one.
+RECOVERY_TIMEOUT_PER_EXTRA_REPLICA = 180
 # Thin microservices and the redis cluster recover in seconds; 180 s is ample.
 SERVICE_RECOVERY_TIMEOUT = 180
 
