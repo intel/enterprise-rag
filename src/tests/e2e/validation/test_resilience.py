@@ -39,11 +39,18 @@ VDB_POD_LABEL_SELECTOR = "app.kubernetes.io/name=redis-cluster"
 # matches the surviving members (which never went down).
 VDB_POD_NAME_LABEL = "statefulset.kubernetes.io/pod-name"
 
-# Measured cold-recovery time for the LLM on spr8 was ~150-173 s (dominated by
-# ~75 s vLLM engine warmup). The bge models are smaller and recover faster, but
-# a single 300 s ceiling gives ~1.7x headroom for the slowest case on a loaded
-# cluster without masking a genuine regression.
+# Measured cold-recovery time for the LLM on a single-replica cluster was
+# ~150-173 s (dominated by ~75 s vLLM engine warmup). The bge models are smaller
+# and recover faster, but a single 300 s ceiling gives ~1.7x headroom for the
+# slowest case on a loaded cluster without masking a genuine regression.
 MODEL_SERVER_RECOVERY_TIMEOUT = 300
+# Taking a component down kills every replica it has, and the replacements warm
+# up at the same time, competing for CPU: the first replica was Ready after
+# ~160 s where one or two were killed, but ~390 s where four restarted at once.
+# So the budget grows with the number of replicas taken down, rather than the
+# ceiling being raised for everyone — which would hide a regression on a
+# single-replica cluster.
+RECOVERY_TIMEOUT_PER_EXTRA_REPLICA = 100
 # Thin microservices and the redis cluster recover in seconds; 180 s is ample.
 SERVICE_RECOVERY_TIMEOUT = 180
 
@@ -94,20 +101,29 @@ def _verify_recovery_after_pod_deletion(
     label_selector, wait for a fresh pod to become Ready, then verify chatqa
     works again.
 
-    This is a recovery test (single replica -> a brief outage is expected), not
-    a failover test. The assertion is functional (a chatqa request succeeds),
-    not merely that the pod reports Ready, because model servers can report
-    Ready before the inference engine is warmed up. The covered components
-    (LLM, embedding, reranker, retriever) all sit on the chatqa request path, so
-    a broken one surfaces as a failed chatqa call.
+    Every replica of the component is taken down, so the component is fully out
+    regardless of how many replicas the cluster runs — a brief outage is
+    expected. This is therefore a recovery test, not a failover test, and the
+    wait is satisfied by the first replica that comes back: the question is
+    whether the pipeline serves again, not whether every replica is back.
+
+    The assertion is functional (a chatqa request succeeds), not merely that the
+    pod reports Ready, because model servers can report Ready before the
+    inference engine is warmed up. The covered components (LLM, embedding,
+    reranker, retriever) all sit on the chatqa request path, so a broken one
+    surfaces as a failed chatqa call.
     """
     logger.info(f"Baseline: verifying chatqa answers before killing the {component} pod")
     chatqa_api_helper.ask_and_assert_answer(BASELINE_QUESTION, context="baseline")
 
-    logger.info(f"Deleting the {component} pod to simulate a crash...")
-    k8s_helper.delete_pods_by_label(namespace=namespace, label_selector=label_selector)
+    logger.info(f"Deleting the {component} pod(s) to simulate a crash...")
+    deleted = k8s_helper.delete_pods_by_label(namespace=namespace, label_selector=label_selector)
 
-    logger.info(f"Waiting for a fresh {component} pod to become Ready...")
+    timeout += RECOVERY_TIMEOUT_PER_EXTRA_REPLICA * (deleted - 1)
+    logger.info(
+        f"Deleted {deleted} {component} pod(s); waiting up to {timeout}s for a fresh one "
+        "to become Ready..."
+    )
     start = time.monotonic()
     k8s_helper.wait_for_fresh_pod_ready(
         namespace=namespace,

@@ -122,7 +122,11 @@ class K8sHelper:
         raise ResourceNotFound("ConfigMap 'erag-deployment-manifest' not found")
 
     def delete_pods_by_label(self, namespace, label_selector):
-        """Delete all pods matching a label selector in a namespace"""
+        """Delete all pods matching a label selector in a namespace.
+
+        Returns the number of pods deleted, which lets a caller size a recovery
+        wait by how many replicas it just took down.
+        """
         logger.debug(f"Deleting pods with label selector '{label_selector}' in namespace '{namespace}'")
         deleted = 0
         for pod in kr8s.get("pods", namespace=namespace, label_selector=label_selector):
@@ -131,6 +135,7 @@ class K8sHelper:
             deleted += 1
         if deleted == 0:
             raise ResourceNotFound(f"No pods found with label '{label_selector}' in namespace '{namespace}'.")
+        return deleted
 
     def delete_one_pod_by_label(self, namespace, label_selector):
         """Delete a single pod matching a label selector and return its name.
@@ -198,7 +203,15 @@ class K8sHelper:
                 logger.debug(f"Pod '{pod.name}' is Terminating, skipping")
                 continue
             logger.debug(f"Found non-terminating pod '{pod.name}', waiting for condition=Ready")
-            pod.wait("condition=Ready", timeout=timeout)
+            # kr8s surfaces the expiry as a bare TimeoutError from anyio, with no
+            # mention of the pod, namespace or budget that ran out.
+            try:
+                pod.wait("condition=Ready", timeout=timeout)
+            except TimeoutError as exc:
+                raise TimeoutError(
+                    f"Pod '{pod.name}' in namespace '{namespace}' did not reach condition=Ready "
+                    f"within {timeout}s"
+                ) from exc
             logger.debug(f"Pod '{pod.name}' is ready")
             return pod
         raise ResourceNotFound(
