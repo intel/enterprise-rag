@@ -24,7 +24,7 @@
       ansible.builtin.script:
         cmd: >-
           {{ role_path }}/files/resolve_vector_dims.py
-          --embedding-model-id '{{ embedding_model_id }}'
+          --embedding-model-id '{{ embedding_model_id | default(embedding_model_name, true) }}'
           {% if offline_model | default(false) | bool %}
           --offline
           {% endif %}
