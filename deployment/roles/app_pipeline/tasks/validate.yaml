@@ -1,4 +1,15 @@
 ---
+# pipeline_namespace is derived from pipeline metadata (see install.yaml). Validate
+# runs standalone, so load the same metadata here to resolve the namespace.
+- name: "app_pipeline | Load modular pipeline metadata"
+  ansible.builtin.include_vars:
+    file: "{{ pipelines_dir }}/{{ pipeline_type }}/pipeline.yaml"
+    name: pipeline_meta
+
+- name: "app_pipeline | Set pipeline namespace from metadata"
+  ansible.builtin.set_fact:
+    pipeline_namespace: "{{ pipeline_meta.namespace }}"
+
 - name: "app_pipeline | Check GMC Helm release"
   kubernetes.core.helm_info:
     name: "{{ gmc_helm_release_name }}"
