@@ -45,7 +45,7 @@ edp_s3_sqs_event_queue_url: "https://sqs.us-east-1.amazonaws.com/123456789012/my
 edp_s3_bucket_name_regex_filter: ""  # optional: restrict which buckets EDP tracks
 ```
 
-Requires SQS event notifications configured on the S3 bucket for automatic ingestion.
+Requires SQS event notifications configured on the S3 bucket for automatic ingestion. To create the buckets, the queue, and the IAM user with the AWS CLI, see [AWS S3 and SQS Setup](aws_s3.md).
 
 ### S3-compatible (without SQS)
 
@@ -132,7 +132,7 @@ The following values are automatically computed by `roles/app_edp/tasks/ontap_s3
 | Mode | Mechanism | Trade-off |
 |------|-----------|-----------|
 | `insecure` (default) | Envoy Gateway `Backend` with `tls.insecureSkipVerify` and `alpnProtocols: [http/1.1]` | The hop to the array is unverified. ONTAP's certificate is normally self-signed and issued to the SVM, not the data LIF, so verification would fail on the name even with a trusted issuer. |
-| `ca` | Gateway API `BackendTLSPolicy` (`v1alpha3`) validating against a ConfigMap built from `ontap_s3_ca_cert_file` | The only verified option. Needs the experimental-channel CRD and a real CA plus an SNI name the certificate matches (`edp_ontap_s3_sni_hostname`). |
+| `ca` | Gateway API `BackendTLSPolicy` (`v1`) validating against a ConfigMap built from `ontap_s3_ca_cert_file` | The only verified option. Needs a Gateway API bundle from v1.4 on (the platform's `envoy_gateway` role installs one) and a real CA plus an SNI name the certificate matches (`edp_ontap_s3_sni_hostname`). |
 | `plaintext` | No upstream TLS. Also selected by `ontap_s3_tls: false`. | Simplest, defensible on a trusted storage VLAN, but object bytes cross the cluster network unencrypted. |
 
 To use `ca` mode:
@@ -162,6 +162,7 @@ To use `ca` mode:
 
 - **Object keys containing `//`, `/../`, or `%2F` cannot be served through the gateway.** SigV4 signs the path verbatim and Envoy normalizes it, so the array recomputes a different signature and answers `SignatureDoesNotMatch`. EDP refuses to presign such names, so the UI path is unaffected, but keys created by other tools are not reachable.
 - **`routing_mode: path` gets no dedicated listener** because the S3 API then shares the apex hostname with the UI. Use `subdomain` mode.
+- **Which gateway listener serves the S3 host.** The platform's dedicated S3 listener when it exists (it keeps signed paths intact); EDP then only records the host grant. Otherwise EDP publishes the host through the platform's gateway contract (`roles/gateway`, `publish.yaml`) as `ontap-s3` (namespace `edp`) or `seaweedfs-s3` (namespace `seaweedfs`), and the platform picks the mechanism: its own ListenerSet and certificate on a gateway that serves ListenerSets, a host grant on the shared `*.<base_domain_name>` listener otherwise, or the `/s3` path on the apex host in `routing_mode: path`. Those listeners use Envoy's default path normalization, so the key limitation above applies to them. The SeaweedFS admin UI is published the same way (`seaweedfs-admin`, `/seaweedfs` in path mode).
 - **No ONTAP-side provisioning.** The object-store server, the bucket, and the S3 user must exist, and the access keys are inputs. Nothing here creates them.
 
 For the complete end-to-end flow (from `configure` through `init erag` to `install erag`), array-side prerequisites, and the `ontap_*` values themselves, see `docs/NETAPP_ONTAP.md` in Enterprise AI Solutions repository.
@@ -188,6 +189,7 @@ The scheduled task polls buckets for changes at the specified interval and inges
 
 | Topic | Link |
 |-------|------|
+| AWS S3 and SQS setup with the AWS CLI | [aws_s3.md](aws_s3.md) |
 | SharePoint integration (another EDP storage source) | [sharepoint.md](sharepoint.md) |
 | NetApp ONTAP persistent volumes | [NetApp ONTAP and Trident](https://github.com/intel/enterprise-ai-solutions/blob/main/docs/deploy/netapp_ontap.md) |
 | EDP source code and detailed settings | [`src/edp/README.md`](../../src/edp/README.md) |

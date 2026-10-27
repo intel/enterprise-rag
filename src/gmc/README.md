@@ -13,7 +13,7 @@ Istio Service Mesh can also be leveraged to facilitate communication between mic
 
 ## Getting Started
 
-- **CRD** defines are at [config/crd/bases/](config/crd/bases/)
+- **CRD** defines are at [deployment/components/gmc/crds/](../../deployment/components/gmc/crds/)
 - **API** is [api/v1alpha3/](api/v1alpha3/)
 - **Controller** is at [internal/controller/](internal/controller/)
 
