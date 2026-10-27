@@ -61,7 +61,7 @@ function ChatHistoryItem({ name, active }: { name: string; active?: boolean }) {
   return (
     <button
       className={`group/history-item flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs/relaxed ${
-        active ? "ring-ring/50 ring-1" : "hover:bg-muted"
+        active ? "ring-1 ring-ring/50" : "hover:bg-muted"
       }`}
     >
       <span className="flex-1 truncate">{name}</span>
@@ -74,8 +74,8 @@ function ChatHistoryItem({ name, active }: { name: string; active?: boolean }) {
 // not a pill/label badge (ERAG has no Badge component; nothing in apps/packages uses one).
 function SourceChip({ name }: { name: string }) {
   return (
-    <span className="bg-secondary inline-flex h-8 items-center overflow-hidden rounded-md">
-      <span className="bg-primary text-primary-foreground flex h-full items-center px-2">
+    <span className="inline-flex h-8 items-center overflow-hidden rounded-md bg-secondary">
+      <span className="flex h-full items-center bg-primary px-2 text-primary-foreground">
         <FileIcon className="size-3.5" />
       </span>
       <span className="truncate px-2 text-xs">{name}</span>
@@ -95,7 +95,7 @@ function ChatHistorySection({
   return (
     <div className="flex flex-col gap-1">
       <button
-        className="text-muted-foreground flex items-center gap-1 px-2 text-xs font-medium tracking-wide uppercase"
+        className="flex items-center gap-1 px-2 text-xs font-medium tracking-wide text-muted-foreground uppercase"
         onClick={() => setOpen((o) => !o)}
       >
         <CaretDownIcon
@@ -110,7 +110,7 @@ function ChatHistorySection({
 
 function ChatView() {
   return (
-    <div className="ring-foreground/10 flex h-[calc(100vh-4rem)] overflow-hidden rounded-lg ring-1">
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-lg ring-1 ring-foreground/10">
       <aside className="flex w-64 shrink-0 flex-col gap-2 border-r border-[color-mix(in_oklch,var(--border),var(--foreground)_50%)] p-3">
         <Button variant="outline" size="sm" className="justify-start gap-1.5">
           <PlusIcon />
@@ -140,7 +140,7 @@ function ChatView() {
         <Button
           variant="ghost"
           size="sm"
-          className="text-muted-foreground justify-start"
+          className="justify-start text-muted-foreground"
         >
           View all conversations
         </Button>
@@ -155,14 +155,14 @@ function ChatView() {
                 className={`flex gap-2 ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 {message.role === "assistant" && (
-                  <div className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-full">
+                  <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <SparkleIcon className="size-3.5" />
                   </div>
                 )}
                 <div
                   className={`flex max-w-md flex-col gap-2 px-3 py-2 text-xs/relaxed ${
                     message.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-lg"
+                      ? "rounded-lg bg-primary text-primary-foreground"
                       : "text-foreground"
                   }`}
                 >
@@ -198,7 +198,7 @@ function ChatView() {
               <TooltipContent>Send prompt</TooltipContent>
             </Tooltip>
           </form>
-          <p className="text-muted-foreground mx-auto max-w-2xl text-center text-xs">
+          <p className="mx-auto max-w-2xl text-center text-xs text-muted-foreground">
             {CHAT_DISCLAIMER}
           </p>
         </div>

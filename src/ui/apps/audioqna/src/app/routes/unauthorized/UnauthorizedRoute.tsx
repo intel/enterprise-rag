@@ -12,7 +12,7 @@ const UnauthorizedRoute = () => {
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center gap-4">
       <h1 className="text-2xl font-semibold">Access Required</h1>
-      <p className="text-foreground max-w-md text-center text-sm">
+      <p className="max-w-md text-center text-sm text-foreground">
         Your account does not have the required permissions to access this
         application. Please contact your administrator to request an admin,
         user, or maintainer role.

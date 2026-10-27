@@ -100,7 +100,7 @@ const DropdownMenuItem = ({
       aria-selected={isSelected}
       onClick={handleClick}
       className={cn(
-        "hover:bg-background/80 flex cursor-pointer items-center gap-2 px-2 py-1 text-xs/relaxed first-of-type:rounded-t-md last-of-type:rounded-b-md data-disabled:cursor-default data-disabled:opacity-50",
+        "flex cursor-pointer items-center gap-2 px-2 py-1 text-xs/relaxed first-of-type:rounded-t-md last-of-type:rounded-b-md hover:bg-background/80 data-disabled:cursor-default data-disabled:opacity-50",
         className,
       )}
     >
@@ -159,7 +159,7 @@ const DropdownMenuTrigger = ({
         >
           <MenuPrimitive.Popup
             aria-label={ariaLabel}
-            className="bg-popover text-popover-foreground ring-foreground/10 rounded-lg p-1 text-xs/relaxed shadow-md ring-1"
+            className="rounded-lg bg-popover p-1 text-xs/relaxed text-popover-foreground shadow-md ring-1 ring-foreground/10"
           >
             {children}
           </MenuPrimitive.Popup>

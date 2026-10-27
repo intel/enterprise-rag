@@ -267,11 +267,11 @@ h3 {
 }
 
 * *::-webkit-scrollbar-track {
-  @apply bg-scrollbar-track my-2 rounded-xl;
+  @apply my-2 rounded-xl bg-scrollbar-track;
 }
 
 * *::-webkit-scrollbar-thumb {
-  @apply bg-scrollbar-thumb rounded-xl;
+  @apply rounded-xl bg-scrollbar-thumb;
 }
 
 *::selection {
@@ -279,7 +279,7 @@ h3 {
 }
 
 *:focus-visible {
-  @apply outline-ring outline-2 outline-solid;
+  @apply outline-2 outline-ring outline-solid;
 }
 
 p.error {

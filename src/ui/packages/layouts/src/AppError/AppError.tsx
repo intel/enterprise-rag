@@ -45,7 +45,7 @@ export const AppError = ({
           {isNotFound ? (
             <WarningIcon className="mx-auto size-8" />
           ) : (
-            <ErrorIcon className="text-destructive mx-auto size-8" />
+            <ErrorIcon className="mx-auto size-8 text-destructive" />
           )}
           <CardTitle>
             {isNotFound ? "Page not found" : "Something went wrong"}
@@ -58,7 +58,7 @@ export const AppError = ({
         </CardHeader>
         {!isNotFound && status !== undefined && (
           <CardContent>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               Error code: {status}
               {statusText && <> — {statusText}</>}
             </p>

@@ -56,7 +56,7 @@ export const DropdownButton = ({
   return (
     <div className={cn("relative flex w-full gap-0", className)}>
       <ButtonPrimitive
-        className="bg-primary text-primary-foreground disabled:bg-muted disabled:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/30 flex h-7 flex-1 cursor-pointer items-center justify-center gap-1 rounded-l-md px-2 text-xs/relaxed font-medium whitespace-nowrap transition-colors outline-none select-none hover:opacity-90 focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-7 flex-1 cursor-pointer items-center justify-center gap-1 rounded-l-md bg-primary px-2 text-xs/relaxed font-medium whitespace-nowrap text-primary-foreground transition-colors outline-none select-none hover:opacity-90 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50"
         onClick={onPress}
         disabled={isDisabled}
       >
@@ -67,7 +67,7 @@ export const DropdownButton = ({
         ariaLabel={ariaLabel}
         trigger={
           <ButtonPrimitive
-            className="bg-primary text-primary-foreground disabled:bg-muted disabled:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/30 flex h-7 cursor-pointer items-center justify-center rounded-r-md border-l border-white/20 px-2 transition-colors outline-none select-none hover:opacity-90 focus-visible:ring-2 disabled:cursor-not-allowed disabled:border-transparent disabled:opacity-50"
+            className="flex h-7 cursor-pointer items-center justify-center rounded-r-md border-l border-white/20 bg-primary px-2 text-primary-foreground transition-colors outline-none select-none hover:opacity-90 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50"
             disabled={isDisabled}
             aria-label={ariaLabel}
           >

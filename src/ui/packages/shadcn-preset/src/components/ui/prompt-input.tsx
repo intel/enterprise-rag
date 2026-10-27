@@ -45,7 +45,7 @@ function PromptInput({
     <form
       data-slot="prompt-input"
       className={cn(
-        "border-input bg-input/20 focus-within:ring-ring/30 flex items-end gap-2 rounded-md border p-2 focus-within:ring-2",
+        "flex items-end gap-2 rounded-md border border-input bg-input/20 p-2 focus-within:ring-2 focus-within:ring-ring/30",
         className,
       )}
       onSubmit={(event) => {
@@ -62,7 +62,7 @@ function PromptInput({
         // items-end keeps the send button pinned to the bottom as the textarea grows past
         // one line. This py matches a single line's own box height to the button's (size-8,
         // 32px) so the 1-line case still looks vertically centered against it.
-        className="placeholder:text-muted-foreground field-sizing-content max-h-60 flex-1 resize-none bg-transparent px-1 py-1 text-sm/relaxed outline-none"
+        className="field-sizing-content max-h-60 flex-1 resize-none bg-transparent px-1 py-1 text-sm/relaxed outline-none placeholder:text-muted-foreground"
         onChange={(event) => onValueChange(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey) {

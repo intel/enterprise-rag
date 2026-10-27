@@ -45,7 +45,7 @@ const GeneratedSummary = ({
   const getContent = () => {
     if (showLoadingIndicator) {
       return (
-        <div className="text-foreground flex h-full max-h-full min-h-0 w-full flex-1 items-center justify-center rounded bg-transparent px-4 text-sm dark:bg-transparent">
+        <div className="flex h-full max-h-full min-h-0 w-full flex-1 items-center justify-center rounded bg-transparent px-4 text-sm text-foreground dark:bg-transparent">
           <LoadingFallback loadingMessage="Generating your summary..." />
         </div>
       );
@@ -53,14 +53,14 @@ const GeneratedSummary = ({
 
     if (showEmptyState) {
       return (
-        <p className="text-foreground bg-secondary flex h-full max-h-full min-h-0 w-full flex-1 items-center justify-center rounded px-4 text-center text-sm">
+        <p className="flex h-full max-h-full min-h-0 w-full flex-1 items-center justify-center rounded bg-secondary px-4 text-center text-sm text-foreground">
           Your summary will be displayed here
         </p>
       );
     }
 
     return (
-      <div className="text-foreground bg-card border-border relative h-full max-h-full min-h-0 w-full flex-1 rounded border">
+      <div className="relative h-full max-h-full min-h-0 w-full flex-1 rounded border border-border bg-card text-foreground">
         <div
           className="generated-summary__content h-full max-h-full [scrollbar-gutter:stable] overflow-y-auto py-3 pr-14 pl-4 break-words whitespace-pre-wrap"
           data-testid="generated-summary-content"

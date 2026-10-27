@@ -116,7 +116,7 @@ export const Dialog = forwardRef<DialogRef, DialogProps>(
             )}
           >
             <div
-              className="bg-background text-foreground ring-foreground/10 relative w-full rounded-xl ring-1"
+              className="relative w-full rounded-xl bg-background text-foreground ring-1 ring-foreground/10"
               style={{ maxWidth }}
             >
               <div className="flex flex-col gap-4 p-4">

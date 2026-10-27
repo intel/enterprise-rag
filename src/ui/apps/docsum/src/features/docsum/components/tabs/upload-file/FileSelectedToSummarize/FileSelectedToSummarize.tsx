@@ -23,7 +23,7 @@ const FileSelectedToSummarize = ({
 
   return (
     <div
-      className="bg-secondary border-border text-foreground flex h-48 flex-col items-center justify-center gap-2 rounded border-2 px-16"
+      className="flex h-48 flex-col items-center justify-center gap-2 rounded border-2 border-border bg-secondary px-16 text-foreground"
       data-testid="file-selected-to-summarize"
     >
       <span className="text-3xl">{icon}</span>

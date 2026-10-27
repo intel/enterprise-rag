@@ -38,7 +38,7 @@ const LinksList = ({
           >
             <p
               className={classNames(
-                "link-list-item__url bg-secondary border-border h-10 overflow-hidden rounded border px-3.5 py-2 text-ellipsis whitespace-nowrap",
+                "link-list-item__url h-10 overflow-hidden rounded border border-border bg-secondary px-3.5 py-2 text-ellipsis whitespace-nowrap",
                 {
                   highlighted: id === highlightedLinkId,
                 },

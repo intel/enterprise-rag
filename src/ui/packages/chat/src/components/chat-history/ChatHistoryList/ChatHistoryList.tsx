@@ -216,7 +216,7 @@ export const ChatHistoryList = ({
           <>
             {hasPinnedChats && (
               <div className="flex flex-col not-last:mb-4">
-                <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+                <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                   Pinned
                 </p>
                 <SortableChatItems
@@ -248,12 +248,12 @@ export const ChatHistoryList = ({
                     aria-expanded={isExpanded}
                     onClick={() => toggleGroup(group.label)}
                   >
-                    <span className="text-muted-foreground ml-2 text-xs font-medium normal-case">
+                    <span className="ml-2 text-xs font-medium text-muted-foreground normal-case">
                       {group.label}
                     </span>
                     <DisclosureIcon
                       className={classNames(
-                        "text-muted-foreground size-3.5 shrink-0 transition-transform duration-150",
+                        "size-3.5 shrink-0 text-muted-foreground transition-transform duration-150",
                         {
                           "-rotate-90": !isExpanded,
                         },

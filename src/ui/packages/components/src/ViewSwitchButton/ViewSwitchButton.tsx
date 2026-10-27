@@ -32,7 +32,7 @@ export const ViewSwitchButton = ({
   selected,
   onSelectionChange,
 }: ViewSwitchButtonProps) => (
-  <div className="bg-muted flex w-full items-center rounded-sm">
+  <div className="flex w-full items-center rounded-sm bg-muted">
     {options.map((option) => {
       const IconComponent = icons[option.icon];
       const isSelected = option.id === selected;
@@ -51,7 +51,7 @@ export const ViewSwitchButton = ({
           }}
           className={cn(
             "flex h-6 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-sm px-2 text-xs font-medium whitespace-nowrap transition-all",
-            "focus-visible:ring-ring/30 outline-none focus-visible:ring-2",
+            "outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
             isSelected
               ? "bg-background text-foreground"
               : "text-muted-foreground hover:text-foreground",

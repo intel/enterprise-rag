@@ -62,7 +62,7 @@ const BatchDeleteDialog = ({
       isCentered
     >
       <div className="flex flex-col gap-4">
-        <p className="text-foreground text-sm">
+        <p className="text-sm text-foreground">
           Are you sure you want to delete the following {itemType}?
         </p>
         {itemNames.length > 0 && (
@@ -70,7 +70,7 @@ const BatchDeleteDialog = ({
             {itemNames.map((name, index) => (
               <li
                 key={index}
-                className="text-foreground list-disc py-0.5 text-xs break-all"
+                className="list-disc py-0.5 text-xs break-all text-foreground"
               >
                 {name}
               </li>

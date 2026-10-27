@@ -165,7 +165,7 @@ const PasteTextTab = () => {
         <p
           id="paste-text-error-message"
           aria-live="polite"
-          className="text-destructive mt-2 h-4 text-sm"
+          className="mt-2 h-4 text-sm text-destructive"
         >
           {errorMessage}
         </p>

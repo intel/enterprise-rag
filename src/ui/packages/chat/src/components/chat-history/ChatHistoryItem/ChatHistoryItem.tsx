@@ -46,7 +46,7 @@ export const ChatHistoryItem = ({
         <Button
           data-testid="unpin-chat-button"
           aria-label="Unpin chat"
-          className="text-foreground hover:text-foreground flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center border-none bg-transparent p-0 transition-colors hover:bg-transparent"
+          className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center border-none bg-transparent p-0 text-foreground transition-colors hover:bg-transparent hover:text-foreground"
           onPress={onPinChange}
         >
           <PinFilledIcon />

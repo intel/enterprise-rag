@@ -10,7 +10,7 @@ interface UserInfoTextProps {
  * Displays a line of user information (username, email, ...) in the side panel footer.
  */
 export const UserInfoText = ({ text }: UserInfoTextProps) => (
-  <p className="text-foreground overflow-hidden text-left text-xs leading-4 font-normal text-ellipsis whitespace-nowrap">
+  <p className="overflow-hidden text-left text-xs leading-4 font-normal text-ellipsis whitespace-nowrap text-foreground">
     {text}
   </p>
 );

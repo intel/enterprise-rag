@@ -23,7 +23,7 @@ export const GraphNavigationControls = ({
   return (
     <Panel
       position="bottom-left"
-      className="bg-background/70 flex items-center gap-1 rounded p-1"
+      className="flex items-center gap-1 rounded bg-background/70 p-1"
       data-testid="graph-navigation-controls"
     >
       <Tooltip

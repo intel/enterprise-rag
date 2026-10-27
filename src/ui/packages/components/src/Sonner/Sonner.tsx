@@ -20,8 +20,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={colorScheme}
       className="toaster group"
       icons={{
-        success: <SuccessIcon className="text-success size-4" />,
-        error: <ErrorIcon className="text-destructive size-4" />,
+        success: <SuccessIcon className="size-4 text-success" />,
+        error: <ErrorIcon className="size-4 text-destructive" />,
       }}
       style={
         {

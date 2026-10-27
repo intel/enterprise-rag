@@ -29,7 +29,7 @@ const UserMessage = ({ id, question }: UserMessageProps) => {
     >
       <div className="flex w-full flex-col">
         <div
-          className="bg-primary text-primary-foreground mr-9 min-h-[2.5rem] max-w-[calc(100vw_-_10rem)] self-end rounded-lg px-5 py-3 text-sm/relaxed md:mr-0 md:max-w-[40rem]"
+          className="mr-9 min-h-[2.5rem] max-w-[calc(100vw_-_10rem)] self-end rounded-lg bg-primary px-5 py-3 text-sm/relaxed text-primary-foreground md:mr-0 md:max-w-[40rem]"
           data-testid="user-message__text"
         >
           <Markdown text={question} />

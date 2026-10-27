@@ -74,7 +74,7 @@ function ControlPlaneView() {
               showLabel
             />
           ))}
-          <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <GearSixIcon className="size-3.5" />
             Configurable Service
           </div>
@@ -110,7 +110,7 @@ function ControlPlaneView() {
               <CardTitle className="flex items-center justify-between">
                 <span>{service.name}</span>
                 {service.configurable && (
-                  <GearSixIcon className="text-muted-foreground size-3.5" />
+                  <GearSixIcon className="size-3.5 text-muted-foreground" />
                 )}
               </CardTitle>
             </CardHeader>

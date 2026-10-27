@@ -40,7 +40,7 @@ export const Sidebar = ({
 }: SidebarProps) => (
   <nav
     className={cn(
-      "bg-sidebar absolute top-0 z-20 flex h-full w-64 flex-col transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+      "absolute top-0 z-20 flex h-full w-64 flex-col bg-sidebar transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
       isOpen ? "translate-x-0 opacity-100" : "opacity-0",
       direction === "left" && "left-0",
       direction === "left" && !isOpen && "translate-x-64",
@@ -65,7 +65,7 @@ export const Sidebar = ({
         )}
         <div className="mx-2 flex-1 overflow-y-auto">{children}</div>
         {footerContent && (
-          <footer className="border-border flex h-16 items-center border-t px-4">
+          <footer className="flex h-16 items-center border-t border-border px-4">
             {footerContent}
           </footer>
         )}

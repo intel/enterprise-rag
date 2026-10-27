@@ -32,7 +32,7 @@ const FilesList = ({ files, setFiles }: FilesListProps) => {
             key={`file-list-item-${index}`}
             className="mb-3 grid h-10 grid-cols-[1fr_2.5rem] items-center gap-2"
           >
-            <div className="border-border bg-secondary grid h-10 grid-cols-[10fr_2fr] items-center gap-4 rounded border px-3.5 py-2">
+            <div className="grid h-10 grid-cols-[10fr_2fr] items-center gap-4 rounded border border-border bg-secondary px-3.5 py-2">
               <p className="overflow-hidden text-ellipsis whitespace-nowrap">
                 {file.name}
               </p>

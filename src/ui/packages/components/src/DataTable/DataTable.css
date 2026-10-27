@@ -11,7 +11,7 @@ table.data-table thead th {
   @apply text-primary-foreground;
   @apply text-left font-semibold;
   @apply h-8 px-3 py-1;
-  @apply border-t-border border-t;
+  @apply border-t border-t-border;
 }
 table.data-table.data-table--plain-header thead th {
   @apply bg-background;
@@ -47,7 +47,7 @@ th.sortable {
 }
 
 table.data-table thead tr.data-table-filter-row th {
-  @apply bg-background text-foreground h-auto rounded-none py-1 font-normal normal-case;
+  @apply h-auto rounded-none bg-background py-1 font-normal text-foreground normal-case;
   @apply border-t-0;
 }
 
@@ -83,7 +83,7 @@ tbody td[data-pin] {
   @apply h-1.5;
 }
 .data-table-wrapper::-webkit-scrollbar-thumb {
-  @apply bg-scrollbar-thumb rounded-full;
+  @apply rounded-full bg-scrollbar-thumb;
 }
 .data-table-wrapper::-webkit-scrollbar-track {
   @apply bg-transparent;

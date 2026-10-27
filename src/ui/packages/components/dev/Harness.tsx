@@ -54,7 +54,7 @@ const Section = ({
   title: string;
   children: React.ReactNode;
 }) => (
-  <section className="border-border mb-8 rounded border p-4">
+  <section className="mb-8 rounded border border-border p-4">
     <h2 className="mb-4 text-lg font-medium">{title}</h2>
     <div className="flex flex-wrap items-center gap-4">{children}</div>
   </section>
@@ -184,10 +184,10 @@ const ICON_BUTTON_VARIANTS: IconButtonVariant[] = [
 const ButtonMatrix = () => (
   <div className="grid grid-cols-[7rem_1fr_1fr] items-center gap-4">
     <div />
-    <div className="text-muted-foreground text-xs font-medium">
+    <div className="text-xs font-medium text-muted-foreground">
       Default size
     </div>
-    <div className="text-muted-foreground text-xs font-medium">Small</div>
+    <div className="text-xs font-medium text-muted-foreground">Small</div>
     {BUTTON_VARIANTS.map((variant) => (
       <Fragment key={variant}>
         <div className="text-sm font-medium capitalize">{variant}</div>
@@ -203,10 +203,10 @@ const ButtonMatrix = () => (
 const IconButtonMatrix = () => (
   <div className="grid grid-cols-[7rem_1fr_1fr] items-center gap-4">
     <div />
-    <div className="text-muted-foreground text-xs font-medium">
+    <div className="text-xs font-medium text-muted-foreground">
       Default size
     </div>
-    <div className="text-muted-foreground text-xs font-medium">Small</div>
+    <div className="text-xs font-medium text-muted-foreground">Small</div>
     {ICON_BUTTON_VARIANTS.map((variant) => (
       <Fragment key={variant}>
         <div className="text-sm font-medium capitalize">{variant}</div>
@@ -266,7 +266,7 @@ const ComboboxDemo = () => {
 };
 
 export const Harness = () => (
-  <div className="bg-background text-foreground min-h-screen p-6">
+  <div className="min-h-screen bg-background p-6 text-foreground">
     <h1 className="mb-6 text-2xl font-semibold">packages/components harness</h1>
     <div className="mb-6">
       <ColorSchemeSwitch />

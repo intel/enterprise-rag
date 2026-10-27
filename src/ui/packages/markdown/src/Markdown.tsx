@@ -81,7 +81,7 @@ export function Markdown({ text }: MarkdownProps) {
     <>
       {error && (
         <div
-          className="border-destructive bg-destructive/10 text-destructive mb-2 rounded border px-3 py-2 text-sm"
+          className="mb-2 rounded border border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive"
           role="alert"
         >
           {error}

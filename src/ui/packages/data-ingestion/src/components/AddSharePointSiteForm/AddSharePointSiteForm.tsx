@@ -75,7 +75,7 @@ const AddSharePointSiteForm = ({ onSiteAdded }: AddSharePointSiteFormProps) => {
               onClick={togglePopover}
             >
               <ErrorIcon className="text-destructive" />
-              <p className="sharepoint-sites-dialog__error-trigger--text text-destructive cursor-pointer font-semibold underline">
+              <p className="sharepoint-sites-dialog__error-trigger--text cursor-pointer font-semibold text-destructive underline">
                 Error adding site
               </p>
             </div>
@@ -87,7 +87,7 @@ const AddSharePointSiteForm = ({ onSiteAdded }: AddSharePointSiteFormProps) => {
               ariaLabel="SharePoint Error"
               onOpenChange={togglePopover}
             >
-              <section className="bg-destructive/10 text-destructive max-w-80 rounded p-3 text-xs [overflow-wrap:anywhere] shadow-lg">
+              <section className="max-w-80 rounded bg-destructive/10 p-3 text-xs [overflow-wrap:anywhere] text-destructive shadow-lg">
                 {errorMessage}
               </section>
             </Popover>

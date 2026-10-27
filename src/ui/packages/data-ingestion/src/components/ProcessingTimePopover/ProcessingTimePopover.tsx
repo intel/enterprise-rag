@@ -153,7 +153,7 @@ const ProcessingTimePopover = memo(
           ref={triggerRef}
           data-testid="processing-time-popover-trigger"
           variant="ghost"
-          className="text-foreground h-auto cursor-pointer bg-transparent p-0 text-xs underline hover:bg-transparent dark:bg-transparent"
+          className="h-auto cursor-pointer bg-transparent p-0 text-xs text-foreground underline hover:bg-transparent dark:bg-transparent"
           onPress={togglePopover}
         >
           {timer}
@@ -170,7 +170,7 @@ const ProcessingTimePopover = memo(
               <p>Total Processing Time</p>
               <p className="text-right">{formattedTotalProcessingTime}</p>
             </header>
-            <div className="bg-card my-3 flex h-4 w-full overflow-hidden rounded">
+            <div className="my-3 flex h-4 w-full overflow-hidden rounded bg-card">
               {durationLegendItems.map(({ key, className, label }) => {
                 const percent =
                   processingDuration > 0

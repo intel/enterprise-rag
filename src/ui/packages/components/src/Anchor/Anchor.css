@@ -7,7 +7,7 @@ a {
   @apply inline-flex items-center gap-1.5;
   @apply underline! underline-offset-4!;
   @apply text-foreground!;
-  @apply focus-visible:ring-ring/30 rounded-sm outline-none focus-visible:ring-2;
+  @apply rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30;
 }
 a.invalid {
   @apply text-destructive!;

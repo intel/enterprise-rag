@@ -23,7 +23,7 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
   ({ isSelected, onChange, isDisabled, className, children }, ref) => (
     <label
       className={cn(
-        "text-foreground relative mb-0 flex cursor-pointer items-center gap-2",
+        "relative mb-0 flex cursor-pointer items-center gap-2 text-foreground",
         className,
       )}
     >
@@ -32,9 +32,9 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
         checked={isSelected}
         onCheckedChange={onChange}
         disabled={isDisabled}
-        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/30 flex h-[16.6px] w-[28px] items-center rounded-full border-2 border-solid p-[2px] transition-all duration-200 outline-none focus-visible:ring-2"
+        className="flex h-[16.6px] w-[28px] items-center rounded-full border-2 border-solid border-input bg-background p-[2px] transition-all duration-200 outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
       >
-        <SwitchPrimitive.Thumb className="bg-primary block size-3.5 rounded-full transition-all duration-200 data-[checked]:translate-x-[calc(100%-2px)]" />
+        <SwitchPrimitive.Thumb className="block size-3.5 rounded-full bg-primary transition-all duration-200 data-[checked]:translate-x-[calc(100%-2px)]" />
       </SwitchPrimitive.Root>
       {children}
     </label>

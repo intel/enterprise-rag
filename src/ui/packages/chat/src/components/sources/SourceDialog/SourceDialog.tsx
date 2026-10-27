@@ -33,12 +33,12 @@ export const SourceDialog = ({
       trigger={
         <Button
           data-testid="source-dialog-trigger"
-          className={`bg-secondary hover:bg-primary/20 grid h-10 w-full grid-cols-[2.25rem_1fr] items-center gap-0 rounded p-0 ${className ?? ""}`}
+          className={`grid h-10 w-full grid-cols-[2.25rem_1fr] items-center gap-0 rounded bg-secondary p-0 hover:bg-primary/20 ${className ?? ""}`}
         >
-          <div className="bg-primary flex h-10 w-9 items-center justify-center rounded-l px-3">
+          <div className="flex h-10 w-9 items-center justify-center rounded-l bg-primary px-3">
             {triggerIcon}
           </div>
-          <div className="text-foreground overflow-hidden pr-3 pl-3 text-xs text-ellipsis whitespace-nowrap">
+          <div className="overflow-hidden pr-3 pl-3 text-xs text-ellipsis whitespace-nowrap text-foreground">
             {name}
           </div>
         </Button>
@@ -66,7 +66,7 @@ export const SourceDialog = ({
         <div className="mb-4 grid max-h-[50vh] grid-cols-[1.5rem_1fr] items-start gap-3 overflow-y-auto pr-4 [overflow-wrap:anywhere]">
           {citations?.map((text, index) => (
             <Fragment key={`${title}-${index}-citation`}>
-              <span className="bg-primary text-primary-foreground flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                 {index + 1}
               </span>
               <p

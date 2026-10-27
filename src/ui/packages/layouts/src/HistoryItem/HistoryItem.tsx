@@ -90,7 +90,7 @@ export const HistoryItem = ({
     rowElement = (
       <div
         className={cn(
-          "border-input bg-background/80 flex h-7 items-center gap-2 rounded border pr-1 pl-3",
+          "flex h-7 items-center gap-2 rounded border border-input bg-background/80 pr-1 pl-3",
           leadingPadding,
         )}
       >
@@ -116,7 +116,7 @@ export const HistoryItem = ({
         className={cn(
           "group-hover/history-item:bg-background/80",
           leadingPadding,
-          isMenuOpen && "bg-background/80 border-input!",
+          isMenuOpen && "border-input! bg-background/80",
         )}
       />
     );
@@ -132,7 +132,7 @@ export const HistoryItem = ({
     <div
       data-testid={testId}
       className={cn(
-        "group/history-item text-foreground relative shrink-0 text-xs",
+        "group/history-item relative shrink-0 text-xs text-foreground",
         "[--history-item-fade:var(--history-item-bg,var(--sidebar))] focus-within:[--history-item-fade:var(--background)] hover:[--history-item-fade:var(--background)]",
         isMenuOpen && "[--history-item-fade:var(--background)]",
         className,

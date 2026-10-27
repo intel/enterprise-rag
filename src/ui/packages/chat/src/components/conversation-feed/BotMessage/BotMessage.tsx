@@ -90,7 +90,7 @@ const BotMessage = ({
   return (
     <div className={className} data-testid={`bot-message-${id}`}>
       {isWaitingForAnswer ? (
-        <div className="text-primary flex h-10 w-4 items-center justify-center">
+        <div className="flex h-10 w-4 items-center justify-center text-primary">
           <AnimatedAiIcon />
         </div>
       ) : (

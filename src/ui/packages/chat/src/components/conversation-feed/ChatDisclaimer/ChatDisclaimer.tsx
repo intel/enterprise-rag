@@ -11,7 +11,7 @@ interface ChatDisclaimerProps {
 export const ChatDisclaimer = ({
   message = CHAT_DISCLAIMER_DEFAULT_MESSAGE,
 }: ChatDisclaimerProps) => (
-  <p className="text-muted-foreground mx-auto my-4 w-[calc(100%_-_2rem)] max-w-full text-center text-xs leading-[0.875rem] font-normal md:w-[46rem]">
+  <p className="mx-auto my-4 w-[calc(100%_-_2rem)] max-w-full text-center text-xs leading-[0.875rem] font-normal text-muted-foreground md:w-[46rem]">
     {message}
   </p>
 );

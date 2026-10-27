@@ -49,7 +49,7 @@ const UploadErrorsPopover = ({
     const sectionTitle = titleCaseString(dataType);
 
     return (
-      <section className="bg-destructive/10 text-destructive max-w-80 rounded p-3 text-xs [overflow-wrap:anywhere] shadow-lg not-last:mb-4">
+      <section className="max-w-80 rounded bg-destructive/10 p-3 text-xs [overflow-wrap:anywhere] text-destructive shadow-lg not-last:mb-4">
         <h4 className="mb-2 font-medium">{sectionTitle}</h4>
         <p className="mb-2">{uploadErrors[dataType]}</p>
         {isUndeterminedNetworkError && UndeterminedNetworkErrorMessage}
@@ -65,7 +65,7 @@ const UploadErrorsPopover = ({
         onClick={togglePopover}
       >
         <ErrorIcon className="text-destructive" />
-        <p className="text-destructive cursor-pointer font-semibold underline">
+        <p className="cursor-pointer font-semibold text-destructive underline">
           Error during upload
         </p>
       </div>

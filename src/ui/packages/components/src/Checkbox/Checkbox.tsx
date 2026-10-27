@@ -80,11 +80,11 @@ export const Checkbox = ({
         required={isRequired}
         onCheckedChange={onChange}
         className={cn(
-          "border-input bg-background relative m-0 flex size-4 items-center justify-center rounded-[4px] border text-xs/relaxed",
+          "relative m-0 flex size-4 items-center justify-center rounded-[4px] border border-input bg-background text-xs/relaxed",
           "data-[checked]:bg-primary data-[checked]:text-primary-foreground",
-          "data-[readonly]:text-primary data-[readonly]:pointer-events-none data-[readonly]:cursor-default data-[readonly]:bg-transparent data-[readonly]:data-[checked]:bg-transparent",
-          "data-[disabled]:text-primary data-[disabled]:pointer-events-none data-[disabled]:cursor-default data-[disabled]:bg-transparent data-[disabled]:data-[checked]:bg-transparent",
-          "focus-visible:border-ring focus-visible:ring-ring/30 outline-none focus-visible:ring-2",
+          "data-[readonly]:pointer-events-none data-[readonly]:cursor-default data-[readonly]:bg-transparent data-[readonly]:text-primary data-[readonly]:data-[checked]:bg-transparent",
+          "data-[disabled]:pointer-events-none data-[disabled]:cursor-default data-[disabled]:bg-transparent data-[disabled]:text-primary data-[disabled]:data-[checked]:bg-transparent",
+          "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30",
           size === "sm" ? "size-3.5" : "cursor-pointer",
         )}
       >

@@ -34,7 +34,7 @@ export const SelectedServiceCard = ({
   return (
     <div>
       <div className="flex flex-col">
-        <header className="bg-card sticky top-0 z-10 grid grid-cols-[1rem_auto] items-center justify-items-start gap-2 pb-2">
+        <header className="sticky top-0 z-10 grid grid-cols-[1rem_auto] items-center justify-items-start gap-2 bg-card pb-2">
           <ServiceStatusIndicator status={serviceStatus} />
           <p className="font-medium">{serviceName}</p>
           {DebugDialog}
@@ -81,7 +81,7 @@ const SelectedServiceCardFooter = ({
   onConfirmChangesButtonClick,
   onCancelChangesButtonClick,
 }: SelectedServiceCardFooterProps) => (
-  <footer className="bg-card sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t pt-2">
+  <footer className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-card pt-2">
     <Button
       data-testid="confirm-service-changes-button"
       size="sm"

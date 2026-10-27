@@ -257,7 +257,7 @@ const FilesDataTable = ({
         </div>
       </div>
       {Object.keys(sourceMap).length > 0 && (
-        <div className="text-foreground flex gap-4 px-2 py-1 text-xs">
+        <div className="flex gap-4 px-2 py-1 text-xs text-foreground">
           <span className="flex items-center gap-1">
             <S3BucketIcon aria-hidden="true" /> S3 Bucket
           </span>

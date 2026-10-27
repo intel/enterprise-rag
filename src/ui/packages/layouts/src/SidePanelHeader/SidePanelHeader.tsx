@@ -28,10 +28,10 @@ export const SidePanelHeader = ({
 }: SidePanelHeaderProps) => (
   <div className="flex w-full min-w-0 items-center justify-between gap-2">
     <div className="flex min-w-0 flex-col justify-center">
-      <p className="text-foreground mb-0.5 truncate text-sm leading-5 font-bold">
+      <p className="mb-0.5 truncate text-sm leading-5 font-bold text-foreground">
         {title}
       </p>
-      <p className="text-muted-foreground truncate text-xs leading-4">
+      <p className="truncate text-xs leading-4 text-muted-foreground">
         {subtitle}
       </p>
     </div>

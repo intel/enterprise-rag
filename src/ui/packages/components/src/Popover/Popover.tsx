@@ -53,7 +53,7 @@ export const Popover = ({
           <PopoverPrimitive.Popup
             aria-label={ariaLabel}
             className={cn(
-              "bg-popover text-popover-foreground ring-foreground/10 rounded-lg p-2.5 text-xs/relaxed shadow-md ring-1",
+              "rounded-lg bg-popover p-2.5 text-xs/relaxed text-popover-foreground shadow-md ring-1 ring-foreground/10",
               className,
             )}
             {...rest}

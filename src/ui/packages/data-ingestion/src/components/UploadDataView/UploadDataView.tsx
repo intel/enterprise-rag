@@ -206,7 +206,7 @@ export const UploadDataView = ({
         <div className="pt-3">
           <Label>Upload to</Label>
           {hasSites && (
-            <div className="text-foreground mb-1 flex gap-4 pt-1 text-xs">
+            <div className="mb-1 flex gap-4 pt-1 text-xs text-foreground">
               <span className="flex items-center gap-1">
                 <S3BucketIcon aria-hidden="true" /> S3 Bucket
               </span>

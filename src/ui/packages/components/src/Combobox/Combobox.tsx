@@ -95,9 +95,9 @@ export const Combobox = <T extends string = string>({
         disabled={isDisabled}
         onClick={() => handleOpenChange(!isOpen)}
         className={cn(
-          "border-input bg-background text-foreground flex h-7 items-center justify-between gap-1.5 rounded-md border px-2 py-1.5 text-xs/relaxed",
+          "flex h-7 items-center justify-between gap-1.5 rounded-md border border-input bg-background px-2 py-1.5 text-xs/relaxed text-foreground",
           "disabled:pointer-events-none disabled:cursor-default disabled:bg-transparent",
-          "focus-visible:border-ring focus-visible:ring-ring/30 outline-none focus-visible:ring-2",
+          "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30",
           fullWidth && "w-full",
           size === "sm" && "h-6 py-0 pr-1 pl-2 text-xs",
         )}

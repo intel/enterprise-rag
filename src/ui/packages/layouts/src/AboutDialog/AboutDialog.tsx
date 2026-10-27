@@ -56,7 +56,7 @@ export const AboutDialog = ({
       isCentered
     >
       <div className="flex flex-col text-sm leading-relaxed">
-        <h2 className="text-foreground text-lg font-semibold">{appName}</h2>
+        <h2 className="text-lg font-semibold text-foreground">{appName}</h2>
         <p className="mb-4">
           <span className="font-medium">Version:</span> {appVersion}
         </p>
@@ -67,7 +67,7 @@ export const AboutDialog = ({
               href={userGuideUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-foreground inline-flex items-center underline"
+              className="inline-flex items-center text-foreground underline"
             >
               User Guide
               <ExternalLinkIcon fontSize={10} />
@@ -83,7 +83,7 @@ export const AboutDialog = ({
             href={GITHUB_ISSUES_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-foreground inline-flex items-center underline"
+            className="inline-flex items-center text-foreground underline"
           >
             GitHub Issues
             <ExternalLinkIcon fontSize={10} />
@@ -96,7 +96,7 @@ export const AboutDialog = ({
             href={SUPPORT_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-foreground mb-2 inline-flex items-center underline"
+            className="mb-2 inline-flex items-center text-foreground underline"
           >
             create a request
             <ExternalLinkIcon fontSize={10} />

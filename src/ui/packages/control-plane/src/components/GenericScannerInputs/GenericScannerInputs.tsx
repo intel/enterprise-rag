@@ -121,7 +121,7 @@ export const GenericScannerInputs = <
   const isExpanded = Boolean(previousArgumentsValues.enabled);
 
   return (
-    <div className="ring-foreground/10 mt-3 rounded-md ring-1">
+    <div className="mt-3 rounded-md ring-1 ring-foreground/10">
       <div className="px-3">
         <ServiceArgumentCheckbox
           {...enabledFieldConfig}
@@ -134,7 +134,7 @@ export const GenericScannerInputs = <
         />
       </div>
       {isExpanded && (
-        <div id={panelId} className="border-foreground/10 border-t px-3 pb-1">
+        <div id={panelId} className="border-t border-foreground/10 px-3 pb-1">
           {Object.entries(otherFieldsConfig).map(([fieldName, fieldConfig]) =>
             renderArgumentInput(
               fieldName,

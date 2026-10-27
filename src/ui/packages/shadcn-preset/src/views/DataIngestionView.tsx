@@ -105,7 +105,7 @@ function DataIngestionView() {
                   Drag and drop files here, or browse to select files to ingest.
                 </DialogDescription>
               </DialogHeader>
-              <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[color-mix(in_oklch,var(--border),var(--foreground)_50%)] p-8">
+              <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[color-mix(in_oklch,var(--border),var(--foreground)_50%)] p-8 text-muted-foreground">
                 <CloudArrowUpIcon className="size-6" />
                 <p>Drop files to upload</p>
               </div>
@@ -151,7 +151,7 @@ function DataIngestionView() {
                   </TableCell>
                   <TableCell>
                     <div className="flex w-24 flex-col gap-1">
-                      <span className="text-muted-foreground text-right text-xs">
+                      <span className="text-right text-xs text-muted-foreground">
                         {file.chunksProcessed}/{file.chunksTotal}
                       </span>
                       <Progress

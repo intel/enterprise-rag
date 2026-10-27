@@ -126,9 +126,9 @@ export const ServiceCard = ({
 const NoServiceSelectedCard = () => (
   <div
     data-testid="no-service-selected-card"
-    className="bg-card border-l-border flex h-full items-center justify-center border-l"
+    className="flex h-full items-center justify-center border-l border-l-border bg-card"
   >
-    <p className="text-foreground w-[14rem] text-center text-sm">
+    <p className="w-[14rem] text-center text-sm text-foreground">
       Select service from the graph to see its details
     </p>
   </div>

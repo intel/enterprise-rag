@@ -106,9 +106,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           aria-errormessage={isInvalid ? errorId : undefined}
           aria-label={label ? label : name}
           className={cn(
-            "border-input bg-background text-foreground caret-foreground h-7 w-full rounded-md border px-2 py-0.5 text-xs/relaxed",
+            "h-7 w-full rounded-md border border-input bg-background px-2 py-0.5 text-xs/relaxed text-foreground caret-foreground",
             "placeholder:text-muted-foreground placeholder:not-italic",
-            "focus-visible:border-ring focus-visible:ring-ring/30 outline-none focus-visible:ring-2",
+            "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30",
             "read-only:pointer-events-none read-only:cursor-default read-only:bg-transparent disabled:pointer-events-none disabled:cursor-default disabled:bg-transparent",
             isInvalid &&
               "border-destructive bg-destructive/10 caret-destructive focus-visible:ring-destructive/30",
@@ -127,7 +127,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <span
             id={errorId}
             className={cn(
-              "text-destructive block py-2 pl-4 text-sm italic",
+              "block py-2 pl-4 text-sm text-destructive italic",
               size === "sm" && "pl-2 text-xs",
             )}
           >

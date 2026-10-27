@@ -107,9 +107,9 @@ export const Select = <T extends string = string>({
           {...rest}
           id={inputId}
           className={cn(
-            "border-input bg-background text-foreground flex h-7 items-center justify-between gap-1.5 rounded-md border px-2 py-1.5 text-xs/relaxed",
+            "flex h-7 items-center justify-between gap-1.5 rounded-md border border-input bg-background px-2 py-1.5 text-xs/relaxed text-foreground",
             "disabled:pointer-events-none disabled:cursor-default disabled:bg-transparent",
-            "focus-visible:border-ring focus-visible:ring-ring/30 outline-none focus-visible:ring-2",
+            "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30",
             isInvalid &&
               "border-destructive bg-destructive/10 text-destructive focus-visible:ring-destructive/30",
             fullWidth && "w-full",
@@ -132,7 +132,7 @@ export const Select = <T extends string = string>({
           <SelectPrimitive.Positioner className="z-[101]">
             <SelectPrimitive.Popup
               className={cn(
-                "border-border bg-background text-foreground ring-foreground/10 rounded-lg border shadow-md ring-1",
+                "rounded-lg border border-border bg-background text-foreground shadow-md ring-1 ring-foreground/10",
                 "min-w-[var(--anchor-width)]",
               )}
             >
@@ -145,7 +145,7 @@ export const Select = <T extends string = string>({
                       getItemTextValue ? getItemTextValue(item) : undefined
                     }
                     className={cn(
-                      "hover:bg-secondary flex cursor-pointer items-center justify-between gap-2 px-2 py-1 text-xs/relaxed outline-none first-of-type:rounded-t-md last-of-type:rounded-b-md",
+                      "flex cursor-pointer items-center justify-between gap-2 px-2 py-1 text-xs/relaxed outline-none first-of-type:rounded-t-md last-of-type:rounded-b-md hover:bg-secondary",
                       "data-[highlighted]:bg-secondary",
                       size === "sm" && "px-2 py-1 text-xs",
                     )}

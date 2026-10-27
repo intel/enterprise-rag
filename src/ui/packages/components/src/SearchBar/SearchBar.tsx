@@ -51,17 +51,17 @@ export const SearchBar = ({
   return (
     <div
       className={cn(
-        "border-input bg-background focus-within:outline-ring flex h-8 w-full max-w-[350px] items-center gap-2 rounded-lg border px-[10px] py-[6px] focus-within:outline focus-within:outline-2",
+        "flex h-8 w-full max-w-[350px] items-center gap-2 rounded-lg border border-input bg-background px-[10px] py-[6px] focus-within:outline focus-within:outline-2 focus-within:outline-ring",
         className,
       )}
     >
       <SearchIcon
         size={9}
-        className="text-foreground flex h-3 w-3 flex-shrink-0 items-center justify-center"
+        className="flex h-3 w-3 flex-shrink-0 items-center justify-center text-foreground"
       />
       <input
         type="text"
-        className="text-foreground caret-foreground placeholder:text-muted-foreground m-0 flex-1 appearance-none border-0 bg-transparent p-0 text-xs leading-[1.6] shadow-none outline-none placeholder:not-italic placeholder:opacity-90 focus:border-none! focus:shadow-none! focus:outline-none! focus:placeholder:text-transparent"
+        className="m-0 flex-1 appearance-none border-0 bg-transparent p-0 text-xs leading-[1.6] text-foreground caret-foreground shadow-none outline-none placeholder:text-muted-foreground placeholder:not-italic placeholder:opacity-90 focus:border-none! focus:shadow-none! focus:outline-none! focus:placeholder:text-transparent"
         placeholder={placeholder}
         value={inner}
         aria-label="Global table search"
@@ -70,7 +70,7 @@ export const SearchBar = ({
       {inner && (
         <ClearIcon
           size={9}
-          className="text-foreground flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center hover:opacity-70"
+          className="flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center text-foreground hover:opacity-70"
           onClick={handleClear}
         />
       )}

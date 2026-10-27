@@ -221,7 +221,7 @@ const SharePointSitesDialog = () => {
         <AddSharePointSiteForm onSiteAdded={onSiteAdded} />
         {sitesContent}
 
-        <div className="sharepoint-sites-dialog__sync-section border-border mt-6 border-t pt-4">
+        <div className="sharepoint-sites-dialog__sync-section mt-6 border-t border-border pt-4">
           <h4 className="mb-2 text-base font-semibold">File Synchronization</h4>
           <p className="mb-3">
             Check for file changes across all tracked SharePoint sites. Each

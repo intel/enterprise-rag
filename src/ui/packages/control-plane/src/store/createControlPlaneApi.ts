@@ -27,7 +27,8 @@ import { withScope } from "@/utils/scope";
 import { parseServiceDetails } from "@/utils/status";
 
 type DispatchableAction =
-  UnknownAction | ThunkAction<unknown, unknown, unknown, UnknownAction>;
+  | UnknownAction
+  | ThunkAction<unknown, unknown, unknown, UnknownAction>;
 
 export interface CreateControlPlaneApiOptions<T extends string> {
   paramsKeys: readonly string[];

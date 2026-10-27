@@ -148,7 +148,7 @@ const ExtractedText = ({ extractedText, isError }: ExtractedTextProps) => {
   );
 
   return (
-    <div className="bg-card flex w-full flex-col items-start p-3">
+    <div className="flex w-full flex-col items-start bg-card p-3">
       <pre className={preClassNames}>{visibleFormattedExtractedText}</pre>
       {isLoadMoreButtonVisible && (
         <Button

@@ -59,7 +59,7 @@ export const SidebarMenuItem = forwardRef<
       aria-label={ariaLabel ?? label}
       className={cn(
         "sidebar-nav__link sidebar-nav__link--toggle",
-        "focus-visible:ring-ring/30 outline-none focus-visible:ring-2",
+        "outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
         isActive && "sidebar-nav__link--active",
         className,
       )}

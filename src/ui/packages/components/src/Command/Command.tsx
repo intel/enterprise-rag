@@ -12,7 +12,7 @@ export const Command = ({
 }: ComponentProps<typeof CommandPrimitive>) => (
   <CommandPrimitive
     className={cn(
-      "text-popover-foreground flex h-full w-full flex-col outline-none",
+      "flex h-full w-full flex-col text-popover-foreground outline-none",
       className,
     )}
     {...props}
@@ -23,11 +23,11 @@ export const CommandInput = ({
   className,
   ...props
 }: ComponentProps<typeof CommandPrimitive.Input>) => (
-  <div className="border-border flex items-center gap-2 border-b px-2.5 py-1.5">
-    <SearchIcon aria-hidden="true" className="text-muted-foreground size-3" />
+  <div className="flex items-center gap-2 border-b border-border px-2.5 py-1.5">
+    <SearchIcon aria-hidden="true" className="size-3 text-muted-foreground" />
     <CommandPrimitive.Input
       className={cn(
-        "placeholder:text-muted-foreground w-full text-xs/relaxed outline-none disabled:cursor-not-allowed disabled:opacity-50",
+        "w-full text-xs/relaxed outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}
@@ -59,7 +59,7 @@ export const CommandGroup = ({
   ...props
 }: ComponentProps<typeof CommandPrimitive.Group>) => (
   <CommandPrimitive.Group
-    className={cn("text-foreground overflow-hidden", className)}
+    className={cn("overflow-hidden text-foreground", className)}
     {...props}
   />
 );
@@ -71,7 +71,7 @@ export const CommandItem = ({
   <CommandPrimitive.Item
     className={cn(
       "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs/relaxed outline-none select-none",
-      "data-[selected=true]:bg-secondary aria-disabled:pointer-events-none aria-disabled:opacity-50",
+      "aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[selected=true]:bg-secondary",
       className,
     )}
     {...props}

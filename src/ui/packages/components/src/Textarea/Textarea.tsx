@@ -80,9 +80,9 @@ export const Textarea = ({
         placeholder={placeholder}
         aria-invalid={isInvalid}
         className={cn(
-          "border-input bg-background text-foreground caret-foreground h-full w-full resize-none rounded-md border px-2 py-2 text-xs/relaxed",
+          "h-full w-full resize-none rounded-md border border-input bg-background px-2 py-2 text-xs/relaxed text-foreground caret-foreground",
           "placeholder:text-muted-foreground placeholder:not-italic",
-          "focus-visible:border-ring focus-visible:ring-ring/30 outline-none focus-visible:ring-2",
+          "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30",
           "read-only:pointer-events-none read-only:cursor-default read-only:bg-transparent disabled:pointer-events-none disabled:cursor-default disabled:bg-transparent",
           isInvalid &&
             "border-destructive bg-destructive/10 caret-destructive focus-visible:ring-destructive/30",

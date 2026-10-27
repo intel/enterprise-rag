@@ -52,7 +52,7 @@ const HistoryItemMenu = ({
                 icon="more-options"
                 size="sm"
                 aria-label="Manage Summary"
-                className="hover:bg-background rounded-full"
+                className="rounded-full hover:bg-background"
               />
             }
           />

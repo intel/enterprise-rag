@@ -36,15 +36,15 @@ export const Tabs = ({
     value={selectedTab}
     onValueChange={(value) => onSelectionChange(value as TabId)}
   >
-    <TabsPrimitive.List className="bg-muted inline-flex h-8 w-fit items-center justify-center rounded-lg p-[3px]">
+    <TabsPrimitive.List className="inline-flex h-8 w-fit items-center justify-center rounded-lg bg-muted p-[3px]">
       {tabs.map((tab) => (
         <TabsPrimitive.Tab
           key={`${tab.id}-tab`}
           value={tab.id}
           aria-label={`${tab.name} Tab`}
           className={cn(
-            "text-muted-foreground cursor-pointer rounded-md px-1.5 py-0.5 text-xs/relaxed font-medium whitespace-nowrap transition-all",
-            "focus-visible:border-ring focus-visible:ring-ring/30 outline-none focus-visible:ring-2",
+            "cursor-pointer rounded-md px-1.5 py-0.5 text-xs/relaxed font-medium whitespace-nowrap text-muted-foreground transition-all",
+            "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30",
             "data-[selected]:bg-background data-[selected]:text-foreground",
           )}
         >

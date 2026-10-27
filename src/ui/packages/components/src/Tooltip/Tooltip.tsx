@@ -42,7 +42,7 @@ export const Tooltip = forwardRef<HTMLElement, TooltipProps>(
             >
               <TooltipPrimitive.Popup
                 className={cn(
-                  "bg-foreground text-background m-2 rounded-md px-3 py-1.5 text-xs font-normal [overflow-wrap:anywhere] break-words whitespace-normal drop-shadow-md",
+                  "m-2 rounded-md bg-foreground px-3 py-1.5 text-xs font-normal [overflow-wrap:anywhere] break-words whitespace-normal text-background drop-shadow-md",
                   className,
                 )}
               >

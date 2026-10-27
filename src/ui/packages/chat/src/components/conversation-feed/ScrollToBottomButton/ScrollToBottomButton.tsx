@@ -27,7 +27,7 @@ export const ScrollToBottomButton = ({
     className={classNames([
       // hover:bg-primary/hover:text-primary-foreground keep the ghost variant's hover tint off,
       // which the old unlayered BEM rule overrode
-      "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground absolute right-1/2 bottom-4 z-10 size-8 translate-x-1/2 rounded-full text-sm shadow-md shadow-black/50 transition-all duration-300 ease-in-out",
+      "absolute right-1/2 bottom-4 z-10 size-8 translate-x-1/2 rounded-full bg-primary text-sm text-primary-foreground shadow-md shadow-black/50 transition-all duration-300 ease-in-out hover:bg-primary hover:text-primary-foreground",
       show
         ? "pointer-events-auto visible translate-y-0 opacity-100"
         : "pointer-events-none invisible translate-y-4 opacity-0",

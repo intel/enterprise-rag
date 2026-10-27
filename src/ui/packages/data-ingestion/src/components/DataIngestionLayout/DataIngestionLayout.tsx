@@ -24,8 +24,8 @@ export const DataIngestionLayout = ({
   onResetAppApiState,
 }: DataIngestionLayoutProps) => (
   <div className="flex h-full min-h-0 flex-col px-16 pt-6">
-    <div className="bg-secondary border-border mb-4 flex shrink-0 items-start gap-3 rounded-md border px-4 py-3 text-sm">
-      <InfoIcon className="text-foreground mt-0.5 shrink-0 text-base" />
+    <div className="mb-4 flex shrink-0 items-start gap-3 rounded-md border border-border bg-secondary px-4 py-3 text-sm">
+      <InfoIcon className="mt-0.5 shrink-0 text-base text-foreground" />
       <p className="text-foreground">
         This interface is designed for lightweight administrative management:
         monitoring ingestion jobs, checking processing results, and adding small

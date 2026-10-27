@@ -50,7 +50,7 @@ const FileInput = React.forwardRef<FileInputHandle, FileInputProps>(
         <div
           data-slot="file-input"
           data-drag-over={isDragOver || undefined}
-          className="border-input data-[drag-over]:bg-input/15 data-[drag-over]:border-ring flex flex-col items-center gap-1.5 rounded-md border border-dashed px-4 py-6 text-center transition-colors"
+          className="flex flex-col items-center gap-1.5 rounded-md border border-dashed border-input px-4 py-6 text-center transition-colors data-[drag-over]:border-ring data-[drag-over]:bg-input/15"
           onDragOver={(event) => {
             event.preventDefault();
             setIsDragOver(true);
@@ -65,12 +65,12 @@ const FileInput = React.forwardRef<FileInputHandle, FileInputProps>(
             <p className="text-sm">Drop here</p>
           ) : (
             <>
-              <UploadSimpleIcon className="text-muted-foreground size-5" />
+              <UploadSimpleIcon className="size-5 text-muted-foreground" />
               {/* Font-size hierarchy: the instruction (what to do) is the most prominent
                   text here, "or" is a minor divider, and the size limit is secondary
                   supporting info — the Browse button itself carries the primary action. */}
               <p className="text-sm">Drag and drop file{multiple && "s"}</p>
-              <p className="text-muted-foreground text-xs">or</p>
+              <p className="text-xs text-muted-foreground">or</p>
               <Button
                 type="button"
                 size="sm"
@@ -79,7 +79,7 @@ const FileInput = React.forwardRef<FileInputHandle, FileInputProps>(
                 Browse files
               </Button>
               {totalSizeLimit && (
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground">
                   Single upload size limit: {totalSizeLimit}MB
                 </p>
               )}
@@ -95,10 +95,10 @@ const FileInput = React.forwardRef<FileInputHandle, FileInputProps>(
           />
         </div>
         {errorMessage && (
-          <p className="text-destructive text-sm font-medium">{errorMessage}</p>
+          <p className="text-sm font-medium text-destructive">{errorMessage}</p>
         )}
         {supportedFileExtensions && (
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             Supported file formats:{" "}
             {supportedFileExtensions.map((ext) => ext.toUpperCase()).join(", ")}
           </p>

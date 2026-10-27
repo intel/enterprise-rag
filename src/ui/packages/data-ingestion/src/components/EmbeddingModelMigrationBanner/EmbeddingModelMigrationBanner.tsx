@@ -123,7 +123,7 @@ const EmbeddingModelMigrationBanner = ({
   }
 
   return (
-    <div className="bg-secondary border-border mb-4 rounded-md border px-4 py-3 text-sm">
+    <div className="mb-4 rounded-md border border-border bg-secondary px-4 py-3 text-sm">
       <div className="flex items-start gap-3">
         <WarningIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
         <div className="flex-1">
@@ -134,7 +134,7 @@ const EmbeddingModelMigrationBanner = ({
             <button
               onClick={() => refetch()}
               disabled={isFetching}
-              className="hover:bg-accent ml-2 rounded p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              className="ml-2 rounded p-1.5 transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
               title="Refresh migration status"
               aria-label="Refresh migration status"
             >

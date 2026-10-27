@@ -15,7 +15,7 @@ interface AppNameProps {
 export const AppNameText = ({ appName, className }: AppNameProps) => (
   <p
     className={cn(
-      "text-foreground text-left text-base leading-5 font-bold",
+      "text-left text-base leading-5 font-bold text-foreground",
       className,
     )}
   >

@@ -73,7 +73,7 @@ export const ChatHistoryItemMenu = ({
                 icon="more-options"
                 size="sm"
                 aria-label="Manage Chat"
-                className="hover:bg-background rounded-full"
+                className="rounded-full hover:bg-background"
               />
             }
           />

@@ -87,7 +87,7 @@ export const ControlPlanePanel = ({
 
   return (
     <div
-      className="bg-background relative grid h-full grid-cols-1 overflow-hidden"
+      className="relative grid h-full grid-cols-1 overflow-hidden bg-background"
       data-testid="control-plane-panel"
     >
       <div className="control-plane-panel__dots-bg" aria-hidden="true" />

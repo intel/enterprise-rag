@@ -41,13 +41,13 @@ export const Progress = ({
       min={minValue}
       max={maxValue}
       className={cn(
-        "border-input relative h-3 w-32 overflow-hidden rounded-sm border",
+        "relative h-3 w-32 overflow-hidden rounded-sm border border-input",
         className,
       )}
     >
-      <ProgressPrimitive.Track className="bg-background h-full w-full">
+      <ProgressPrimitive.Track className="h-full w-full bg-background">
         <ProgressPrimitive.Indicator
-          className="bg-primary absolute top-0 left-0 h-full transition-all duration-300"
+          className="absolute top-0 left-0 h-full bg-primary transition-all duration-300"
           style={{ width: `${percentage}%` }}
         />
       </ProgressPrimitive.Track>

@@ -50,7 +50,7 @@ export const AppHeader = ({
   });
 
   return (
-    <header className="bg-background flex h-16 items-center justify-between gap-4 px-4">
+    <header className="flex h-16 items-center justify-between gap-4 bg-background px-4">
       <div className="flex min-w-0 flex-1 items-center gap-4">
         {!maintenanceMode && onToggleSidebar && (
           <SidebarToggleButton
@@ -63,7 +63,7 @@ export const AppHeader = ({
             className={cn(
               "flex min-w-0 flex-1 items-center gap-2 overflow-hidden",
               isTitleEditable &&
-                "group/title hover:bg-muted focus-within:bg-muted -mx-2 rounded-md px-2 transition-colors",
+                "group/title -mx-2 rounded-md px-2 transition-colors focus-within:bg-muted hover:bg-muted",
             )}
             onDoubleClick={
               isTitleEditable

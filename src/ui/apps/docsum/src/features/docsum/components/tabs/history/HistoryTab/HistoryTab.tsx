@@ -21,7 +21,7 @@ const HistoryTab = () => {
 
   return (
     <div className="grid h-[calc(100vh-8rem)] grid-cols-[21.25rem_1fr]">
-      <div className="bg-secondary flex h-full flex-col pt-8 pr-8 pb-16 pl-16 [--history-item-bg:var(--secondary)]">
+      <div className="flex h-full flex-col bg-secondary pt-8 pr-8 pb-16 pl-16 [--history-item-bg:var(--secondary)]">
         <p className="mb-4 text-base font-medium">Summary History</p>
         <div className="flex h-full min-h-0 flex-1 [scrollbar-gutter:stable] flex-col gap-1 overflow-y-auto">
           {items.length === 0 && (
@@ -42,7 +42,7 @@ const HistoryTab = () => {
       </div>
       <div className="h-full min-h-0 pt-6 pr-16 pb-16 pl-8">
         {selectedItemData === null && (
-          <p className="text-foreground flex h-full items-center justify-center rounded text-center text-sm">
+          <p className="flex h-full items-center justify-center rounded text-center text-sm text-foreground">
             Select item from the list to view summary details
           </p>
         )}

@@ -108,7 +108,7 @@ function Section({
     // --border resolves to the same value as --popover/--card/--secondary in this
     // palette, so a plain border-border divider is invisible against the page background.
     <section className="flex flex-col gap-3 border-b border-[color-mix(in_oklch,var(--border),var(--foreground)_50%)] pb-8">
-      <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+      <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
         {title}
       </h2>
       <div className="flex flex-wrap items-center gap-3">{children}</div>
@@ -134,13 +134,13 @@ function ComponentsView() {
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th className="text-muted-foreground p-2 text-left text-xs font-medium">
+                <th className="p-2 text-left text-xs font-medium text-muted-foreground">
                   Size
                 </th>
                 {BUTTON_VARIANTS.map((variant) => (
                   <th
                     key={variant}
-                    className="text-muted-foreground p-2 text-left text-xs font-medium capitalize"
+                    className="p-2 text-left text-xs font-medium text-muted-foreground capitalize"
                   >
                     {variant}
                   </th>
@@ -150,7 +150,7 @@ function ComponentsView() {
             <tbody>
               {BUTTON_SIZES.map((size) => (
                 <tr key={size}>
-                  <td className="text-muted-foreground p-2 text-xs">{size}</td>
+                  <td className="p-2 text-xs text-muted-foreground">{size}</td>
                   {BUTTON_VARIANTS.map((variant) => (
                     <td key={variant} className="p-2">
                       <Button variant={variant} size={size}>
@@ -167,7 +167,7 @@ function ComponentsView() {
 
       <Section title="Dialog">
         <div className="flex flex-col gap-1.5">
-          <span className="text-muted-foreground text-xs">
+          <span className="text-xs text-muted-foreground">
             Action / confirm
           </span>
           <Dialog>
@@ -199,7 +199,7 @@ function ComponentsView() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-muted-foreground text-xs">
+          <span className="text-xs text-muted-foreground">
             Regular, larger, centered on overlay
           </span>
           <Dialog>
@@ -337,7 +337,7 @@ function ComponentsView() {
             <SelectItem value="one">
               <span className="flex flex-col">
                 <span>Inside project</span>
-                <span className="text-muted-foreground text-xs">
+                <span className="text-xs text-muted-foreground">
                   .claude/worktrees
                 </span>
               </span>
@@ -356,7 +356,7 @@ function ComponentsView() {
             <SelectItem value="one">
               <span className="flex flex-col">
                 <span>Inside project</span>
-                <span className="text-muted-foreground text-xs">
+                <span className="text-xs text-muted-foreground">
                   .claude/worktrees
                 </span>
               </span>
@@ -374,7 +374,7 @@ function ComponentsView() {
       <Section title="Progress">
         <div className="flex w-full max-w-xs items-center gap-3">
           <div className="flex flex-1 flex-col gap-1">
-            <span className="text-muted-foreground text-right text-xs">
+            <span className="text-right text-xs text-muted-foreground">
               {progress}%
             </span>
             <Progress value={progress} aria-label="Demo progress" />
