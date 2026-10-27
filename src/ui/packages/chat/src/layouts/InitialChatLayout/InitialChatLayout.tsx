@@ -1,9 +1,7 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./InitialChatLayout.css";
-
-import { ChatBotIcon } from "@intel-enterprise-rag-ui/icons";
+import { AiIcon } from "@intel-enterprise-rag-ui/icons";
 import { ChangeEventHandler } from "react";
 
 import { ChatDisclaimer } from "@/components/conversation-feed/ChatDisclaimer/ChatDisclaimer";
@@ -28,9 +26,13 @@ export const InitialChatLayout = ({
   onSpeechToText,
   onSpeechToTextError,
 }: InitialChatLayoutProps) => (
-  <div className="initial-chat-layout">
-    <ChatBotIcon className="initial-chat-layout__chat-bot-icon" />
-    <p className="initial-chat-layout__greeting">What do you want to know?</p>
+  <div className="relative mx-auto mb-24 flex h-full w-full max-w-[calc(100%_-_8rem)] flex-col items-center justify-center">
+    <div className="mb-9 flex items-start justify-center gap-3">
+      <p className="text-center text-[2.5rem] leading-[3rem] font-semibold text-foreground">
+        How can I help?
+      </p>
+      <AiIcon weight="fill" className="shrink-0 text-[2.5rem] text-primary" />
+    </div>
     <PromptInput
       prompt={userInput}
       enableMicrophone={enableMicrophone}
@@ -38,6 +40,7 @@ export const InitialChatLayout = ({
       onSubmit={onPromptSubmit}
       onSpeechToText={onSpeechToText}
       onSpeechToTextError={onSpeechToTextError}
+      showSparkAnimation
     />
     <ChatDisclaimer message={disclaimer} />
   </div>

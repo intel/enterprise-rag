@@ -1,8 +1,0 @@
-{
-  "name": "@intel-enterprise-rag-ui/tailwind-theme",
-  "version": "3.0.0",
-  "style": "theme.css",
-  "files": [
-    "theme.css"
-  ]
-}

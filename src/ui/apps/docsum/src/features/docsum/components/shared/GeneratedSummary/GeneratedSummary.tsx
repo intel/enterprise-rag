@@ -1,8 +1,6 @@
 // Copyright (C) 2024-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-import "./GeneratedSummary.css";
-
 import {
   CopyButton,
   LoadingFallback,
@@ -47,7 +45,7 @@ const GeneratedSummary = ({
   const getContent = () => {
     if (showLoadingIndicator) {
       return (
-        <div className="generated-summary__loading">
+        <div className="flex h-full max-h-full min-h-0 w-full flex-1 items-center justify-center rounded bg-transparent px-4 text-sm text-foreground dark:bg-transparent">
           <LoadingFallback loadingMessage="Generating your summary..." />
         </div>
       );
@@ -55,22 +53,22 @@ const GeneratedSummary = ({
 
     if (showEmptyState) {
       return (
-        <p className="generated-summary__no-summary">
+        <p className="flex h-full max-h-full min-h-0 w-full flex-1 items-center justify-center rounded bg-secondary px-4 text-center text-sm text-foreground">
           Your summary will be displayed here
         </p>
       );
     }
 
     return (
-      <div className="generated-summary__result">
+      <div className="relative h-full max-h-full min-h-0 w-full flex-1 rounded border border-border bg-card text-foreground">
         <div
-          className="generated-summary__content"
+          className="generated-summary__content h-full max-h-full [scrollbar-gutter:stable] overflow-y-auto py-3 pr-14 pl-4 break-words whitespace-pre-wrap"
           data-testid="generated-summary-content"
         >
           <Markdown text={displaySummary ?? ""} />
         </div>
         {showCopyButton && (
-          <span className="copy-btn-wrapper">
+          <span className="absolute top-0 right-0 mx-4 my-2">
             <CopyButton textToCopy={displaySummary ?? ""} />
           </span>
         )}
@@ -80,9 +78,9 @@ const GeneratedSummary = ({
 
   return (
     <>
-      <div className="generated-summary">
-        <div className="generated-summary__header">
-          <p>Summary</p>
+      <div className="grid h-full max-h-full grid-cols-1 grid-rows-[auto_1fr]">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="font-medium">Summary</p>
           {showExportButton && (
             <ExportButton onPress={() => setIsExportDialogOpen(true)} />
           )}

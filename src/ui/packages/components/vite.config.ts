@@ -38,4 +38,9 @@ export default defineConfig({
       "@/": resolve(__dirname, "./src/"),
     },
   },
+  // Dev-only harness server (see index.html / dev/) — port fixed so preview tooling can target it
+  // reliably; unrelated to `vite build`.
+  server: {
+    port: 5180,
+  },
 });

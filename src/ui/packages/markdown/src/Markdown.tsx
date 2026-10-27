@@ -33,7 +33,7 @@ export function Markdown({ text }: MarkdownProps) {
       const div = document.createElement("div");
       div.textContent = text;
       setHtml(
-        `<pre class="whitespace-pre-wrap text-sm text-light-status-error dark:text-dark-status-error">${div.innerHTML}</pre>`,
+        `<pre class="whitespace-pre-wrap text-sm text-destructive">${div.innerHTML}</pre>`,
       );
     }
   }, [text]);
@@ -81,7 +81,7 @@ export function Markdown({ text }: MarkdownProps) {
     <>
       {error && (
         <div
-          className="mb-2 rounded-sm border border-light-status-error bg-light-status-error/10 px-3 py-2 text-sm text-light-status-error dark:border-dark-status-error dark:bg-dark-status-error/10 dark:text-dark-status-error"
+          className="mb-2 rounded border border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive"
           role="alert"
         >
           {error}

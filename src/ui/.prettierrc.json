@@ -5,5 +5,5 @@
     "prettier-plugin-organize-imports",
     "prettier-plugin-tailwindcss"
   ],
-  "tailwindStylesheet": "./packages/tailwind-theme/theme.css"
+  "tailwindStylesheet": "./packages/shadcn-preset/src/index.css"
 }
