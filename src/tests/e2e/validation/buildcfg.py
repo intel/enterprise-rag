@@ -17,3 +17,7 @@ def keycloak_base_url():
         prefix = cfg.get("erag_keycloak_default_path_prefix") or cfg.get("keycloak_path") or "/keycloak"
         return f"https://{fqdn}{prefix}"
     return f"https://keycloak.{fqdn}"
+
+
+def is_openshift():
+    return cfg.get("cluster_distribution") == "openshift"
