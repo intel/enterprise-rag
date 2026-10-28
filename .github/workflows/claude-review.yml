@@ -22,7 +22,7 @@ jobs:
           persist-credentials: false
       - name: fetch PR diff
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.AI_SYS_BOT_GH_TOKEN || github.token }}
           PR: ${{ github.event.pull_request.number }}
         run: gh pr diff "$PR" -R "$GITHUB_REPOSITORY" > "$RUNNER_TEMP/pr.diff" || true
       - uses: anthropics/claude-code-action@v1
@@ -31,7 +31,7 @@ jobs:
           AWS_REGION: us-east-2
         with:
           use_bedrock: "true"
-          github_token: ${{ github.token }}
+          github_token: ${{ secrets.AI_SYS_BOT_GH_TOKEN || github.token }}
           track_progress: true
           prompt: |
             Review this PR against .github/REVIEW_RULES.md (read it first).
