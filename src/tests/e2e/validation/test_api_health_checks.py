@@ -29,9 +29,9 @@ def test_api_health_checks(generic_api_helper):
             continue
         container = pod.spec.containers[0]
         if container.get('livenessProbe'):
-            lp = container.get('livenessProbe')
-            path = lp.get("httpGet", {}).get("path")
-            port_name = lp.get("httpGet", {}).get("port")
+            http_get = container.get('livenessProbe').get("httpGet", {})
+            path = http_get.get("path")
+            port_name = http_get.get("port")
             if path in ["v1/health_check", "/v1/health_check", "/health", "/healthz"]:
                 app_name = pod.metadata.labels.get("app.kubernetes.io/name")
                 if not app_name:
@@ -52,7 +52,7 @@ def test_api_health_checks(generic_api_helper):
                              "namespace": ns,
                              "port": container_port,
                              "health_path": path,
-                             "scheme": lp.httpGet.get("scheme", "HTTP").lower()})
+                             "scheme": http_get.get("scheme", "HTTP").lower()})
 
     failed_microservices = []
     for service in svcs:
