@@ -209,7 +209,7 @@ async def _send_chat_and_get_response(chat_ui_helper, prompt: str) -> str:
 # TEST CASES
 # ============================================================================
 
-@allure.testcase("IEASG-T394")
+@allure.testcase("DSPTV-T302")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_change_max_tokens_via_ui_affects_response(
@@ -280,7 +280,7 @@ async def test_change_max_tokens_via_ui_affects_response(
     logger.info("Test completed: max_new_tokens change validated")
 
 
-@allure.testcase("IEASG-T395")
+@allure.testcase("DSPTV-T303")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_toggle_streaming_via_ui(chat_ui_helper, fingerprint_api_helper):
@@ -343,7 +343,7 @@ async def test_toggle_streaming_via_ui(chat_ui_helper, fingerprint_api_helper):
     logger.info("Test completed: Stream toggle validated")
 
 
-@allure.testcase("IEASG-T396")
+@allure.testcase("DSPTV-T304")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_guard_blocks_question_after_ui_change(

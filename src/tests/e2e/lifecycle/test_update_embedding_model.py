@@ -30,7 +30,7 @@ def _load_pre_update_state():
         )
 
 
-@allure.testcase("IEASG-T311")
+@allure.testcase("DSPTV-T204")
 def test_update_embedding_model(k8s_helper, edp_helper, chatqa_api_helper):
     """
     Verify an embedding-model update took effect end to end (CLUSTER_STATE=after-update).

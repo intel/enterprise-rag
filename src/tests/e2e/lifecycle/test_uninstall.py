@@ -108,28 +108,28 @@ def _verify_layer(k8s_helper, layer):
     )
 
 
-@allure.testcase("IEASG-T711")
+@allure.testcase("DSPTV-T217")
 def test_uninstall_erag(k8s_helper):
     """After `es_auto_installer.sh teardown erag`, the erag application layer must be fully
     gone while the inference and platform layers below it stay intact."""
     _verify_layer(k8s_helper, "erag")
 
 
-@allure.testcase("IEASG-T712")
+@allure.testcase("DSPTV-T218")
 def test_uninstall_inference(k8s_helper):
     """After `es_auto_installer.sh teardown inference`, the inference layer must be fully gone
     while the platform layer below it stays intact."""
     _verify_layer(k8s_helper, "inference")
 
 
-@allure.testcase("IEASG-T713")
+@allure.testcase("DSPTV-T219")
 def test_uninstall_platform(k8s_helper):
     """After `es_auto_installer.sh teardown platform`, the platform layer must be fully gone,
     leaving only the bare Kubernetes cluster (infrastructure layer)."""
     _verify_layer(k8s_helper, "platform")
 
 
-@allure.testcase("IEASG-T309")
+@allure.testcase("DSPTV-T202")
 def test_uninstall(k8s_helper):
     """After a full teardown (`teardown --all`), only base Kubernetes/node namespaces may
     remain and no application resources (releases, CRDs, PVCs, secrets, pods) may linger."""

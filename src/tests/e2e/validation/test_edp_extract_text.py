@@ -19,7 +19,7 @@ FILES_DIR = "e2e/files/extract_text"
 FILES_PREFIX = "extract_text_test_"
 
 
-@allure.testcase("IEASG-T218")
+@allure.testcase("DSPTV-T106")
 def test_edp_extract_text_adoc(edp_helper):
     """Test case containing all adoc extract text test scenarios"""
 
@@ -86,7 +86,7 @@ def test_edp_extract_text_adoc(edp_helper):
         assert phrase in extracted_text, f"Phrase '{phrase}' missing from the extracted text, extracted text: {extracted_text}"
 
 
-@allure.testcase("IEASG-T219")
+@allure.testcase("DSPTV-T107")
 def test_edp_extract_text_txt(edp_helper):
     """Test case containing all txt extract text test scenarios"""
 
@@ -96,7 +96,7 @@ def test_edp_extract_text_txt(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "txt")
 
 
-@allure.testcase("IEASG-T220")
+@allure.testcase("DSPTV-T108")
 def test_edp_extract_text_doc(edp_helper):
     """Test case containing all doc extract text test scenarios"""
 
@@ -106,7 +106,7 @@ def test_edp_extract_text_doc(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "doc")
 
 
-@allure.testcase("IEASG-T221")
+@allure.testcase("DSPTV-T109")
 def test_edp_extract_text_pdf(edp_helper):
     """Test case containing all pdf extract text test scenarios"""
 
@@ -148,7 +148,7 @@ def test_edp_extract_text_pdf(edp_helper):
         assert subject_number == subjects[subject]
 
 
-@allure.testcase("IEASG-T318")
+@allure.testcase("DSPTV-T391")
 def test_edp_extract_text_pdf_complex(edp_helper):
     """Test case for complex pdf extract text scenario"""
     files_dir = FILES_DIR + "/" + "pdf"
@@ -189,7 +189,7 @@ def test_edp_extract_text_pdf_complex(edp_helper):
         assert phrase in extracted_text, f"Extracted text does not contain expected phrase: {phrase}"
 
 
-@allure.testcase("IEASG-T222")
+@allure.testcase("DSPTV-T110")
 def test_edp_extract_text_pptx(edp_helper):
     """Test case containing all pptx extract text test scenarios"""
 
@@ -205,7 +205,7 @@ def test_edp_extract_text_pptx(edp_helper):
     assert text_in_image in extracted_text, f"Extracted text '{extracted_text}' does not contain expected text '{text_in_image}'"
 
 
-@allure.testcase("IEASG-T223")
+@allure.testcase("DSPTV-T111")
 def test_edp_extract_text_json(edp_helper):
     """Test case containing all json extract text test scenarios"""
 
@@ -215,7 +215,7 @@ def test_edp_extract_text_json(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "json")
 
 
-@allure.testcase("IEASG-T224")
+@allure.testcase("DSPTV-T112")
 def test_edp_extract_text_ppt(edp_helper):
     """Test case containing all ppt extract text test scenarios"""
 
@@ -225,7 +225,7 @@ def test_edp_extract_text_ppt(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "ppt")
 
 
-@allure.testcase("IEASG-T225")
+@allure.testcase("DSPTV-T113")
 def test_edp_extract_text_md(edp_helper):
     """Test case containing all md extract text test scenarios"""
 
@@ -235,7 +235,7 @@ def test_edp_extract_text_md(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "md")
 
 
-@allure.testcase("IEASG-T226")
+@allure.testcase("DSPTV-T114")
 def test_edp_extract_text_html(edp_helper):
     """Test case containing all html extract text test scenarios"""
 
@@ -245,7 +245,7 @@ def test_edp_extract_text_html(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "html")
 
 
-@allure.testcase("IEASG-T227")
+@allure.testcase("DSPTV-T115")
 def test_edp_extract_text_tiff(edp_helper):
     """Test case containing all tiff extract text test scenarios"""
 
@@ -255,7 +255,7 @@ def test_edp_extract_text_tiff(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "tiff")
 
 
-@allure.testcase("IEASG-T228")
+@allure.testcase("DSPTV-T116")
 def test_edp_extract_text_jpg(edp_helper):
     """Test case containing all jpg extract text test scenarios"""
 
@@ -265,7 +265,7 @@ def test_edp_extract_text_jpg(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "jpg")
 
 
-@allure.testcase("IEASG-T229")
+@allure.testcase("DSPTV-T117")
 def test_edp_extract_text_jpeg(edp_helper):
     """Test case containing all jpeg extract text test scenarios"""
 
@@ -275,7 +275,7 @@ def test_edp_extract_text_jpeg(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "jpeg")
 
 
-@allure.testcase("IEASG-T230")
+@allure.testcase("DSPTV-T118")
 def test_edp_extract_text_png(edp_helper):
     """Test case containing all png extract text test scenarios"""
 
@@ -285,7 +285,7 @@ def test_edp_extract_text_png(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "png")
 
 
-@allure.testcase("IEASG-T231")
+@allure.testcase("DSPTV-T119")
 def test_edp_extract_text_svg(edp_helper):
     """Test case containing all svg extract text test scenarios"""
 
@@ -295,7 +295,7 @@ def test_edp_extract_text_svg(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "svg")
 
 
-@allure.testcase("IEASG-T232")
+@allure.testcase("DSPTV-T120")
 def test_edp_extract_text_xlsx(edp_helper):
     """Test case containing all xlsx extract text test scenarios"""
 
@@ -305,7 +305,7 @@ def test_edp_extract_text_xlsx(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "xlsx")
 
 
-@allure.testcase("IEASG-T233")
+@allure.testcase("DSPTV-T121")
 def test_edp_extract_text_xls(edp_helper):
     """Test case containing all xls extract text test scenarios"""
 
@@ -315,7 +315,7 @@ def test_edp_extract_text_xls(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "xls")
 
 
-@allure.testcase("IEASG-T234")
+@allure.testcase("DSPTV-T122")
 def test_edp_extract_text_csv(edp_helper):
     """Test case containing all csv extract text test scenarios"""
 
@@ -325,7 +325,7 @@ def test_edp_extract_text_csv(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "csv")
 
 
-@allure.testcase("IEASG-T235")
+@allure.testcase("DSPTV-T123")
 def test_edp_extract_text_jsonl(edp_helper):
     """Test case containing all jsonl extract text test scenarios"""
 
@@ -335,7 +335,7 @@ def test_edp_extract_text_jsonl(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "jsonl")
 
 
-@allure.testcase("IEASG-T236")
+@allure.testcase("DSPTV-T124")
 def test_edp_extract_text_xml(edp_helper):
     """Test case containing all xml extract text test scenarios"""
 
@@ -345,7 +345,7 @@ def test_edp_extract_text_xml(edp_helper):
     extract_text_file_with_text_only(edp_helper, files_dir, "xml")
 
 
-@allure.testcase("IEASG-T237")
+@allure.testcase("DSPTV-T125")
 def test_edp_extract_text_docx(edp_helper):
     """Test case containing all docx extract text test scenarios"""
 

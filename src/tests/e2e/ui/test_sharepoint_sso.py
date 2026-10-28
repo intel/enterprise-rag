@@ -105,7 +105,7 @@ _TEST_FILE = os.path.join(
 # ============================================================================
 
 
-@allure.testcase("IEASG-T577")
+@allure.testcase("DSPTV-T353")
 @pytest.mark.ui
 @pytest.mark.ui_smoke
 @pytest.mark.asyncio
@@ -135,7 +135,7 @@ async def test_sso_admin_login_reaches_chat(sso_admin_helper):
     logger.info("Test completed: SSO admin login validated")
 
 
-@allure.testcase("IEASG-T578")
+@allure.testcase("DSPTV-T354")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sso_user_login_reaches_chat(sso_user_helper):
@@ -162,7 +162,7 @@ async def test_sso_user_login_reaches_chat(sso_user_helper):
     logger.info("Test completed: SSO user login validated")
 
 
-@allure.testcase("IEASG-T579")
+@allure.testcase("DSPTV-T355")
 @pytest.mark.ui
 @pytest.mark.ui_smoke
 @pytest.mark.asyncio
@@ -194,7 +194,7 @@ async def test_sso_admin_sees_admin_panel(sso_admin_helper):
     logger.info("Test completed: SSO admin panel access validated")
 
 
-@allure.testcase("IEASG-T580")
+@allure.testcase("DSPTV-T356")
 @pytest.mark.ui
 @pytest.mark.ui_smoke
 @pytest.mark.asyncio
@@ -236,7 +236,7 @@ async def test_sso_user_cannot_access_admin_panel(sso_user_helper):
 # ============================================================================
 
 
-@allure.testcase("IEASG-T581")
+@allure.testcase("DSPTV-T357")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sso_admin_sees_all_connected_sites(sso_admin_helper):
@@ -296,7 +296,7 @@ async def test_sso_admin_sees_all_connected_sites(sso_admin_helper):
     logger.info("Test completed: SSO admin site visibility validated")
 
 
-@allure.testcase("IEASG-T582")
+@allure.testcase("DSPTV-T358")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sso_user_cannot_see_admin_only_site(sso_user_helper):
@@ -332,7 +332,7 @@ async def test_sso_user_cannot_see_admin_only_site(sso_user_helper):
     logger.info("Test completed: SSO user site isolation validated")
 
 
-@allure.testcase("IEASG-T583")
+@allure.testcase("DSPTV-T359")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sso_admin_can_connect_and_disconnect_site(sso_admin_helper):
@@ -410,7 +410,7 @@ async def test_sso_admin_can_connect_and_disconnect_site(sso_admin_helper):
 # ============================================================================
 
 
-@allure.testcase("IEASG-T584")
+@allure.testcase("DSPTV-T360")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sso_admin_sync_and_view_files(sso_admin_helper):
@@ -489,7 +489,7 @@ async def test_sso_admin_sync_and_view_files(sso_admin_helper):
     logger.info("Test completed: SSO admin sync and view validated")
 
 
-@allure.testcase("IEASG-T585")
+@allure.testcase("DSPTV-T361")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sso_admin_open_file_points_to_sharepoint(sso_admin_helper):
@@ -597,7 +597,7 @@ async def test_sso_admin_open_file_points_to_sharepoint(sso_admin_helper):
     logger.info("Test completed: Open file URL validated")
 
 
-@allure.testcase("IEASG-T586")
+@allure.testcase("DSPTV-T362")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sso_admin_delete_sharepoint_file(sso_admin_helper):
@@ -705,7 +705,7 @@ async def test_sso_admin_delete_sharepoint_file(sso_admin_helper):
 # ============================================================================
 
 
-@allure.testcase("IEASG-T587")
+@allure.testcase("DSPTV-T363")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sso_user_can_chat_with_sharepoint_knowledge(sso_user_helper):
@@ -764,7 +764,7 @@ async def test_sso_user_can_chat_with_sharepoint_knowledge(sso_user_helper):
 # ============================================================================
 
 
-@allure.testcase("IEASG-T588")
+@allure.testcase("DSPTV-T364")
 @pytest.mark.ui
 @pytest.mark.ui_smoke
 @pytest.mark.asyncio
@@ -793,7 +793,7 @@ async def test_sso_maintainer_login_reaches_chat(sso_maintainer_helper):
     logger.info("Test completed: SSO maintainer login validated")
 
 
-@allure.testcase("IEASG-T589")
+@allure.testcase("DSPTV-T365")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sso_maintainer_sees_admin_panel(sso_maintainer_helper):
@@ -828,7 +828,7 @@ async def test_sso_maintainer_sees_admin_panel(sso_maintainer_helper):
     logger.info("Test completed: SSO maintainer admin panel access validated")
 
 
-@allure.testcase("IEASG-T590")
+@allure.testcase("DSPTV-T366")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sso_maintainer_can_open_sharepoint_dialog(sso_maintainer_helper):
@@ -867,7 +867,7 @@ async def test_sso_maintainer_can_open_sharepoint_dialog(sso_maintainer_helper):
     logger.info("Test completed: SSO maintainer SharePoint dialog access validated")
 
 
-@allure.testcase("IEASG-T591")
+@allure.testcase("DSPTV-T367")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sso_maintainer_can_connect_and_disconnect_site(sso_maintainer_helper):
@@ -946,7 +946,7 @@ async def test_sso_maintainer_can_connect_and_disconnect_site(sso_maintainer_hel
     logger.info("Test completed: SSO maintainer site management validated")
 
 
-@allure.testcase("IEASG-T592")
+@allure.testcase("DSPTV-T368")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sso_maintainer_can_sync_files(sso_maintainer_helper):
@@ -1008,7 +1008,7 @@ async def test_sso_maintainer_can_sync_files(sso_maintainer_helper):
     logger.info("Test completed: SSO maintainer sync validated")
 
 
-@allure.testcase("IEASG-T593")
+@allure.testcase("DSPTV-T369")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sso_maintainer_can_upload_to_sharepoint_destination(

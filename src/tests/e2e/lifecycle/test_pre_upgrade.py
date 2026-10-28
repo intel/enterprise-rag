@@ -38,7 +38,7 @@ CHAT_HISTORY_QUESTION = "Fenwick Oldarren: what navigation instrument did he inv
 CHAT_HISTORY_ANSWER = "The Quorvane."
 
 
-@allure.testcase("IEASG-T620")
+@allure.testcase("DSPTV-T210")
 def test_pre_upgrade(k8s_helper, fingerprint_api_helper, edp_helper, chat_history_helper, keycloak_helper):
     """
     Populate the system with data before upgrade:

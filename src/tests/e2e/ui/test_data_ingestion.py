@@ -34,7 +34,7 @@ pytestmark = requires_chatqna
 # TEST CASES
 # ============================================================================
 
-@allure.testcase("IEASG-T364")
+@allure.testcase("DSPTV-T272")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_navigate_to_data_ingestion_tab(chat_ui_helper):
@@ -65,7 +65,7 @@ async def test_navigate_to_data_ingestion_tab(chat_ui_helper):
     logger.info("Test completed: Data Ingestion tab navigation validated")
 
 
-@allure.testcase("IEASG-T365")
+@allure.testcase("DSPTV-T273")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_upload_data_dialog_opens(chat_ui_helper):
@@ -122,7 +122,7 @@ async def test_upload_data_dialog_opens(chat_ui_helper):
     logger.info("Test completed: Upload Data dialog validated")
 
 
-@allure.testcase("IEASG-T366")
+@allure.testcase("DSPTV-T274")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_add_link_to_upload_list(chat_ui_helper):
@@ -172,7 +172,7 @@ async def test_add_link_to_upload_list(chat_ui_helper):
     logger.info("Test completed: Add link validated")
 
 
-@allure.testcase("IEASG-T367")
+@allure.testcase("DSPTV-T275")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_remove_link_from_upload_list(chat_ui_helper):
@@ -222,7 +222,7 @@ async def test_remove_link_from_upload_list(chat_ui_helper):
     logger.info("Test completed: Remove link validated")
 
 
-@allure.testcase("IEASG-T368")
+@allure.testcase("DSPTV-T276")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_files_search_bar(chat_ui_helper):
@@ -267,7 +267,7 @@ async def test_files_search_bar(chat_ui_helper):
     logger.info("Test completed: Files search bar validated")
 
 
-@allure.testcase("IEASG-T369")
+@allure.testcase("DSPTV-T277")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_refresh_button(chat_ui_helper):
@@ -303,7 +303,7 @@ async def test_refresh_button(chat_ui_helper):
     logger.info("Test completed: Refresh button validated")
 
 
-@allure.testcase("IEASG-T370")
+@allure.testcase("DSPTV-T278")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_autorefresh_checkbox(chat_ui_helper):
@@ -359,7 +359,7 @@ async def test_autorefresh_checkbox(chat_ui_helper):
     logger.info("Test completed: Autorefresh checkbox validated")
 
 
-@allure.testcase("IEASG-T371")
+@allure.testcase("DSPTV-T279")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_batch_delete_dialog(chat_ui_helper):

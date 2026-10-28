@@ -68,14 +68,14 @@ def ingested_document(mcp_helper, edp_helper):
     return MCP_TEST_FILE
 
 
-@allure.testcase("IEASG-T628")
+@allure.testcase("DSPTV-T226")
 def test_mcp_health(mcp_helper):
     """Verify that the MCP gateway health endpoint responds."""
     status_code = mcp_helper.check_health()
     assert status_code == 200, f"MCP gateway health check returned {status_code}"
 
 
-@allure.testcase("IEASG-T629")
+@allure.testcase("DSPTV-T227")
 def test_mcp_list_tools(mcp_helper):
     """Verify that the MCP gateway exposes all expected tools via SSE connection."""
     tool_names = mcp_helper.list_tools()
@@ -85,7 +85,7 @@ def test_mcp_list_tools(mcp_helper):
         assert tool in tool_names, f"{tool} tool not registered"
 
 
-@allure.testcase("IEASG-T630")
+@allure.testcase("DSPTV-T228")
 def test_mcp_auth_requires_token(mcp_helper):
     """Verify that connecting without a bearer token is rejected.
 
@@ -96,14 +96,14 @@ def test_mcp_auth_requires_token(mcp_helper):
     assert status == 401, f"Expected 401 without a token, got {status}"
 
 
-@allure.testcase("IEASG-T708")
+@allure.testcase("DSPTV-T241")
 def test_mcp_auth_invalid_token(mcp_helper):
     """Verify that a token the gateway cannot validate is rejected."""
     status = mcp_helper.connect_status(token="not-a-real-token")
     assert status == 401, f"Expected 401 for an unverifiable token, got {status}"
 
 
-@allure.testcase("IEASG-T709")
+@allure.testcase("DSPTV-T242")
 def test_mcp_session_is_bound_to_its_caller(mcp_helper, keycloak_helper):
     """Verify that knowing a session_id does not grant the ability to call tools.
 
@@ -126,7 +126,7 @@ def test_mcp_session_is_bound_to_its_caller(mcp_helper, keycloak_helper):
         f"The session owner should still be accepted, got {results['owner']}"
 
 
-@allure.testcase("IEASG-T710")
+@allure.testcase("DSPTV-T243")
 def test_mcp_protected_resource_metadata(mcp_helper):
     """Verify the OAuth protected-resource document agents use to find the token issuer.
 
@@ -143,7 +143,7 @@ def test_mcp_protected_resource_metadata(mcp_helper):
         f"Authorization server is not a Keycloak realm URL: {body['authorization_servers'][0]}"
 
 
-@allure.testcase("IEASG-T631")
+@allure.testcase("DSPTV-T229")
 def test_mcp_list_buckets(mcp_helper):
     """Verify that list_buckets tool returns bucket names from EDP."""
     success, result = mcp_helper.call_tool("list_buckets", {})
@@ -154,7 +154,7 @@ def test_mcp_list_buckets(mcp_helper):
     assert "default" in result, "'default' bucket must always exist"
 
 
-@allure.testcase("IEASG-T632")
+@allure.testcase("DSPTV-T230")
 def test_mcp_retrieve_context(mcp_helper, ingested_document):
     """Verify that retrieve_context returns relevant chunks from an ingested document."""
     success, result = mcp_helper.call_tool("retrieve_context", {
@@ -172,7 +172,7 @@ def test_mcp_retrieve_context(mcp_helper, ingested_document):
 
 
 
-@allure.testcase("IEASG-T633")
+@allure.testcase("DSPTV-T231")
 def test_mcp_retrieve_context_top_n_limits_results(mcp_helper, ingested_document):
     """Verify that top_n parameter limits the number of returned chunks.
 
@@ -199,7 +199,7 @@ def test_mcp_retrieve_context_top_n_limits_results(mcp_helper, ingested_document
     assert len(chunks_5) >= len(chunks_1), "top_n=5 should return at least as many chunks as top_n=1"
 
 
-@allure.testcase("IEASG-T634")
+@allure.testcase("DSPTV-T232")
 def test_mcp_ingest_file(mcp_helper):
     """Verify that ingest_file uploads a document and it appears in ingestion status."""
     tool_names = mcp_helper.list_tools()
@@ -229,7 +229,7 @@ def test_mcp_ingest_file(mcp_helper):
     logger.info(f"Ingested file status: {file_entry.get('status')}, chunks: {file_entry.get('chunks_processed')}")
 
 
-@allure.testcase("IEASG-T635")
+@allure.testcase("DSPTV-T233")
 def test_mcp_check_ingestion_status(mcp_helper, ingested_document):
     """Verify that check_ingestion_status returns correct file metadata.
 
@@ -254,7 +254,7 @@ def test_mcp_check_ingestion_status(mcp_helper, ingested_document):
         f"Expected chunks_processed > 0, got {file_entry.get('chunks_processed')}"
 
 
-@allure.testcase("IEASG-T636")
+@allure.testcase("DSPTV-T234")
 def test_mcp_ingest_url(mcp_helper):
     """Verify that ingest_url tool queues a URL and returns a link ID."""
     tool_names = mcp_helper.list_tools()
@@ -272,7 +272,7 @@ def test_mcp_ingest_url(mcp_helper):
 
 
 
-@allure.testcase("IEASG-T637")
+@allure.testcase("DSPTV-T235")
 def test_mcp_retrieve_context_with_reranker(mcp_helper, ingested_document):
     """Verify that retrieve_context works with reranker enabled.
 
@@ -292,7 +292,7 @@ def test_mcp_retrieve_context_with_reranker(mcp_helper, ingested_document):
     assert len(chunks) > 0, "Expected at least one chunk from ingested document"
 
 
-@allure.testcase("IEASG-T638")
+@allure.testcase("DSPTV-T236")
 def test_mcp_retrieve_context_empty_query(mcp_helper):
     """Verify that retrieve_context handles an empty query gracefully.
 
@@ -315,7 +315,7 @@ def test_mcp_retrieve_context_empty_query(mcp_helper):
 
 
 
-@allure.testcase("IEASG-T639")
+@allure.testcase("DSPTV-T237")
 def test_mcp_ingest_file_invalid_bucket(mcp_helper):
     """Verify that ingest_file with a non-existent bucket returns a clear error."""
     tool_names = mcp_helper.list_tools()
@@ -334,7 +334,7 @@ def test_mcp_ingest_file_invalid_bucket(mcp_helper):
     logger.info(f"Invalid bucket error: {error_text[:200]}")
 
 
-@allure.testcase("IEASG-T640")
+@allure.testcase("DSPTV-T238")
 def test_mcp_ingest_file_empty_content(mcp_helper):
     """Verify that ingest_file with empty base64 content returns an error."""
     tool_names = mcp_helper.list_tools()
@@ -352,7 +352,7 @@ def test_mcp_ingest_file_empty_content(mcp_helper):
     logger.info(f"Empty content error: {error_text[:200]}")
 
 
-@allure.testcase("IEASG-T641")
+@allure.testcase("DSPTV-T239")
 def test_mcp_check_ingestion_status_nonexistent_file(mcp_helper):
     """Verify that check_ingestion_status returns empty list for a file that does not exist."""
     success, result = mcp_helper.call_tool("check_ingestion_status", {
@@ -368,7 +368,7 @@ def test_mcp_check_ingestion_status_nonexistent_file(mcp_helper):
 
 
 
-@allure.testcase("IEASG-T642")
+@allure.testcase("DSPTV-T240")
 def test_mcp_retrieve_context_search_type_siblings(mcp_helper, ingested_document):
     """Verify that retrieve_context with siblings search type returns additional context.
 

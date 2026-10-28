@@ -47,28 +47,28 @@ def test_data(request, test_language):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T50")
+@allure.testcase("DSPTV-T190")
 def test_txt(edp_helper, chatqa_api_helper, test_data):
     """*.txt file learning capabilities"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T56")
+@allure.testcase("DSPTV-T193")
 def test_docx_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.docx file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T54")
+@allure.testcase("DSPTV-T191")
 def test_pdf_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.pdf file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T55")
+@allure.testcase("DSPTV-T192")
 def test_pptx_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.pptx file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
@@ -76,115 +76,115 @@ def test_pptx_text_only(edp_helper, chatqa_api_helper, test_data):
 
 # https://jira.devtools.intel.com/browse/IEASG-2851
 @pytest.mark.xfail(reason="SmartArt text extraction regression")
-@allure.testcase("IEASG-T704")
+@allure.testcase("DSPTV-T199")
 def test_pptx_complex(edp_helper, chatqa_api_helper, test_data):
     """*.pptx file learning capabilities (tables, charts, and SmartArt)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T104")
+@allure.testcase("DSPTV-T156")
 def test_json_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.json file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T105")
+@allure.testcase("DSPTV-T157")
 def test_doc_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.doc file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T106")
+@allure.testcase("DSPTV-T158")
 def test_ppt_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.ppt file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T107")
+@allure.testcase("DSPTV-T159")
 def test_md_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.md file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T108")
+@allure.testcase("DSPTV-T160")
 def test_html_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.html file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T109")
+@allure.testcase("DSPTV-T161")
 def test_tiff_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.tiff file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T110")
+@allure.testcase("DSPTV-T162")
 def test_jpg_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.jpg file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T111")
+@allure.testcase("DSPTV-T163")
 def test_jpeg_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.jpeg file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T112")
+@allure.testcase("DSPTV-T164")
 def test_png_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.png file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T113")
+@allure.testcase("DSPTV-T165")
 def test_svg_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.svg file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T114")
+@allure.testcase("DSPTV-T166")
 def test_xlsx_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.xlsx file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T115")
+@allure.testcase("DSPTV-T167")
 def test_xls_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.xls file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T116")
+@allure.testcase("DSPTV-T168")
 def test_csv_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.csv file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T117")
+@allure.testcase("DSPTV-T169")
 def test_jsonl_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.jsonl file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T118")
+@allure.testcase("DSPTV-T170")
 def test_xml_text_only(edp_helper, chatqa_api_helper, test_data):
     """*.xml file learning capabilities (pure text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T162")
+@allure.testcase("DSPTV-T171")
 def test_docx_multi_paragraph(edp_helper, chatqa_api_helper, test_data):
     """*.docx file learning capabilities (multiple paragraphs inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T163")
+@allure.testcase("DSPTV-T172")
 def test_docx_with_images(edp_helper, chatqa_api_helper, test_data):
     """*.docx file learning capabilities (with images and text surrounding the images)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T164")
+@allure.testcase("DSPTV-T173")
 def test_get_context_from_filename(edp_helper, chatqa_api_helper):
     """Upload a file whose name contains unique info not present in the file body.
     Verify that the system can answer questions using context from the filename alone."""
@@ -211,38 +211,38 @@ def test_get_context_from_filename(edp_helper, chatqa_api_helper):
         ["nexus"], response
     ), "System should know Veldrix Tormanheim is associated with Project Nexus from the filename"
 
-@allure.testcase("IEASG-T534")
+@allure.testcase("DSPTV-T392")
 def test_pdf_table(edp_helper, chatqa_api_helper, test_data):
     """*.pdf file learning capabilities (with tables inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T166")
+@allure.testcase("DSPTV-T175")
 def test_docx_tables(edp_helper, chatqa_api_helper, test_data):
     """*.docx file learning capabilities (with tables inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T165")
+@allure.testcase("DSPTV-T174")
 def test_docx_formatted_text(edp_helper, chatqa_api_helper, test_data):
     """*.docx file learning capabilities (with formatted text inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T167")
+@allure.testcase("DSPTV-T176")
 def test_docx_with_hyperlink(edp_helper, chatqa_api_helper, test_data):
     """*.docx file learning capabilities (with hyperlinks inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T168")
+@allure.testcase("DSPTV-T177")
 def test_docx_numbered_and_bulleted_lists(edp_helper, chatqa_api_helper, test_data):
     """*.docx file learning capabilities (with numbered and bulleted lists inside the file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T169")
+@allure.testcase("DSPTV-T178")
 def test_content_is_forgotten_after_file_deletion(edp_helper, chatqa_api_helper, test_data):
     """Verify if the content is actually forgotten after file deletion"""
     stage = test_data.stages[0]
@@ -265,13 +265,13 @@ def test_content_is_forgotten_after_file_deletion(edp_helper, chatqa_api_helper,
     assert not chatqa_api_helper.words_in_response(expected, response), UNRELATED_RESPONSE_MSG
 
 
-@allure.testcase("IEASG-T176")
+@allure.testcase("DSPTV-T179")
 def test_adoc_basic(edp_helper, chatqa_api_helper, test_data):
     """Validate basic *.adoc files support and learning capabilities"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T177")
+@allure.testcase("DSPTV-T180")
 def test_adoc_recognized_as_troff_mime_type(edp_helper, chatqa_api_helper, test_data):
     """
     Upload a file with 'text/troff' mime type.
@@ -281,31 +281,31 @@ def test_adoc_recognized_as_troff_mime_type(edp_helper, chatqa_api_helper, test_
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T178")
+@allure.testcase("DSPTV-T181")
 def test_adoc_links(edp_helper, chatqa_api_helper, test_data):
     """Check if links are properly extracted from the adoc file"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T179")
+@allure.testcase("DSPTV-T182")
 def test_adoc_tables(edp_helper, chatqa_api_helper, test_data):
     """Validate if tables are recognized in the adoc file"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T180")
+@allure.testcase("DSPTV-T183")
 def test_adoc_source_code(edp_helper, chatqa_api_helper, test_data):
     """Put a code block in the adoc file and check if it is recognized"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T181")
+@allure.testcase("DSPTV-T184")
 def test_adoc_substitutions(edp_helper, chatqa_api_helper, test_data):
     """Check if substitutions are recognized in the text (*.adoc file)"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T262")
+@allure.testcase("DSPTV-T188")
 def test_logs_parsing_capability(edp_helper, chatqa_api_helper, test_data):
     """Check if chatbot can extract information from log files"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
@@ -373,13 +373,13 @@ def run_metadata_validation(edp_helper, chatqa_api_helper, test_data):
     assert not failures, f"Metadata failures ({len(failures)}):\n" + "\n".join(f"  [{i+1}] {f}" for i, f in enumerate(failures))
 
 
-@allure.testcase("IEASG-T595")
+@allure.testcase("DSPTV-T194")
 def test_metadata_pdf(edp_helper, chatqa_api_helper, test_data):
     """Verify that all metadata (author, title, creation/modification/ingestion dates) is extracted from PDF"""
     run_metadata_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T714")
+@allure.testcase("DSPTV-T200")
 def test_pdf_metadata_survives_split(edp_helper, chatqa_api_helper, test_data):
     """Verify PDF metadata survives EDP's >100-page split.
 
@@ -398,31 +398,31 @@ def test_pdf_metadata_survives_split(edp_helper, chatqa_api_helper, test_data):
     run_metadata_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T596")
+@allure.testcase("DSPTV-T195")
 def test_metadata_docx(edp_helper, chatqa_api_helper, test_data):
     """Verify that all metadata (author, title, creation/modification/ingestion dates) is extracted from DOCX"""
     run_metadata_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T597")
+@allure.testcase("DSPTV-T196")
 def test_metadata_pptx(edp_helper, chatqa_api_helper, test_data):
     """Verify that all metadata (author, title, creation/modification/ingestion dates) is extracted from PPTX"""
     run_metadata_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T599")
+@allure.testcase("DSPTV-T197")
 def test_metadata_distinguishes_authors_across_documents(edp_helper, chatqa_api_helper, test_data):
     """Verify that the LLM correctly attributes authors when multiple documents are ingested"""
     run_standard_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T601")
+@allure.testcase("DSPTV-T198")
 def test_metadata_xlsx(edp_helper, chatqa_api_helper, test_data):
     """Verify that all metadata (author, title, creation/modification/ingestion dates) is extracted from XLSX"""
     run_metadata_validation(edp_helper, chatqa_api_helper, test_data)
 
 
-@allure.testcase("IEASG-T264")
+@allure.testcase("DSPTV-T189")
 def test_reupload(edp_helper, chatqa_api_helper, test_data):
     """Check if re-uploading the same file and updated file works as expected"""
 
@@ -463,7 +463,7 @@ def test_reupload(edp_helper, chatqa_api_helper, test_data):
         modify_file(file_path, modify_new, modify_old)  # restore original file content
 
 
-@allure.testcase("IEASG-T249")
+@allure.testcase("DSPTV-T39")
 def test_similarity_search_with_siblings(edp_helper, chatqa_api_helper, fingerprint_api_helper, test_data):
     """
     Upload a file with a list of 20 elements.
@@ -514,7 +514,7 @@ def test_similarity_search_with_siblings(edp_helper, chatqa_api_helper, fingerpr
             "retriever", search_type=original_search_type, k=original_k)
 
 
-@allure.testcase("IEASG-T308")
+@allure.testcase("DSPTV-T155")
 def test_late_chunking(edp_helper, chatqa_api_helper, fingerprint_api_helper, test_data):
     """
     Upload a file with a list of 35 elements.
@@ -536,7 +536,7 @@ def test_late_chunking(edp_helper, chatqa_api_helper, fingerprint_api_helper, te
         assert chatqa_api_helper.words_in_response(q["expected_all"], response)
 
 
-@allure.testcase("IEASG-T199")
+@allure.testcase("DSPTV-T185")
 def test_updated_file(edp_helper, chatqa_api_helper):
     question_1 = "Who is Alex?"
     expected_1_before = ["sloth"]
@@ -575,7 +575,7 @@ def test_updated_file(edp_helper, chatqa_api_helper):
         assert chatqa_api_helper.words_in_response(expected_3_after, response_3_after), UNRELATED_RESPONSE_MSG
 
 
-@allure.testcase("IEASG-T248")
+@allure.testcase("DSPTV-T187")
 def test_multi_doc_reasoning(edp_helper, chatqa_api_helper):
     """
     Upload 2 documents:
@@ -594,7 +594,7 @@ def test_multi_doc_reasoning(edp_helper, chatqa_api_helper):
     assert "300" in response.lower(), UNRELATED_RESPONSE_MSG
 
 
-@allure.testcase("IEASG-T247")
+@allure.testcase("DSPTV-T186")
 def test_top_n(edp_helper, chatqa_api_helper, fingerprint_api_helper, test_data):
     """
     Upload 2 documents:

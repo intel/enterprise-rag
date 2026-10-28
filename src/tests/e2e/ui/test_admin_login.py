@@ -28,7 +28,7 @@ def _get_valid_redirect_paths() -> list:
     return ["/chat", "/docsum", "/translation"]
 
 
-@allure.testcase("IEASG-T266")
+@allure.testcase("DSPTV-T324")
 @pytest.mark.ui
 @pytest.mark.ui_smoke
 @pytest.mark.asyncio

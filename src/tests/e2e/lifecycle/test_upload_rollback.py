@@ -22,7 +22,7 @@ QUESTION = "How many shards does the Qwindell artifact contain?"
 EXPECTED = ["88"]
 
 
-@allure.testcase("IEASG-T720")
+@allure.testcase("DSPTV-T223")
 def test_upload_rollback_restores_chat_models(k8s_helper):
     """After switching back to base, the LLM and reranking model servers are redeployed (the
     machine-filling upload embedding is undeployed first to free the machine)."""
@@ -35,7 +35,7 @@ def test_upload_rollback_restores_chat_models(k8s_helper):
         "Reranking model server should be redeployed after switching back to base"
 
 
-@allure.testcase("IEASG-T721")
+@allure.testcase("DSPTV-T224")
 def test_upload_rollback_ingested_data_persists_and_queryable(edp_helper, chatqa_api_helper):
     """Data continuity end-to-end: the document ingested via the upload pipeline survives the switch
     back to base (the vector store is a separate namespace) AND is now answerable via chat — the

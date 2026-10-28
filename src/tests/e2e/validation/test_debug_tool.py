@@ -213,7 +213,7 @@ def cleanup_kubeconfig(kubeconfig_path, was_copied):
         logger.info(f"Cleaned up kubeconfig file: {kubeconfig_path}")
 
 
-@allure.testcase("IEASG-T522")
+@allure.testcase("DSPTV-T14")
 def test_debug_tool_execution(request):
     """Test that debug_tool.py runs successfully with the build config directory."""
     build_config_dir = os.path.abspath(request.config.getoption("--build-config-dir"))

@@ -68,7 +68,7 @@ async def _fill_and_generate_summary(docsum_ui_helper, text=None):
 # TEST CASES
 # ============================================================================
 
-@allure.testcase("IEASG-T379")
+@allure.testcase("DSPTV-T287")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_paste_text_textarea_via_testid(docsum_ui_helper):
@@ -105,7 +105,7 @@ async def test_paste_text_textarea_via_testid(docsum_ui_helper):
     logger.info("Test completed: Paste text textarea validated")
 
 
-@allure.testcase("IEASG-T380")
+@allure.testcase("DSPTV-T288")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_paste_text_clear_button(docsum_ui_helper):
@@ -149,7 +149,7 @@ async def test_paste_text_clear_button(docsum_ui_helper):
     logger.info("Test completed: Clear button validated")
 
 
-@allure.testcase("IEASG-T381")
+@allure.testcase("DSPTV-T289")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_generated_summary_content_testid(docsum_ui_helper):
@@ -183,7 +183,7 @@ async def test_generated_summary_content_testid(docsum_ui_helper):
     logger.info("Test completed: Generated summary content validated")
 
 
-@allure.testcase("IEASG-T382")
+@allure.testcase("DSPTV-T290")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_export_summary_button(docsum_ui_helper):
@@ -243,7 +243,7 @@ async def test_export_summary_button(docsum_ui_helper):
     logger.info("Test completed: Export summary validated")
 
 
-@allure.testcase("IEASG-T383")
+@allure.testcase("DSPTV-T291")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_docsum_tabs_via_testid(docsum_ui_helper):
@@ -268,7 +268,7 @@ async def test_docsum_tabs_via_testid(docsum_ui_helper):
     logger.info("Test completed: DocSum tabs validated")
 
 
-@allure.testcase("IEASG-T384")
+@allure.testcase("DSPTV-T292")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_summary_history_item_menu(docsum_ui_helper):
@@ -343,7 +343,7 @@ async def test_summary_history_item_menu(docsum_ui_helper):
     logger.info("Test completed: Summary history menu validated")
 
 
-@allure.testcase("IEASG-T385")
+@allure.testcase("DSPTV-T293")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_rename_summary_dialog(docsum_ui_helper):
@@ -408,7 +408,7 @@ async def test_rename_summary_dialog(docsum_ui_helper):
     logger.info("Test completed: Rename summary dialog validated")
 
 
-@allure.testcase("IEASG-T386")
+@allure.testcase("DSPTV-T294")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_delete_summary_dialog(docsum_ui_helper):
