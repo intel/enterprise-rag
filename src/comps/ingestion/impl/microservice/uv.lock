@@ -948,7 +948,7 @@ wheels = [
 
 [[package]]
 name = "pytest"
-version = "9.1.1"
+version = "9.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
@@ -957,9 +957,9 @@ dependencies = [
     { name = "pluggy" },
     { name = "pygments" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e4/47/b9efed96c114afcfa3c9d3fe98a76a1d14c74a9e266d397cf6eb64be5e01/pytest-9.1.1.tar.gz", hash = "sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313", size = 1636369, upload-time = "2026-06-19T10:58:32.857Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/79/42/bb4641652e58dedeac2ec51abc1f8cae4fee4ec63899a0999016229a0f2a/pytest-9.2.0.tar.gz", hash = "sha256:97c4f3b1f3c7414aa36465e09b8220f1d03627993bd51b1282e193753c80557b", size = 1797555, upload-time = "2026-10-27T21:30:20.728Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl", hash = "sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c", size = 386536, upload-time = "2026-06-19T10:58:31.347Z" },
+    { url = "https://files.pythonhosted.org/packages/51/39/1f5d8c8877a0fa327db959c19341d4be61660de1ab6b7391f9eb805bcd67/pytest-9.2.0-py3-none-any.whl", hash = "sha256:07acdcf88ec174f907dc01af70bf52d49b014bbab03faeeade31c96b18c2e588", size = 411776, upload-time = "2026-10-27T21:30:19.131Z" },
 ]
 
 [[package]]
@@ -999,11 +999,14 @@ wheels = [
 
 [[package]]
 name = "python-ulid"
-version = "4.0.1"
+version = "4.1.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d6/41/65079023c81491a21799c0120bce5925366b6913596bf797806f19973290/python_ulid-4.0.1.tar.gz", hash = "sha256:bbeec02556190bb9dc3401faa7268696acbfbe7b6db9908c155dc3548629f20c", size = 101683, upload-time = "2026-07-20T15:21:41.256Z" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/50/a9/7d7e7e9a43c85c5d7efb44696c623612c5c0b87bdd9447292d0514a5bc59/python_ulid-4.1.0.tar.gz", hash = "sha256:7991ae0b139eed37fd843be81d561c56ec2c7544ef78262a401cd1a31bc41021", size = 111144, upload-time = "2026-10-27T13:01:30.774Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b4/15/8b39b36f55b6618ec4ca9b55134dcfd9c04cecbc72709f5d8e6bdebed9cd/python_ulid-4.0.1-py3-none-any.whl", hash = "sha256:6f1d69ceb97e99fe542df8476ebcd7a668284bf53ee14b3106bcc6a341a95ed9", size = 14609, upload-time = "2026-07-20T15:21:40.214Z" },
+    { url = "https://files.pythonhosted.org/packages/f2/08/68b321b85139f19cbca7b218c71a0a9889aea29bb9c12be7f5203fcbcff9/python_ulid-4.1.0-py3-none-any.whl", hash = "sha256:46992012f74638f286fcaff33904ba2510e51d9018b73af8c3f9b65014d52c1b", size = 14638, upload-time = "2026-10-27T13:01:29.811Z" },
 ]
 
 [[package]]
