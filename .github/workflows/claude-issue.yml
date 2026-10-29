@@ -3,7 +3,9 @@ name: claude-issue
 
 on:
   issues:
-    types: [opened]
+    types: [opened, edited]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
@@ -15,7 +17,7 @@ concurrency:
 
 jobs:
   triage:
-    if: ${{ !endsWith(github.actor, '[bot]') }}
+    if: ${{ github.event_name == 'issues' && github.event.action == 'opened' && !endsWith(github.actor, '[bot]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -24,6 +26,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: ensure the needs-info label
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh label create needs-info --repo "$GITHUB_REPOSITORY" --color d4c5f9 --description "Waiting for the author to add details" --force
       - uses: anthropics/claude-code-action@d70510b174a1244958df0b03166a54912811f3e6 # v1.0.264
         env:
           AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
@@ -40,3 +46,17 @@ jobs:
       - name: show Claude error
         if: failure()
         run: jq -r '.. | objects | select(.type? == "result") | .result // .error // empty' "$RUNNER_TEMP/claude-execution-output.json" | head -c 3000
+
+  author-replied:
+    if: >-
+      ${{ !github.event.issue.pull_request
+      && contains(github.event.issue.labels.*.name, 'needs-info')
+      && github.actor == github.event.issue.user.login
+      && (github.event_name == 'issue_comment' || github.event.action == 'edited') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: gh issue edit "$ISSUE" --repo "$GITHUB_REPOSITORY" --remove-label needs-info
