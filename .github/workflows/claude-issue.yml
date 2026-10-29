@@ -1,0 +1,42 @@
+---
+name: claude-issue
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+  id-token: write
+
+concurrency:
+  group: claude-issue-${{ github.event.issue.number }}
+
+jobs:
+  triage:
+    if: ${{ !endsWith(github.actor, '[bot]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLAUDE_CODE_SCRIPT_CAPS: '{"comment.sh":1,"label.sh":2}'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: anthropics/claude-code-action@d70510b174a1244958df0b03166a54912811f3e6 # v1.0.264
+        env:
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+          AWS_REGION: us-east-2
+        with:
+          use_bedrock: "true"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          allowed_non_write_users: "*"
+          prompt: "Use the skill `issue` on issue ${{ github.event.issue.number }}."
+          claude_args: >-
+            --model us.anthropic.claude-opus-5-5 --fallback-model us.anthropic.claude-opus-5 --max-turns 15
+            --allowedTools "Skill,Read(.claude/skills/issue/**),Bash(.claude/skills/issue/scripts/gh.sh:*),Bash(.claude/skills/issue/scripts/label.sh:*),Bash(.claude/skills/issue/scripts/comment.sh:*)"
+            --disallowedTools "WebFetch,WebSearch,Write,Edit"
+      - name: show Claude error
+        if: failure()
+        run: jq -r '.. | objects | select(.type? == "result") | .result // .error // empty' "$RUNNER_TEMP/claude-execution-output.json" | head -c 3000
