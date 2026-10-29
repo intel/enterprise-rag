@@ -16,8 +16,8 @@ jobs:
       - uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11.0.0
         with:
           any-of-issue-labels: needs-info
-          days-before-issue-stale: 23
-          days-before-issue-close: 7
+          days-before-issue-stale: 60
+          days-before-issue-close: 14
           days-before-pr-stale: -1
           days-before-pr-close: -1
           stale-issue-label: stale
@@ -25,8 +25,8 @@ jobs:
           close-issue-reason: not_planned
           operations-per-run: 100
           stale-issue-message: >
-            We are still waiting for the details requested above and there has been no activity for 23 days,
-            so this issue is now marked `stale`. It will be closed in 7 days unless there is new activity.
+            We are still waiting for the details requested above and there has been no activity for 60 days,
+            so this issue is now marked `stale`. It will be closed in 14 days unless there is new activity.
           close-issue-message: >
-            Closed after 30 days without the requested details. If you still run into this,
+            Closed after 74 days without the requested details. If you still run into this,
             please open a new issue with the full reproduction steps and environment.
