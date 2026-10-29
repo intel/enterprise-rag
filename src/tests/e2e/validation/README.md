@@ -79,8 +79,8 @@ Each test should be linked to its corresponding Zephyr test case using the `@all
 ```python
 import allure
 
-@allure.testcase("IEASG-T82")
-def test_in_guard_language(guard_helper):
+@allure.testcase("DSPTV-T141")
+def test_in_guard_ban_substrings(guard_helper):
     # test logic here
 ```
 
