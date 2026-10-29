@@ -22,11 +22,10 @@ jobs:
           days-before-pr-close: -1
           stale-issue-label: stale
           exempt-issue-labels: security
-          close-issue-reason: not_planned
           operations-per-run: 100
           stale-issue-message: >
-            We are still waiting for the details requested above and there has been no activity for 30 days,
-            so this issue is now marked `stale`. It will be closed in 14 days unless there is new activity.
+            We are still waiting for the details requested above, so this issue is now marked `stale`.
+            It will be closed unless there is new activity.
           close-issue-message: >
-            Closed after 44 days without the requested details. If you still run into this,
+            Closed without the requested details. If you still run into this,
             please open a new issue with the full reproduction steps and environment.

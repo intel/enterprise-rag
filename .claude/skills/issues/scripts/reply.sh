@@ -8,7 +8,8 @@ if [[ -n $(gh api "repos/$GH_REPO/issues/$issue/comments" --jq '.[] | select(.us
   echo "already triaged" >&2
   exit 0
 fi
-body=$(head -c 4000)
+body=$(cat)
+[[ ${#body} -le 4000 ]] || { echo "comment over 4000 characters, shorten it" >&2; exit 2; }
 [[ -n $body ]] || { echo "usage: reply.sh [label ...] <<'EOF' comment EOF" >&2; exit 2; }
 valid=$(gh label list --limit 200 --json name --jq '.[].name')
 args=()

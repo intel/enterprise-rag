@@ -10,7 +10,6 @@ on:
 permissions:
   contents: read
   issues: write
-  id-token: write
 
 concurrency:
   group: claude-issue-${{ github.event.issue.number }}
@@ -21,15 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      CLAUDE_CODE_SCRIPT_CAPS: '{"gh.sh":6,"reply.sh":1}'
+      CLAUDE_CODE_SCRIPT_CAPS: '{"gh.sh":6,"reply.sh":2}'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: ensure the needs-info label
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh label create needs-info --repo "$GITHUB_REPOSITORY" --color d4c5f9 --description "Waiting for the author to add details" --force
       - uses: anthropics/claude-code-action@d70510b174a1244958df0b03166a54912811f3e6 # v1.0.264
         env:
           AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
@@ -59,4 +54,4 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
           ISSUE: ${{ github.event.issue.number }}
-        run: gh issue edit "$ISSUE" --repo "$GITHUB_REPOSITORY" --remove-label needs-info
+        run: gh issue edit "$ISSUE" --repo "$GITHUB_REPOSITORY" --remove-label needs-info,stale
