@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      CLAUDE_CODE_SCRIPT_CAPS: '{"gh.sh":6,"comment.sh":1,"label.sh":2}'
+      CLAUDE_CODE_SCRIPT_CAPS: '{"gh.sh":6,"reply.sh":1}'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -38,10 +38,10 @@ jobs:
           use_bedrock: "true"
           github_token: ${{ secrets.GITHUB_TOKEN }}
           allowed_non_write_users: "*"
-          prompt: "Use the skill `issue` on issue ${{ github.event.issue.number }}."
+          prompt: "Use the skill `issues` on issue ${{ github.event.issue.number }}."
           claude_args: >-
             --model us.anthropic.claude-opus-5-5 --fallback-model us.anthropic.claude-opus-5 --max-turns 15
-            --allowedTools "Skill,Read(./**),Grep,Glob,Bash(.claude/skills/issue/scripts/gh.sh:*),Bash(.claude/skills/issue/scripts/label.sh:*),Bash(.claude/skills/issue/scripts/comment.sh:*)"
+            --allowedTools "Skill,Read(./**),Grep,Glob,Bash(.claude/skills/issues/scripts/gh.sh:*),Bash(.claude/skills/issues/scripts/reply.sh:*)"
             --disallowedTools "WebFetch,WebSearch,Write,Edit"
       - name: show Claude error
         if: failure()
