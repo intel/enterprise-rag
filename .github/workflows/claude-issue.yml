@@ -11,9 +11,6 @@ permissions:
   contents: read
   issues: write
 
-concurrency:
-  group: claude-issue-${{ github.event.issue.number }}
-
 jobs:
   triage:
     if: ${{ github.event_name == 'issues' && github.event.action == 'opened' && !endsWith(github.actor, '[bot]') }}
