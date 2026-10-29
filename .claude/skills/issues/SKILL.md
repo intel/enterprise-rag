@@ -15,4 +15,4 @@ Claude applies these to every new issue. It prepares the maintainer's decision a
 6. **Ask only for what is missing.** A bug needs version, environment (platform, Kubernetes, accelerator), steps, expected vs actual, and an error or log. A file and line, or an attached fix, is enough. Missing items: list them and add `needs-info`.
 7. **One short, linked comment.** At most 10 lines: thank the author, what is missing or that the team will review it, possibly related issues or fixing PRs, a doc link if it answers the question, "A maintainer will follow up here.", and `🤖 Automated triage` last. Every claim links to its source. No dates, no internal hostnames, URLs, Jira keys, IPs or credentials.
 
-Labels: the class, at most one area label, and `needs-info` when asking. Existing labels only. `needs-info` means waiting for the author; `issue-stale.yml` marks only those `stale` after 60 quiet days and closes them 14 days later.
+Labels: the class, at most one area label, and `needs-info` when asking. Existing labels only. `needs-info` means waiting for the author; `issue-stale.yml` marks only those `stale` after 30 quiet days and closes them 14 days later.
