@@ -22,7 +22,6 @@ dependencies = [
 
 [dependency-groups]
 security-overrides = [
-  "pillow>=12.3.0,<13.0.0",
   "protobuf>=7.36.2,<8.0.0",
 ]
 

@@ -43,7 +43,6 @@ test = [
 
 [dependency-groups]
 security-overrides = [
-  "pillow>=12.3.0,<13.0.0",
   "protobuf>=6.33.5,<7.0.0",
   "setuptools>=80.10.2,<81.0.0",
 ]
