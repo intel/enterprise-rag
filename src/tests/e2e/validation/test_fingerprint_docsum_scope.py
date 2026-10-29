@@ -79,7 +79,7 @@ def _assert_group_seeded(fingerprint_api_helper, params_key):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T701")
+@allure.testcase("DSPTV-T137")
 def test_docsum_param_groups_are_seeded(fingerprint_api_helper):
     """
     Each parameter group docsum declares must have a row under docsum's scope,
@@ -94,7 +94,7 @@ def test_docsum_param_groups_are_seeded(fingerprint_api_helper):
             _assert_group_seeded(fingerprint_api_helper, params_key)
 
 
-@allure.testcase("IEASG-T702")
+@allure.testcase("DSPTV-T138")
 def test_docsum_scope_write_is_read_back(fingerprint_api_helper):
     """
     A write to docsum's llm group must be readable back from the same scope, so

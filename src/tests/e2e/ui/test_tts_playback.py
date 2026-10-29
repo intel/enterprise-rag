@@ -75,7 +75,7 @@ TTS_TEST_QUESTIONS = [
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T339")
+@allure.testcase("DSPTV-T317")
 async def test_play_speech_button_appears_on_response(audio_chat_ui_helper):
     """
     Test that the TTS play speech button appears after bot responds.
@@ -105,7 +105,7 @@ async def test_play_speech_button_appears_on_response(audio_chat_ui_helper):
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T340")
+@allure.testcase("DSPTV-T318")
 async def test_tts_state_transitions(audio_chat_ui_helper):
     """
     Test TTS button state transitions: idle → waiting → playing → idle.
@@ -181,7 +181,7 @@ async def test_tts_state_transitions(audio_chat_ui_helper):
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T341")
+@allure.testcase("DSPTV-T319")
 async def test_tts_audio_plays_completely(audio_chat_ui_helper):
     """
     Test that TTS audio plays to completion (ended event fires).
@@ -238,7 +238,7 @@ async def test_tts_audio_plays_completely(audio_chat_ui_helper):
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T342")
+@allure.testcase("DSPTV-T320")
 async def test_tts_audio_has_valid_duration(audio_chat_ui_helper):
     """
     Test that TTS audio has a reasonable duration (not empty/silent).
@@ -296,7 +296,7 @@ async def test_tts_audio_has_valid_duration(audio_chat_ui_helper):
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T343")
+@allure.testcase("DSPTV-T321")
 async def test_tts_abort_on_new_playback(audio_chat_ui_helper):
     """
     Test that starting new TTS playback aborts previous playback.
@@ -381,7 +381,7 @@ async def test_tts_abort_on_new_playback(audio_chat_ui_helper):
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T344")
+@allure.testcase("DSPTV-T322")
 async def test_tts_no_button_while_pending(audio_chat_ui_helper):
     """
     Test that play speech button is NOT visible while response is pending.
@@ -425,7 +425,7 @@ async def test_tts_no_button_while_pending(audio_chat_ui_helper):
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T345")
+@allure.testcase("DSPTV-T323")
 async def test_tts_audio_matches_bot_response_text(audio_chat_ui_helper, unified_audio_input, keycloak_helper):  # noqa: F811
     """
     Test that TTS audio output matches the bot response text.

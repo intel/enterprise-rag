@@ -91,7 +91,7 @@ POLL_INTERVAL_MS = 5_000
 # ============================================================================
 
 
-@allure.testcase("IEASG-T556")
+@allure.testcase("DSPTV-T370")
 @pytest.mark.ui
 @pytest.mark.ui_smoke
 @pytest.mark.asyncio
@@ -136,7 +136,7 @@ async def test_sp_dialog_opens_and_closes(chat_ui_helper):
     logger.info("Test completed: SharePoint Sites dialog navigation validated")
 
 
-@allure.testcase("IEASG-T557")
+@allure.testcase("DSPTV-T371")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_trigger_button_visible_on_data_ingestion_tab(chat_ui_helper):
@@ -163,7 +163,7 @@ async def test_sp_trigger_button_visible_on_data_ingestion_tab(chat_ui_helper):
     logger.info("Test completed: SharePoint trigger button validated")
 
 
-@allure.testcase("IEASG-T558")
+@allure.testcase("DSPTV-T372")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_dialog_shows_sites_table(chat_ui_helper):
@@ -205,7 +205,7 @@ async def test_sp_dialog_shows_sites_table(chat_ui_helper):
 # ============================================================================
 
 
-@allure.testcase("IEASG-T559")
+@allure.testcase("DSPTV-T373")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_add_site_button_disabled_when_empty(chat_ui_helper):
@@ -238,7 +238,7 @@ async def test_sp_add_site_button_disabled_when_empty(chat_ui_helper):
     logger.info("Test completed: Add Site button disabled state validated")
 
 
-@allure.testcase("IEASG-T560")
+@allure.testcase("DSPTV-T374")
 @pytest.mark.ui
 @pytest.mark.ui_smoke
 @pytest.mark.asyncio
@@ -319,7 +319,7 @@ async def test_sp_add_and_disconnect_site(chat_ui_helper):
 # ============================================================================
 
 
-@allure.testcase("IEASG-T561")
+@allure.testcase("DSPTV-T375")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_check_for_updates_button(chat_ui_helper):
@@ -364,7 +364,7 @@ async def test_sp_check_for_updates_button(chat_ui_helper):
     logger.info("Test completed: Check for updates button validated")
 
 
-@allure.testcase("IEASG-T562")
+@allure.testcase("DSPTV-T376")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_sync_preview_table_columns(chat_ui_helper):
@@ -421,7 +421,7 @@ async def test_sp_sync_preview_table_columns(chat_ui_helper):
     logger.info("Test completed: Sync preview table structure validated")
 
 
-@allure.testcase("IEASG-T563")
+@allure.testcase("DSPTV-T377")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_synchronize_button_disabled_no_actionable(chat_ui_helper):
@@ -471,7 +471,7 @@ async def test_sp_synchronize_button_disabled_no_actionable(chat_ui_helper):
 # ============================================================================
 
 
-@allure.testcase("IEASG-T564")
+@allure.testcase("DSPTV-T378")
 @pytest.mark.ui
 @pytest.mark.ui_smoke
 @pytest.mark.asyncio
@@ -548,7 +548,7 @@ async def test_sp_destination_dropdown_shows_sharepoint_sites(chat_ui_helper):
     logger.info("Test completed: SharePoint in destination dropdown validated")
 
 
-@allure.testcase("IEASG-T565")
+@allure.testcase("DSPTV-T379")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_file_shows_open_button(chat_ui_helper):
@@ -606,7 +606,7 @@ async def test_sp_file_shows_open_button(chat_ui_helper):
 # ============================================================================
 
 
-@allure.testcase("IEASG-T566")
+@allure.testcase("DSPTV-T380")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_add_invalid_url_shows_error(chat_ui_helper):
@@ -650,7 +650,7 @@ async def test_sp_add_invalid_url_shows_error(chat_ui_helper):
     logger.info("Test completed: Invalid URL error handling validated")
 
 
-@allure.testcase("IEASG-T567")
+@allure.testcase("DSPTV-T381")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_add_malformed_url_shows_client_error(chat_ui_helper):
@@ -693,7 +693,7 @@ async def test_sp_add_malformed_url_shows_client_error(chat_ui_helper):
     logger.info("Test completed: Malformed URL validation validated")
 
 
-@allure.testcase("IEASG-T568")
+@allure.testcase("DSPTV-T382")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_error_popover_shows_details(chat_ui_helper):
@@ -754,7 +754,7 @@ async def test_sp_error_popover_shows_details(chat_ui_helper):
 # ============================================================================
 
 
-@allure.testcase("IEASG-T569")
+@allure.testcase("DSPTV-T383")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_maintainer_can_open_dialog(chat_ui_helper_maintainer):
@@ -786,7 +786,7 @@ async def test_sp_maintainer_can_open_dialog(chat_ui_helper_maintainer):
     logger.info("Test completed: Maintainer SharePoint access validated")
 
 
-@allure.testcase("IEASG-T570")
+@allure.testcase("DSPTV-T384")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_maintainer_can_add_and_disconnect_site(chat_ui_helper_maintainer):
@@ -830,7 +830,7 @@ async def test_sp_maintainer_can_add_and_disconnect_site(chat_ui_helper_maintain
     logger.info("Test completed: Maintainer CRUD validated")
 
 
-@allure.testcase("IEASG-T571")
+@allure.testcase("DSPTV-T385")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_user_cannot_see_sharepoint_trigger(chat_ui_helper_user):
@@ -870,7 +870,7 @@ async def test_sp_user_cannot_see_sharepoint_trigger(chat_ui_helper_user):
     logger.info("Test completed: User RBAC restriction validated")
 
 
-@allure.testcase("IEASG-T572")
+@allure.testcase("DSPTV-T386")
 @pytest.mark.ui
 @pytest.mark.asyncio
 @pytest.mark.xfail(
@@ -917,7 +917,7 @@ async def test_sp_user_cannot_access_data_ingestion(chat_ui_helper_user):
 # ============================================================================
 
 
-@allure.testcase("IEASG-T573")
+@allure.testcase("DSPTV-T387")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_upload_file_to_sharepoint_destination(chat_ui_helper):
@@ -1081,7 +1081,7 @@ async def test_sp_upload_file_to_sharepoint_destination(chat_ui_helper):
     logger.info("Test completed: SharePoint upload E2E validated")
 
 
-@allure.testcase("IEASG-T574")
+@allure.testcase("DSPTV-T388")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_synchronize_files_e2e(chat_ui_helper):
@@ -1157,7 +1157,7 @@ async def test_sp_synchronize_files_e2e(chat_ui_helper):
     logger.info("Test completed: Synchronize E2E validated")
 
 
-@allure.testcase("IEASG-T575")
+@allure.testcase("DSPTV-T389")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_delete_sharepoint_file_via_table(chat_ui_helper):
@@ -1229,7 +1229,7 @@ async def test_sp_delete_sharepoint_file_via_table(chat_ui_helper):
 # ============================================================================
 
 
-@allure.testcase("IEASG-T576")
+@allure.testcase("DSPTV-T390")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_sp_show_all_files_checkbox(chat_ui_helper):

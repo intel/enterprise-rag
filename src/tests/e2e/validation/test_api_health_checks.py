@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T26")
+@allure.testcase("DSPTV-T151")
 def test_api_health_checks(generic_api_helper):
     """
     Find the services that expose /v1/health_check API.

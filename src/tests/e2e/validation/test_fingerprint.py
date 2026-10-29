@@ -45,7 +45,7 @@ def _restore_max_new_tokens(fingerprint_api_helper, params_key, value):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T53")
+@allure.testcase("DSPTV-T128")
 def test_fingerprint_change_arguments(fingerprint_api_helper):
     """
     Retrieve current value for max_new_tokens and increase its value by 1.
@@ -86,7 +86,7 @@ def test_fingerprint_change_arguments(fingerprint_api_helper):
 
 @_needs_chatqna
 @pytest.mark.smoke
-@allure.testcase("IEASG-T151")
+@allure.testcase("DSPTV-T126")
 def test_fingerprint_change_prompt_template(fingerprint_api_helper, chatqa_api_helper):
     """
     Verifies that the system correctly applies a custom prompt template.
@@ -123,7 +123,7 @@ def test_fingerprint_change_prompt_template(fingerprint_api_helper, chatqa_api_h
         fingerprint_api_helper.change_arguments(body)
 
 
-@allure.testcase("IEASG-T240")
+@allure.testcase("DSPTV-T127")
 def test_fingerprint_regular_user_can_access_fingerprint_api(fingerprint_api_helper, temporarily_remove_regular_user_required_actions):
     """Verify that change_arguments and config APIs are not accessible by regular users"""
     # Test change_arguments API
@@ -146,7 +146,7 @@ def test_fingerprint_regular_user_can_access_fingerprint_api(fingerprint_api_hel
     assert config_response.status_code == 403, "Regular user should not be able to call config"
 
 
-@allure.testcase("IEASG-T691")
+@allure.testcase("DSPTV-T130")
 def test_fingerprint_multi_instance_keyed_storage(fingerprint_api_helper):
     """
     Two instances of the same kind (llm) addressed by distinct params_keys must
@@ -188,7 +188,7 @@ def test_fingerprint_multi_instance_keyed_storage(fingerprint_api_helper):
 @pytest.mark.skipif(
     not cfg.get("gmc_multi_instance_pipeline_enabled"),
     reason="Requires a pipeline CR with two LLM steps (paramsKey llm_primary/llm_secondary)")
-@allure.testcase("IEASG-T692")
+@allure.testcase("DSPTV-T131")
 def test_fingerprint_multi_instance_injection(fingerprint_api_helper, chatqa_api_helper):
     """
     With a pipeline deploying two LLM steps keyed llm_primary and llm_secondary,
@@ -221,7 +221,7 @@ def test_fingerprint_multi_instance_injection(fingerprint_api_helper, chatqa_api
         _restore_max_new_tokens(fingerprint_api_helper, "llm_secondary", original_secondary)
 
 
-@allure.testcase("IEASG-T693")
+@allure.testcase("DSPTV-T132")
 def test_fingerprint_realtime_propagation(fingerprint_api_helper):
     """
     A change_arguments write must become visible on the per-key read path within
@@ -263,7 +263,7 @@ def test_fingerprint_realtime_propagation(fingerprint_api_helper):
         fingerprint_api_helper.set_component_parameters("llm", max_new_tokens=original)
 
 
-@allure.testcase("IEASG-T694")
+@allure.testcase("DSPTV-T133")
 def test_fingerprint_change_and_read_non_default_scope(fingerprint_api_helper):
     """
     A change_arguments write that names an explicit pipeline/tenant must land in
@@ -306,7 +306,7 @@ def test_fingerprint_change_and_read_non_default_scope(fingerprint_api_helper):
             pipeline=pipeline, tenant=tenant)
 
 
-@allure.testcase("IEASG-T695")
+@allure.testcase("DSPTV-T134")
 def test_fingerprint_change_arguments_rejects_bad_tenant(fingerprint_api_helper):
     """
     A tenant outside [A-Za-z0-9_-] must be rejected with a 400 at write time,
@@ -317,7 +317,7 @@ def test_fingerprint_change_arguments_rejects_bad_tenant(fingerprint_api_helper)
     assert response.status_code == 400, "A tenant outside the allowed charset must be a 400"
 
 
-@allure.testcase("IEASG-T594")
+@allure.testcase("DSPTV-T129")
 def test_fingerprint_maintainer_cannot_call_change_arguments(fingerprint_api_helper, temporarily_remove_maintainer_required_actions):
     """Verify that the maintainer user is not able to call the change_arguments API"""
     current_arguments = fingerprint_api_helper.read_config("llm")

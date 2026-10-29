@@ -146,7 +146,7 @@ def balloon_pod_data(k8s_helper):
 
 @nri_balloons_only
 @pytest.mark.smoke
-@allure.testcase("IEASG-T698")
+@allure.testcase("DSPTV-T244")
 def test_nri_cpu_no_collisions(balloon_pod_data):
     """Verify that NRI balloons assign exclusive physical CPU cores to each pod.
 
@@ -203,7 +203,7 @@ def test_nri_cpu_no_collisions(balloon_pod_data):
 
 @nri_balloons_only
 @pytest.mark.smoke
-@allure.testcase("IEASG-T700")
+@allure.testcase("DSPTV-T245")
 def test_nri_physical_cores_only(balloon_pod_data):
     """Verify that pods received only physical CPU cores, not hyperthread siblings.
 
@@ -294,7 +294,7 @@ VALID_PSS_PROFILES = ("privileged", "baseline", "restricted")
     reason="enforce_pss is disabled for this deployment",
 )
 @pytest.mark.smoke
-@allure.testcase("IEASG-T723")
+@allure.testcase("DSPTV-T54")
 def test_namespaces_have_pss_labels():
     """Verify every namespace in the cluster carries a valid PSS enforce label.
 

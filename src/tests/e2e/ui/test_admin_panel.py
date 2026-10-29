@@ -32,7 +32,7 @@ pytestmark = requires_chatqna
 # TEST CASES
 # ============================================================================
 
-@allure.testcase("IEASG-T372")
+@allure.testcase("DSPTV-T280")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_admin_panel_tab_switching(chat_ui_helper):
@@ -62,7 +62,7 @@ async def test_admin_panel_tab_switching(chat_ui_helper):
     logger.info("Test completed: All admin panel tabs validated")
 
 
-@allure.testcase("IEASG-T373")
+@allure.testcase("DSPTV-T281")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_telemetry_links_rendered(chat_ui_helper):
@@ -99,7 +99,7 @@ async def test_telemetry_links_rendered(chat_ui_helper):
     logger.info("Test completed: Telemetry links validated")
 
 
-@allure.testcase("IEASG-T374")
+@allure.testcase("DSPTV-T282")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_control_plane_panel_and_graph_controls(chat_ui_helper):
@@ -134,7 +134,7 @@ async def test_control_plane_panel_and_graph_controls(chat_ui_helper):
     logger.info("Test completed: Control plane panel validated")
 
 
-@allure.testcase("IEASG-T375")
+@allure.testcase("DSPTV-T283")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_control_plane_refresh(chat_ui_helper):
@@ -177,7 +177,7 @@ async def test_control_plane_refresh(chat_ui_helper):
     logger.info("Test completed: Control plane refresh controls validated")
 
 
-@allure.testcase("IEASG-T376")
+@allure.testcase("DSPTV-T284")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_no_service_selected_card_data_testid(chat_ui_helper):
@@ -207,7 +207,7 @@ async def test_no_service_selected_card_data_testid(chat_ui_helper):
     logger.info("Test completed: No service selected card validated")
 
 
-@allure.testcase("IEASG-T377")
+@allure.testcase("DSPTV-T285")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_retriever_debug_dialog(chat_ui_helper):
@@ -286,7 +286,7 @@ async def test_retriever_debug_dialog(chat_ui_helper):
     logger.info("Test completed: Retriever debug dialog validated")
 
 
-@allure.testcase("IEASG-T378")
+@allure.testcase("DSPTV-T286")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_service_card_confirm_cancel_buttons(chat_ui_helper):

@@ -101,7 +101,7 @@ def restore_dataprep_guard(guard_helper):
         f"it may stay enabled and block later ingestion. {response.text[:200]}")
 
 
-@allure.testcase("IEASG-T697")
+@allure.testcase("DSPTV-T136")
 def test_dataprep_guard_config_reaches_ingestion(guard_helper, edp_helper):
     """
     Enabling ban_substrings on the dataprep guard scope must block ingestion of

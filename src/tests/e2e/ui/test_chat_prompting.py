@@ -56,7 +56,7 @@ BASIC_TEST_PROMPTS = [
 @pytest.mark.ui
 @pytest.mark.ui_smoke
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T267")
+@allure.testcase("DSPTV-T325")
 async def test_single_prompt_response(chat_ui_helper):
     """
     Test that a single prompt receives a valid response.
@@ -117,7 +117,7 @@ async def test_single_prompt_response(chat_ui_helper):
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T268")
+@allure.testcase("DSPTV-T326")
 async def test_multiple_prompts_responses(chat_ui_helper):
     """
     Test that multiple prompts all receive valid responses.
@@ -179,7 +179,7 @@ async def test_multiple_prompts_responses(chat_ui_helper):
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T269")
+@allure.testcase("DSPTV-T327")
 async def test_response_contains_keywords(chat_ui_helper):
     """
     Test that responses contain relevant keywords from the prompt.
@@ -231,7 +231,7 @@ async def test_response_contains_keywords(chat_ui_helper):
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T270")
+@allure.testcase("DSPTV-T328")
 async def test_conversational_context(chat_ui_helper):
     """
     Test that conversational context is maintained across messages.
@@ -277,7 +277,7 @@ async def test_conversational_context(chat_ui_helper):
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T271")
+@allure.testcase("DSPTV-T329")
 async def test_chat_handles_various_question_types(chat_ui_helper):
     """
     Test that chat handles various types of questions.
@@ -324,7 +324,7 @@ async def test_chat_handles_various_question_types(chat_ui_helper):
 @pytest.mark.ui
 @pytest.mark.ui_smoke
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T706")
+@allure.testcase("DSPTV-T336")
 async def test_user_message_display(chat_ui_helper):
     """
     Test that user messages are properly displayed with data-testid attributes.

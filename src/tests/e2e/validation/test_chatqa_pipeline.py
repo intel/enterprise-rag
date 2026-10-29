@@ -30,7 +30,7 @@ PIPELINE = "chatqna"
 TENANT = "_global"
 
 
-@allure.testcase("IEASG-T32")
+@allure.testcase("DSPTV-T45")
 def test_chatqa_timeout(chatqa_api_helper):
     """
     The aim is to check if the response is no longer than 60 seconds what may
@@ -47,7 +47,7 @@ def test_chatqa_timeout(chatqa_api_helper):
     logger.info(f"Response: {chatqa_api_helper.get_text(response)}")
 
 
-@allure.testcase("IEASG-T29")
+@allure.testcase("DSPTV-T42")
 def test_chatqa_pass_empty_question(chatqa_api_helper):
     """
     Check if 'Bad request' is returned in case user makes an invalid request
@@ -58,7 +58,7 @@ def test_chatqa_pass_empty_question(chatqa_api_helper):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T28")
+@allure.testcase("DSPTV-T41")
 def test_chatqa_ask_in_polish(chatqa_api_helper):
     """
     This is to reproduce a defect:
@@ -74,7 +74,7 @@ def test_chatqa_ask_in_polish(chatqa_api_helper):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T31")
+@allure.testcase("DSPTV-T44")
 def test_chatqa_disable_streaming(chatqa_api_helper, fingerprint_api_helper):
     """
     Disable streaming. Check that the response is in JSON format. Check headers.
@@ -90,7 +90,7 @@ def test_chatqa_disable_streaming(chatqa_api_helper, fingerprint_api_helper):
         pytest.fail(f"Response is not a valid JSON: {response.text}")
 
 
-@allure.testcase("IEASG-T49")
+@allure.testcase("DSPTV-T47")
 def test_chatqa_response_headers_when_streaming_enabled(chatqa_api_helper, fingerprint_api_helper):
     """
     Enable streaming. Check that the response is in 'Server-Sent Events' format. Check headers.
@@ -107,7 +107,7 @@ def test_chatqa_response_headers_when_streaming_enabled(chatqa_api_helper, finge
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T150")
+@allure.testcase("DSPTV-T37")
 def test_chatqa_streaming_capability(chatqa_api_helper, fingerprint_api_helper):
     """
     Check if streaming is working properly by measuring the time between first and last line of the response.
@@ -132,7 +132,7 @@ def test_chatqa_streaming_capability(chatqa_api_helper, fingerprint_api_helper):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T57")
+@allure.testcase("DSPTV-T48")
 def test_chatqa_change_max_new_tokens(chatqa_api_helper, fingerprint_api_helper):
     """
     Make /change_arguments API call to change max_new_tokens value.
@@ -150,7 +150,7 @@ def test_chatqa_change_max_new_tokens(chatqa_api_helper, fingerprint_api_helper)
     assert len(response_text.split()) <= 5
 
 
-@allure.testcase("IEASG-T58")
+@allure.testcase("DSPTV-T49")
 def test_chatqa_api_call_with_additional_parameters(chatqa_api_helper, fingerprint_api_helper):
     """
     Check that additional parameters passed to /v1/chatqa are not taken into account.
@@ -187,7 +187,7 @@ def test_chatqa_api_call_with_additional_parameters(chatqa_api_helper, fingerpri
     assert refreshed_retriever_resp.json()["values"] == old_retriever
 
 
-@allure.testcase("IEASG-T42")
+@allure.testcase("DSPTV-T46")
 def test_chatqa_concurrent_requests(chatqa_api_helper, temporarily_remove_brute_force_detection):
     """
     Ask 100 concurrent questions. Measure min, max, avg response time.
@@ -225,7 +225,7 @@ def test_chatqa_concurrent_requests(chatqa_api_helper, temporarily_remove_brute_
     assert failed_requests_counter == 0, "Some of the requests didn't return HTTP status code 200"
 
 
-@allure.testcase("IEASG-T161")
+@allure.testcase("DSPTV-T38")
 def test_chatqa_input_over_limit(chatqa_api_helper):
     """Ask a question over limit of 4096 tokens. Expect 400 Bad Request status code."""
     words_in_message = 15000
@@ -242,7 +242,7 @@ def test_chatqa_input_over_limit(chatqa_api_helper):
                                          f"Answer: {response.text}")
 
 
-@allure.testcase("IEASG-T251")
+@allure.testcase("DSPTV-T40")
 def test_chatqa_chunks_in_sources(chatqa_api_helper, edp_helper, fingerprint_api_helper):
     """
     Upload a file with the following content:
@@ -275,7 +275,7 @@ def test_chatqa_chunks_in_sources(chatqa_api_helper, edp_helper, fingerprint_api
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T171")
+@allure.testcase("DSPTV-T50")
 def test_follow_up_questions_simple_case(chatqa_api_helper, chat_history_helper):
     """Check if second answer refers to the first answer (simple case)"""
     # Ask first question
@@ -299,7 +299,7 @@ def test_follow_up_questions_simple_case(chatqa_api_helper, chat_history_helper)
     assert chatqa_api_helper.words_in_response(["seine", "eiffel"], response_followup)
 
 
-@allure.testcase("IEASG-T301")
+@allure.testcase("DSPTV-T43")
 def test_false_content_injection_via_file(edp_helper, chatqa_api_helper, chat_history_helper):
     """
     Checks whether the system incorrectly uses irrelevant context from the uploaded document.
@@ -328,7 +328,7 @@ def test_false_content_injection_via_file(edp_helper, chatqa_api_helper, chat_hi
     assert chatqa_api_helper.words_in_response(["wisla", "vistula"], response_followup)
 
 
-@allure.testcase("IEASG-T173")
+@allure.testcase("DSPTV-T51")
 def test_follow_up_questions_irrelevant_data_injected(chatqa_api_helper, chat_history_helper):
     """Irrelevant data injected in the first question. Refer to it a couple of questions later"""
     # Ask first question
@@ -355,7 +355,7 @@ def test_follow_up_questions_irrelevant_data_injected(chatqa_api_helper, chat_hi
     assert chatqa_api_helper.words_in_response(["giovanni", "giorgio"], response_followup)
 
 
-@allure.testcase("IEASG-T174")
+@allure.testcase("DSPTV-T52")
 def test_follow_up_questions_contradictory_history(chatqa_api_helper, chat_history_helper):
     """Check if the model is able to handle contradictory history"""
     question_people = "And in which country is that city located?"
@@ -372,7 +372,7 @@ def test_follow_up_questions_contradictory_history(chatqa_api_helper, chat_histo
         f"Model appears misled by contradictory history: {response_text}"
 
 
-@allure.testcase("IEASG-T175")
+@allure.testcase("DSPTV-T53")
 def test_follow_up_questions_full_history_access(chatqa_api_helper, chat_history_helper):
     """
     Seed the conversation history with three long turns (~440 words each), each carrying a

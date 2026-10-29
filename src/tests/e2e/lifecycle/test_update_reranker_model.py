@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 RERANKER_POD_LABEL_SELECTOR = "app.kubernetes.io/name=reranking-usvc"
 
 
-@allure.testcase("IEASG-T310")
+@allure.testcase("DSPTV-T203")
 def test_update_reranker_model(k8s_helper):
     """
     Verify the reranker microservice pod serves the reranking model selected in the

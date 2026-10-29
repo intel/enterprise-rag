@@ -10,7 +10,7 @@ import pytest
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T27")
+@allure.testcase("DSPTV-T152")
 def test_pods_are_running():
     pods_not_running = []
     for pod in kr8s.get("pods", namespace=kr8s.ALL): # type: kr8s.api_resources.Pod

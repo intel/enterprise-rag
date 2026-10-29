@@ -91,7 +91,7 @@ def response_evaluator():
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T278")
+@allure.testcase("DSPTV-T330")
 async def test_response_quality_single_prompt(chat_ui_helper, response_evaluator):
     """
     Test response quality for a single prompt using evaluation metrics.
@@ -137,7 +137,7 @@ async def test_response_quality_single_prompt(chat_ui_helper, response_evaluator
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T279")
+@allure.testcase("DSPTV-T331")
 async def test_multiple_prompts_quality_metrics(chat_ui_helper, response_evaluator):
     """
     Test response quality across multiple diverse prompts.
@@ -236,7 +236,7 @@ async def test_multiple_prompts_quality_metrics(chat_ui_helper, response_evaluat
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T280")
+@allure.testcase("DSPTV-T332")
 async def test_groundedness_hallucination_detection(chat_ui_helper, response_evaluator):
     """
     Test groundedness and hallucination detection in responses.
@@ -290,7 +290,7 @@ async def test_groundedness_hallucination_detection(chat_ui_helper, response_eva
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T281")
+@allure.testcase("DSPTV-T333")
 async def test_response_latency_and_quality(chat_ui_helper, response_evaluator):
     """
     Test response latency while maintaining quality standards.

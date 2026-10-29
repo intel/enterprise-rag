@@ -110,7 +110,7 @@ def test_post_restore_restore_completed(k8s_helper):
             )
 
 
-@allure.testcase("IEASG-T315")
+@allure.testcase("DSPTV-T208")
 def test_post_restore_data_exists(keycloak_helper, edp_helper, chat_history_helper, chatqa_api_helper):
     """
     1. Verify that the previously uploaded file is present in the system.
@@ -153,7 +153,7 @@ def test_post_restore_data_exists(keycloak_helper, edp_helper, chat_history_help
     )
 
 
-@allure.testcase("IEASG-T316")
+@allure.testcase("DSPTV-T209")
 def test_post_restore_data_does_not_exists(keycloak_helper, edp_helper, chat_history_helper):
     """
     Check that data ingested after the backup does not exist after the restore.

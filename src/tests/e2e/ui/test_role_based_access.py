@@ -41,7 +41,7 @@ def _admin_panel_url() -> str:
 # 1. Chat access (all roles)
 # ---------------------------------------------------------------------------
 
-@allure.testcase("IEASG-T543")
+@allure.testcase("DSPTV-T344")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_admin_can_access_chat(chat_ui_helper):
@@ -51,7 +51,7 @@ async def test_admin_can_access_chat(chat_ui_helper):
     )
 
 
-@allure.testcase("IEASG-T544")
+@allure.testcase("DSPTV-T345")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_maintainer_can_access_chat(chat_ui_helper_maintainer):
@@ -61,7 +61,7 @@ async def test_maintainer_can_access_chat(chat_ui_helper_maintainer):
     )
 
 
-@allure.testcase("IEASG-T545")
+@allure.testcase("DSPTV-T346")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_user_can_access_chat(chat_ui_helper_user):
@@ -75,7 +75,7 @@ async def test_user_can_access_chat(chat_ui_helper_user):
 # 2. ViewSwitchButton visibility
 # ---------------------------------------------------------------------------
 
-@allure.testcase("IEASG-T546")
+@allure.testcase("DSPTV-T347")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_admin_sees_view_switch_button(chat_ui_helper):
@@ -86,7 +86,7 @@ async def test_admin_sees_view_switch_button(chat_ui_helper):
     assert visible, "Admin should see view-switch-btn--to-admin-panel"
 
 
-@allure.testcase("IEASG-T547")
+@allure.testcase("DSPTV-T348")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_maintainer_sees_view_switch_button(chat_ui_helper_maintainer):
@@ -97,7 +97,7 @@ async def test_maintainer_sees_view_switch_button(chat_ui_helper_maintainer):
     assert visible, "Maintainer should see view-switch-btn--to-admin-panel"
 
 
-@allure.testcase("IEASG-T548")
+@allure.testcase("DSPTV-T349")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_user_does_not_see_view_switch_button(chat_ui_helper_user):
@@ -112,7 +112,7 @@ async def test_user_does_not_see_view_switch_button(chat_ui_helper_user):
 # 3. Admin panel access control
 # ---------------------------------------------------------------------------
 
-@allure.testcase("IEASG-T549")
+@allure.testcase("DSPTV-T350")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_user_redirected_from_admin_panel(chat_ui_helper_user):
@@ -131,7 +131,7 @@ async def test_user_redirected_from_admin_panel(chat_ui_helper_user):
 # 4. Admin panel tab visibility — admin
 # ---------------------------------------------------------------------------
 
-@allure.testcase("IEASG-T550")
+@allure.testcase("DSPTV-T351")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_admin_sees_all_admin_tabs(chat_ui_helper):
@@ -158,7 +158,7 @@ async def test_admin_sees_all_admin_tabs(chat_ui_helper):
 # 5. Admin panel tab visibility — maintainer
 # ---------------------------------------------------------------------------
 
-@allure.testcase("IEASG-T551")
+@allure.testcase("DSPTV-T352")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_maintainer_sees_only_allowed_tabs(chat_ui_helper_maintainer):

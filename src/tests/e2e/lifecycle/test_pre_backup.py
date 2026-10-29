@@ -76,7 +76,7 @@ def test_pre_backup_engine_is_ready(k8s_helper):
     )
 
 
-@allure.testcase("IEASG-T312")
+@allure.testcase("DSPTV-T205")
 def test_pre_backup(keycloak_helper, edp_helper, chat_history_helper):
     """
     Prepare data for backup:

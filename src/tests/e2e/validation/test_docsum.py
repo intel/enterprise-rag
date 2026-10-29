@@ -21,7 +21,7 @@ BAD_REQUEST_STATUS_CODES = [400, 422]
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T289")
+@allure.testcase("DSPTV-T1")
 def test_docsum_summary_type(docsum_helper, texts):
     """
     Upload a couple of short books - each book using all available summary types.
@@ -49,7 +49,7 @@ def test_docsum_summary_type(docsum_helper, texts):
     assert not failures, "\n".join(failures)
 
 
-@allure.testcase("IEASG-T290")
+@allure.testcase("DSPTV-T2")
 def test_docsum_long_books(docsum_helper, texts):
     """Upload long books (using map_reduce summary type) and check if the summaries are correct"""
     books_to_test = [
@@ -71,7 +71,7 @@ def test_docsum_long_books(docsum_helper, texts):
     assert not failures, "\n".join(failures)
 
 
-@allure.testcase("IEASG-T291")
+@allure.testcase("DSPTV-T3")
 def test_docsum_links(docsum_helper):
     """Upload links and check if the summaries are correct"""
     links = [
@@ -90,7 +90,7 @@ def test_docsum_links(docsum_helper):
     assert not failures, "\n".join(failures)
 
 
-@allure.testcase("IEASG-T292")
+@allure.testcase("DSPTV-T4")
 def test_docsum_files(docsum_helper, texts):
     """Upload files and check if the summaries are correct"""
     files = ["after_a_few_words_3k_words", "the_history_of_the_peloponnesian_war_205k_words"]
@@ -108,7 +108,7 @@ def test_docsum_files(docsum_helper, texts):
     assert not failures, "\n".join(failures)
 
 
-@allure.testcase("IEASG-T293")
+@allure.testcase("DSPTV-T5")
 def test_docsum_confusing_stories(docsum_helper, texts):
     """
     Upload 2 stories - each story consists of random sentences not related to each other.
@@ -130,7 +130,7 @@ def test_docsum_confusing_stories(docsum_helper, texts):
     assert not failures, "\n".join(failures)
 
 
-@allure.testcase("IEASG-T294")
+@allure.testcase("DSPTV-T6")
 def test_docsum_multiple_texts(docsum_helper, texts):
     """
     Upload multiple texts in a single request.
@@ -146,7 +146,7 @@ def test_docsum_multiple_texts(docsum_helper, texts):
     assert not failures, "\n".join(failures)
 
 
-@allure.testcase("IEASG-T295")
+@allure.testcase("DSPTV-T7")
 def test_docsum_mixed_parameters(docsum_helper, texts):
     """Upload one text and one file in a single request. Check if the summary is correct."""
     text = texts["multiple_texts_1"]
@@ -160,7 +160,7 @@ def test_docsum_mixed_parameters(docsum_helper, texts):
     assert not failures, "\n".join(failures)
 
 
-@allure.testcase("IEASG-T296")
+@allure.testcase("DSPTV-T8")
 def test_docsum_streaming(docsum_helper, texts):
     """Request for a summary with streaming enabled and disabled. Check if both summaries are correct."""
     book = "the_gift_of_the_magi_2k_words"
@@ -176,7 +176,7 @@ def test_docsum_streaming(docsum_helper, texts):
     assert not failures, "\n".join(failures)
 
 
-@allure.testcase("IEASG-T297")
+@allure.testcase("DSPTV-T9")
 def test_docsum_input_over_limit(docsum_helper, texts):
     """ Upload a text exceeding the allowed limit for 'stuff'' summary type. """
     book_title = "the_call_of_the_wild_32k_words"
@@ -185,7 +185,7 @@ def test_docsum_input_over_limit(docsum_helper, texts):
     assert response.status_code in BAD_REQUEST_STATUS_CODES
 
 
-@allure.testcase("IEASG-T298")
+@allure.testcase("DSPTV-T10")
 def test_docsum_empty_lists(docsum_helper):
     """Test DocSum API with empty lists for texts, links, and files"""
     logger.info("Requesting a summary without providing any text/link/file")
@@ -193,7 +193,7 @@ def test_docsum_empty_lists(docsum_helper):
     assert response.status_code in BAD_REQUEST_STATUS_CODES
 
 
-@allure.testcase("IEASG-T299")
+@allure.testcase("DSPTV-T11")
 def test_docsum_invalid_request(docsum_helper):
     """
     Test DocSum API with invalid payloads:
@@ -219,7 +219,7 @@ def test_docsum_invalid_request(docsum_helper):
     assert response.status_code in BAD_REQUEST_STATUS_CODES
 
 
-@allure.testcase("IEASG-T302")
+@allure.testcase("DSPTV-T12")
 def test_docsum_concurrent_requests(docsum_helper, texts, temporarily_remove_brute_force_detection):
     """
     Make multiple concurrent DocSum API requests.
