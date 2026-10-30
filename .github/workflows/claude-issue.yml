@@ -1,0 +1,54 @@
+---
+name: claude-issue
+
+on:
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  triage:
+    if: ${{ github.event_name == 'issues' && github.event.action == 'opened' && !endsWith(github.actor, '[bot]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLAUDE_CODE_SCRIPT_CAPS: '{"gh.sh":6,"reply.sh":2}'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: anthropics/claude-code-action@d70510b174a1244958df0b03166a54912811f3e6 # v1.0.264
+        env:
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+          AWS_REGION: us-east-2
+        with:
+          use_bedrock: "true"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          allowed_non_write_users: "*"
+          prompt: "Use the skill `issues` on issue ${{ github.event.issue.number }}."
+          claude_args: >-
+            --model us.anthropic.claude-opus-5-5 --fallback-model us.anthropic.claude-opus-5 --max-turns 15
+            --allowedTools "Skill,Read(./**),Grep,Glob,Bash(.claude/skills/issues/scripts/gh.sh:*),Bash(.claude/skills/issues/scripts/reply.sh:*)"
+            --disallowedTools "WebFetch,WebSearch,Write,Edit"
+      - name: show Claude error
+        if: failure()
+        run: jq -r '.. | objects | select(.type? == "result") | .result // .error // empty' "$RUNNER_TEMP/claude-execution-output.json" | head -c 3000
+
+  author-replied:
+    if: >-
+      ${{ !github.event.issue.pull_request
+      && contains(github.event.issue.labels.*.name, 'needs-info')
+      && github.actor == github.event.issue.user.login
+      && (github.event_name == 'issue_comment' || github.event.action == 'edited') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: gh issue edit "$ISSUE" --repo "$GITHUB_REPOSITORY" --remove-label needs-info,stale

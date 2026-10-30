@@ -1,0 +1,32 @@
+---
+name: issue-stale
+
+on:
+  schedule:
+    - cron: '0 4 * * 6'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11.0.0
+        with:
+          any-of-issue-labels: needs-info
+          days-before-issue-stale: 30
+          days-before-issue-close: 14
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          stale-issue-label: stale
+          exempt-issue-labels: security
+          operations-per-run: 100
+          stale-issue-message: >
+            We are still waiting for the details requested above, so this issue is now marked `stale`.
+            It will be closed unless there is new activity.
+          close-issue-message: >
+            Closed without the requested details. If you still run into this,
+            please open a new issue with the full reproduction steps and environment.
