@@ -5,15 +5,9 @@ name: Dependency Review
 # that SHA corresponded to) and every tool to an exact version -- no floating
 # tags. Version bumps are therefore explicit, reviewable changes to this file.
 #
-# Blocks pull requests that introduce a *new* dependency whose license is not
-# compatible with Apache-2.0, the license of this repository. Version bumps of
-# dependencies that are already in use are not license-checked: those were
-# accepted when they were first added, and re-checking them on every bump only
-# resurfaces the existing exceptions (pymupdf is AGPL, psycopg2 LGPL, ...) and
-# license-detector noise (typing-extensions reported as GPL, ...).
-#
-# Data comes from the dependency graph, so only manifests and lockfiles the
-# dependency graph understands are covered.
+# Blocks pull requests that introduce a new dependency whose license is not
+# compatible with Apache-2.0. Data comes from the dependency graph, so only
+# manifests and lockfiles the dependency graph understands are covered.
 
 on:
   pull_request:
@@ -33,8 +27,6 @@ jobs:
   dependency-review:
     name: Dependency Review (licenses)
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
     steps:
       - name: Harden the runner (audit all outbound calls)
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -43,12 +35,16 @@ jobs:
 
       # The dependency graph reports a version bump as the old version removed
       # plus the new version added, and the action license-checks every added
-      # entry. A package that is both removed and added in this PR is therefore
-      # a bump of an existing dependency, so it is passed to the action as
-      # license-exempt. Exemptions are version-less purls, which the action
-      # matches on type + name, case-insensitively. Packages that are genuinely
-      # new -- including new transitive dependencies pulled in by a bump --
-      # are still checked.
+      # entry. A package that is both removed and added in this PR *with the
+      # same license* is therefore a bump of an existing dependency, so it is
+      # passed to the action as license-exempt, so existing exceptions (AGPL
+      # pymupdf, ...) and license-detector noise do not fail every bump. A bump
+      # that changes the license (e.g. a relicense to AGPL, SSPL or BUSL) is
+      # still checked. Exemptions are version-less purls, which the action
+      # matches on type + name for every manifest, so a name is exempted only
+      # if all of its added entries kept their license. Packages that are
+      # genuinely new -- including new transitive dependencies pulled in by a
+      # bump -- are still checked.
       - name: Find bumped (pre-existing) dependencies
         id: bumped
         env:
@@ -61,18 +57,16 @@ jobs:
           # Strips the trailing `@version` only, so npm scopes (`@types/...`) survive.
           purls=$(jq -r '
             def name_only: .package_url // empty | sub("@[^@/]*$"; "");
-            [.[] | select(.change_type == "removed") | name_only] as $removed
-            | [.[] | select(.change_type == "added") | name_only
-                | select(IN($removed[]))]
-            | unique | join(",")' changes.json)
-          echo "Bumped, not license-checked: ${purls:-none}" | tr ',' '\n'
+            [.[] | select(.change_type == "removed") | [name_only, .license]] as $removed
+            | [.[] | select(.change_type == "added")
+                | {name: name_only, kept: ([name_only, .license] | IN($removed[]))}]
+            | group_by(.name) | map(select(all(.kept)) | .[0].name)
+            | join(",")' changes.json)
+          echo "Bumped with unchanged license, not license-checked: ${purls:-none}" | tr ',' '\n'
           echo "purls=${purls}" >> "$GITHUB_OUTPUT"
 
-      # Allowed licenses are the ASF Category A list (permissive licenses that
-      # may be included in an Apache-2.0 work) plus MPL-2.0 (ASF Category B:
-      # file-level copyleft, fine as an unmodified dependency). (A)GPL, LGPL,
-      # SSPL, CC-BY-SA, etc. fail the check. A dependency whose license cannot
-      # be determined is only warned about by the action, not failed.
+      # ASF Category A licenses plus MPL-2.0 (Category B). A dependency whose
+      # license cannot be determined is only warned about, not failed.
       - name: Dependency Review
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
