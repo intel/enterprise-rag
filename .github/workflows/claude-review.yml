@@ -21,7 +21,6 @@ jobs:
         with:
           persist-credentials: false
       - name: Test
-        if: github.event.pull_request.head.repo.fork == true  # only on fork PRs
         env:
           AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
         run: |
