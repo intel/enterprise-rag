@@ -190,19 +190,26 @@ func routeDepth(ctx context.Context) int {
 
 // Carried on the context rather than re-parsed per step: later steps get JSON
 // headers, so a multipart entry body cannot be read back from initInput there.
-type callerParamsCtxKey struct{}
+type entryRequestCtxKey struct{}
 
-func withCallerParams(ctx context.Context, body []byte, headers http.Header) context.Context {
+func withEntryRequest(ctx context.Context, body []byte, headers http.Header) context.Context {
 	initReqData, err := entryRequestData(body, headers)
 	if err != nil {
 		return ctx
 	}
-	params, _ := initReqData[Parameters].(map[string]interface{})
-	return context.WithValue(ctx, callerParamsCtxKey{}, params)
+	return context.WithValue(ctx, entryRequestCtxKey{}, initReqData)
+}
+
+func entryRequestFor(ctx context.Context, body []byte, headers http.Header) (map[string]interface{}, error) {
+	if initReqData, ok := ctx.Value(entryRequestCtxKey{}).(map[string]interface{}); ok {
+		return initReqData, nil
+	}
+	return entryRequestData(body, headers)
 }
 
 func callerParamsFromContext(ctx context.Context) map[string]interface{} {
-	params, _ := ctx.Value(callerParamsCtxKey{}).(map[string]interface{})
+	initReqData, _ := ctx.Value(entryRequestCtxKey{}).(map[string]interface{})
+	params, _ := initReqData[Parameters].(map[string]interface{})
 	return params
 }
 
@@ -1126,7 +1133,7 @@ func handleEnsemblePipeline(
 ) (io.ReadCloser, int, error) {
 	currentNode := graph.Spec.Nodes[nodeName]
 
-	initReqData, err := entryRequestData(initInput, headers)
+	initReqData, err := entryRequestFor(ctx, initInput, headers)
 	if err != nil {
 		otlpr.WithContext(log, ctx).Error(err, "Error unmarshaling initReqData:")
 		return nil, 500, err
@@ -1333,7 +1340,7 @@ func handleSequencePipeline(
 	var err error
 
 	multipartEntry := isMultipartBody(headers)
-	initReqData, err := entryRequestData(initInput, headers)
+	initReqData, err := entryRequestFor(ctx, initInput, headers)
 	if err != nil {
 		otlpr.WithContext(log, ctx).Error(err, "Error reading entry request:")
 		if multipartEntry {
@@ -1583,7 +1590,7 @@ func mcGraphHandler(w http.ResponseWriter, req *http.Request) {
 
 		// ---------------------- RouterAllSteps
 		allStepsCtx, spanRouterAllSteps := mainTracer.Start(ctx, "router all steps") // this context will be used for callClient instrumenation (POSTs)
-		allStepsCtx = withCallerParams(allStepsCtx, inputBytes, req.Header)
+		allStepsCtx = withEntryRequest(allStepsCtx, inputBytes, req.Header)
 		responseBody, statusCode, err := routeStep(allStepsCtx, defaultNodeName, *mcGraph, inputBytes, inputBytes, req.Header)
 
 		pipeLatencyMilliseconds := float64(time.Since(routerRequestStartTime)) / float64(time.Millisecond)

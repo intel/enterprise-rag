@@ -6,9 +6,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -266,14 +268,36 @@ func TestLeafStepInjectedOncePerPipeline(t *testing.T) {
 	}
 }
 
-func TestMcGraphHandlerCallerStreamReachesLeaf(t *testing.T) {
+func multipartUpload(t *testing.T, parameters string) (string, string) {
+	t.Helper()
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	fw, err := mw.CreateFormFile("files", "doc.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = fw.Write([]byte("text"))
+	if err := mw.WriteField(Parameters, parameters); err != nil {
+		t.Fatal(err)
+	}
+	if err := mw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.String(), mw.FormDataContentType()
+}
+
+func TestMcGraphHandlerCallerParamsReachLeaf(t *testing.T) {
+	uploadBody, uploadType := multipartUpload(t, `{"summary_type": "stuff"}`)
 	cases := []struct {
-		name       string
-		body       string
-		wantStream interface{}
+		name        string
+		body        string
+		contentType string
+		key         string
+		want        interface{}
 	}{
-		{"caller value wins", `{"texts": ["x"], "parameters": {"stream": "this_should_be_a_boolean"}}`, "this_should_be_a_boolean"},
-		{"stored value beats upstream default", `{"texts": ["x"]}`, false},
+		{"caller stream wins", `{"texts": ["x"], "parameters": {"stream": "this_should_be_a_boolean"}}`, JSONContentType, "stream", "this_should_be_a_boolean"},
+		{"stored stream beats upstream default", `{"texts": ["x"]}`, JSONContentType, "stream", false},
+		{"multipart caller summary_type wins", uploadBody, uploadType, "summary_type", "stuff"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -289,7 +313,7 @@ func TestMcGraphHandlerCallerStreamReachesLeaf(t *testing.T) {
 			defer closeFn()
 
 			w := newTestWatcher("docsum")
-			w.applyEntry("docsum._global.docsum", []byte(`{"stream": false}`), 1, time.Now())
+			w.applyEntry("docsum._global.docsum", []byte(`{"stream": false, "summary_type": "refine"}`), 1, time.Now())
 			useTestWatcher(t, w)
 
 			docsum := leafStep("DocSum", leafURL, "docsum")
@@ -308,11 +332,12 @@ func TestMcGraphHandlerCallerStreamReachesLeaf(t *testing.T) {
 			}
 
 			req := httptest.NewRequest("POST", "/", strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", tc.contentType)
 			mcGraphHandler(httptest.NewRecorder(), req)
 
 			var got map[string]interface{}
 			assert.NoError(t, json.Unmarshal(recvWithTimeout(t, received), &got))
-			assert.Equal(t, tc.wantStream, got["stream"])
+			assert.Equal(t, tc.want, got[tc.key])
 		})
 	}
 }

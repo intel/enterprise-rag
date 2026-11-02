@@ -767,21 +767,20 @@ func TestInjectTopLevelKeepsRequestStream(t *testing.T) {
 func TestInjectTopLevelStoreWinsOverUpstreamStreamDefault(t *testing.T) {
 	out := injectTopLevel(
 		[]byte(`{"docs": [], "stream": true}`),
-		map[string]interface{}{"stream": false},
-		map[string]interface{}{"summary_type": "stuff"})
+		map[string]interface{}{"stream": false}, nil)
 
 	var got map[string]interface{}
 	assert.NoError(t, json.Unmarshal(out, &got))
 	assert.Equal(t, false, got["stream"])
 }
 
-func TestWithCallerParamsReadsEntryParameters(t *testing.T) {
-	ctx := withCallerParams(context.Background(),
+func TestWithEntryRequestReadsEntryParameters(t *testing.T) {
+	ctx := withEntryRequest(context.Background(),
 		[]byte(`{"texts": ["x"], "parameters": {"stream": false}}`),
 		http.Header{"Content-Type": []string{JSONContentType}})
 	assert.Equal(t, map[string]interface{}{"stream": false}, callerParamsFromContext(ctx))
 
-	ctx = withCallerParams(context.Background(), []byte(`not json`), http.Header{})
+	ctx = withEntryRequest(context.Background(), []byte(`not json`), http.Header{})
 	assert.Nil(t, callerParamsFromContext(ctx))
 }
 
