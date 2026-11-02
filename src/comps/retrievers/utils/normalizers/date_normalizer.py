@@ -215,9 +215,8 @@ class DateNormalizer:
             # Flexible quarter range 
             if isinstance(value, (tuple, list)) and len(value) >= 3:
                 # Parse quarter numbers (handle Roman numerals from Polish patterns)
-                start_q = self._parse_quarter_number(value[0], value[1] if len(value) > 3 else None)
-                end_q = self._parse_quarter_number(value[2] if len(value) == 3 else value[2], 
-                                                   value[3] if len(value) > 3 else None)
+                start_q = self._parse_quarter_number(value[0], None)
+                end_q = self._parse_quarter_number(value[1], None)
                 year = int(value[-1])  # Year is always last
                 
                 if start_q and end_q:
