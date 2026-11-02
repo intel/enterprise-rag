@@ -188,29 +188,19 @@ func routeDepth(ctx context.Context) int {
 	return 0
 }
 
-// callerParamsCtxKey carries the `parameters` object of the entry request, so a
-// leaf step can tell the parameters the caller set from upstream defaults.
+// Carried on the context rather than re-parsed per step: later steps get JSON
+// headers, so a multipart entry body cannot be read back from initInput there.
 type callerParamsCtxKey struct{}
 
-// withCallerParams attaches the entry request's `parameters` object to the
-// context. A body without one, or one that cannot be parsed, attaches nothing.
 func withCallerParams(ctx context.Context, body []byte, headers http.Header) context.Context {
-	initReqData := make(map[string]interface{})
-	if isMultipartBody(headers) {
-		parsed, err := multipartInitParams(body, headers.Get("Content-Type"))
-		if err != nil {
-			return ctx
-		}
-		initReqData = parsed
-	} else if err := json.Unmarshal(body, &initReqData); err != nil {
+	initReqData, err := entryRequestData(body, headers)
+	if err != nil {
 		return ctx
 	}
 	params, _ := initReqData[Parameters].(map[string]interface{})
 	return context.WithValue(ctx, callerParamsCtxKey{}, params)
 }
 
-// callerParamsFromContext returns the entry request's `parameters` object, or nil
-// when none was attached.
 func callerParamsFromContext(ctx context.Context) map[string]interface{} {
 	params, _ := ctx.Value(callerParamsCtxKey{}).(map[string]interface{})
 	return params
@@ -739,6 +729,17 @@ func isMultipartBody(headers http.Header) bool {
 	return err == nil && mediaType == MultipartContentType
 }
 
+func entryRequestData(body []byte, headers http.Header) (map[string]interface{}, error) {
+	if isMultipartBody(headers) {
+		return multipartInitParams(body, headers.Get("Content-Type"))
+	}
+	initReqData := make(map[string]interface{})
+	if err := json.Unmarshal(body, &initReqData); err != nil {
+		return nil, err
+	}
+	return initReqData, nil
+}
+
 func multipartInitParams(body []byte, contentType string) (map[string]interface{}, error) {
 	_, mediaParams, err := mime.ParseMediaType(contentType)
 	if err != nil {
@@ -1125,8 +1126,8 @@ func handleEnsemblePipeline(
 ) (io.ReadCloser, int, error) {
 	currentNode := graph.Spec.Nodes[nodeName]
 
-	initReqData := make(map[string]interface{})
-	if err := json.Unmarshal(initInput, &initReqData); err != nil {
+	initReqData, err := entryRequestData(initInput, headers)
+	if err != nil {
 		otlpr.WithContext(log, ctx).Error(err, "Error unmarshaling initReqData:")
 		return nil, 500, err
 	}
@@ -1331,16 +1332,13 @@ func handleSequencePipeline(
 	var responseBytes []byte
 	var err error
 
-	initReqData := make(map[string]interface{})
-
 	multipartEntry := isMultipartBody(headers)
-	if multipartEntry {
-		if initReqData, err = multipartInitParams(initInput, headers.Get("Content-Type")); err != nil {
-			otlpr.WithContext(log, ctx).Error(err, "Error reading multipart entry request:")
+	initReqData, err := entryRequestData(initInput, headers)
+	if err != nil {
+		otlpr.WithContext(log, ctx).Error(err, "Error reading entry request:")
+		if multipartEntry {
 			return nil, http.StatusBadRequest, err
 		}
-	} else if err = json.Unmarshal(initInput, &initReqData); err != nil {
-		otlpr.WithContext(log, ctx).Error(err, "Error unmarshaling initReqData:")
 		return nil, 500, err
 	}
 	// Steps after the entry step are called with the previous step's JSON response,

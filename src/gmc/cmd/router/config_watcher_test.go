@@ -754,7 +754,6 @@ func TestInjectTopLevelSuppliesSummaryTypeWhenAbsent(t *testing.T) {
 }
 
 func TestInjectTopLevelKeepsRequestStream(t *testing.T) {
-	// The caller's stream value must reach the service so it can validate it.
 	out := injectTopLevel(
 		[]byte(`{"stream": "this_should_be_a_boolean"}`),
 		map[string]interface{}{"stream": true},
@@ -766,8 +765,6 @@ func TestInjectTopLevelKeepsRequestStream(t *testing.T) {
 }
 
 func TestInjectTopLevelStoreWinsOverUpstreamStreamDefault(t *testing.T) {
-	// An upstream step fills stream with its own default; a stream the caller did
-	// not send must still come from the store.
 	out := injectTopLevel(
 		[]byte(`{"docs": [], "stream": true}`),
 		map[string]interface{}{"stream": false},

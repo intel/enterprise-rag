@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -261,6 +262,57 @@ func TestLeafStepInjectedOncePerPipeline(t *testing.T) {
 			assert.NoError(t, json.Unmarshal(recvWithTimeout(t, received), &got))
 			assert.EqualValues(t, 256, got["max_new_tokens"])
 			assert.Equal(t, "hi", got["query"])
+		})
+	}
+}
+
+func TestMcGraphHandlerCallerStreamReachesLeaf(t *testing.T) {
+	cases := []struct {
+		name       string
+		body       string
+		wantStream interface{}
+	}{
+		{"caller value wins", `{"texts": ["x"], "parameters": {"stream": "this_should_be_a_boolean"}}`, "this_should_be_a_boolean"},
+		{"stored value beats upstream default", `{"texts": ["x"]}`, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+				_, _ = io.WriteString(rw, `{"docs": [], "stream": true}`)
+			}))
+			defer upstream.Close()
+			upstreamURL, err := apis.ParseURL(upstream.URL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			leafURL, received, closeFn := echoService(t)
+			defer closeFn()
+
+			w := newTestWatcher("docsum")
+			w.applyEntry("docsum._global.docsum", []byte(`{"stream": false}`), 1, time.Now())
+			useTestWatcher(t, w)
+
+			docsum := leafStep("DocSum", leafURL, "docsum")
+			docsum.Data = "$response"
+			prevGraph := mcGraph
+			t.Cleanup(func() { mcGraph = prevGraph })
+			mcGraph = &mcv1alpha3.GMConnector{
+				Spec: mcv1alpha3.GMConnectorSpec{
+					Nodes: map[string]mcv1alpha3.Router{
+						"root": {
+							RouterType: mcv1alpha3.Sequence,
+							Steps:      []mcv1alpha3.Step{leafStep("TextExtractor", upstreamURL.String(), ""), docsum},
+						},
+					},
+				},
+			}
+
+			req := httptest.NewRequest("POST", "/", strings.NewReader(tc.body))
+			mcGraphHandler(httptest.NewRecorder(), req)
+
+			var got map[string]interface{}
+			assert.NoError(t, json.Unmarshal(recvWithTimeout(t, received), &got))
+			assert.Equal(t, tc.wantStream, got["stream"])
 		})
 	}
 }

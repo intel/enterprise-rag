@@ -847,17 +847,15 @@ var requestOverridableParams = map[string]struct{}{
 	// docsum exposes the chain type as a per-summary choice in its UI, so the
 	// stored value is the default rather than an override.
 	"summary_type": {},
-	// Response framing only; the stored value is the default when a caller omits it.
+	// Response framing only, for every pipeline; the stored value is the default
+	// when a caller omits it.
 	"stream": {},
 }
 
 // injectTopLevel overlays params onto the top level of a JSON object request.
-// Stored values overwrite what the request carried, except for the parameters in
-// requestOverridableParams that the caller set in its entry request
-// (callerParams), where the caller's value is used. Upstream steps fill fields
-// such as stream with their own defaults, so the step input cannot tell a
-// caller's value from an upstream default. A request that is not a JSON object
-// is returned unchanged.
+// Overridable keys are matched against callerParams, not the request: upstream
+// steps fill fields such as stream with their own defaults, so the step input
+// cannot tell a caller's value from an upstream default.
 func injectTopLevel(request []byte, params map[string]interface{}, callerParams map[string]interface{}) []byte {
 	var data map[string]interface{}
 	if err := json.Unmarshal(request, &data); err != nil {
