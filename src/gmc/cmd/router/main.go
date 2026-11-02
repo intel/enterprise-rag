@@ -188,6 +188,34 @@ func routeDepth(ctx context.Context) int {
 	return 0
 }
 
+// callerParamsCtxKey carries the `parameters` object of the entry request, so a
+// leaf step can tell the parameters the caller set from upstream defaults.
+type callerParamsCtxKey struct{}
+
+// withCallerParams attaches the entry request's `parameters` object to the
+// context. A body without one, or one that cannot be parsed, attaches nothing.
+func withCallerParams(ctx context.Context, body []byte, headers http.Header) context.Context {
+	initReqData := make(map[string]interface{})
+	if isMultipartBody(headers) {
+		parsed, err := multipartInitParams(body, headers.Get("Content-Type"))
+		if err != nil {
+			return ctx
+		}
+		initReqData = parsed
+	} else if err := json.Unmarshal(body, &initReqData); err != nil {
+		return ctx
+	}
+	params, _ := initReqData[Parameters].(map[string]interface{})
+	return context.WithValue(ctx, callerParamsCtxKey{}, params)
+}
+
+// callerParamsFromContext returns the entry request's `parameters` object, or nil
+// when none was attached.
+func callerParamsFromContext(ctx context.Context) map[string]interface{} {
+	params, _ := ctx.Value(callerParamsCtxKey{}).(map[string]interface{})
+	return params
+}
+
 // fanoutCtxKey carries one request's ensemble fan-out budget. The budget is
 // shared by every node the request reaches, because a per-node limit does not
 // bound the tree: nested Ensemble nodes each open their own group, so the
@@ -1557,6 +1585,7 @@ func mcGraphHandler(w http.ResponseWriter, req *http.Request) {
 
 		// ---------------------- RouterAllSteps
 		allStepsCtx, spanRouterAllSteps := mainTracer.Start(ctx, "router all steps") // this context will be used for callClient instrumenation (POSTs)
+		allStepsCtx = withCallerParams(allStepsCtx, inputBytes, req.Header)
 		responseBody, statusCode, err := routeStep(allStepsCtx, defaultNodeName, *mcGraph, inputBytes, inputBytes, req.Header)
 
 		pipeLatencyMilliseconds := float64(time.Since(routerRequestStartTime)) / float64(time.Millisecond)

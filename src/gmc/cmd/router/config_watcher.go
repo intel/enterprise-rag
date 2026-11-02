@@ -691,7 +691,7 @@ func (w *configWatcher) injectParamsForStep(ctx context.Context, step *mcv1alpha
 	if len(params) == 0 {
 		return request
 	}
-	return injectTopLevel(request, params)
+	return injectTopLevel(request, params, callerParamsFromContext(ctx))
 }
 
 // fetchLegacy calls the fingerprint microservice for a single parameter group,
@@ -853,16 +853,20 @@ var requestOverridableParams = map[string]struct{}{
 
 // injectTopLevel overlays params onto the top level of a JSON object request.
 // Stored values overwrite what the request carried, except for the parameters in
-// requestOverridableParams, where a value the caller sent is left in place. A
-// request that is not a JSON object is returned unchanged.
-func injectTopLevel(request []byte, params map[string]interface{}) []byte {
+// requestOverridableParams that the caller set in its entry request
+// (callerParams), where the caller's value is used. Upstream steps fill fields
+// such as stream with their own defaults, so the step input cannot tell a
+// caller's value from an upstream default. A request that is not a JSON object
+// is returned unchanged.
+func injectTopLevel(request []byte, params map[string]interface{}, callerParams map[string]interface{}) []byte {
 	var data map[string]interface{}
 	if err := json.Unmarshal(request, &data); err != nil {
 		return request
 	}
 	for key, value := range params {
 		if _, overridable := requestOverridableParams[key]; overridable {
-			if _, sent := data[key]; sent {
+			if sentValue, sent := callerParams[key]; sent {
+				data[key] = sentValue
 				continue
 			}
 		}
