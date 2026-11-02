@@ -38,8 +38,8 @@ def _completed(returncode=0, stdout="", stderr=""):
 def test_exec_targets_workload_service_without_apiserver_proxy():
     argv = resolver.build_exec_argv("kubectl", "llm-inference", "llama3-8b-awq", 30)
 
-    assert argv[:5] == ["kubectl", "exec", "-n", "llm-inference", "svc/llama3-8b-awq-kserve-workload-svc"]
-    assert "--raw" not in argv
+    assert argv[:7] == ["kubectl", "exec", "-n", "llm-inference", "svc/llama3-8b-awq-kserve-workload-svc",
+                         "-c", "main"]
     assert resolver.LOCAL_MODELS_URL in argv[-1]
 
 
@@ -53,6 +53,8 @@ def test_fetch_models_parses_exec_output():
 
 @pytest.mark.parametrize("result, expected_reason", [
     (_completed(returncode=1, stderr="services not found"), "not reachable from its workload pod: services not found"),
+    (_completed(returncode=1, stderr="Traceback (most recent call last):\n  ...\nURLError: refused\n"),
+     "not reachable from its workload pod: URLError: refused"),
     (_completed(stdout="not json"), "no JSON model list"),
 ])
 def test_fetch_models_reports_reason_on_failure(result, expected_reason):

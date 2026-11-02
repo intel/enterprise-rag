@@ -29,6 +29,7 @@ import sys
 NAME_PATTERN = re.compile(r"^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$")
 
 WORKLOAD_SVC_SUFFIX = "-kserve-workload-svc"
+WORKLOAD_CONTAINER = "main"
 LOCAL_MODELS_URL = "http://127.0.0.1:8000/v1/models"
 
 
@@ -38,7 +39,7 @@ def build_exec_argv(kubectl, namespace, model_name, timeout):
         "import sys, urllib.request; "
         f"sys.stdout.write(urllib.request.urlopen('{LOCAL_MODELS_URL}', timeout={timeout}).read().decode())"
     )
-    return [kubectl, "exec", "-n", namespace, f"svc/{model_name}{WORKLOAD_SVC_SUFFIX}", "--", "python3", "-c", fetch]
+    return [kubectl, "exec", "-n", namespace, f"svc/{model_name}{WORKLOAD_SVC_SUFFIX}", "-c", WORKLOAD_CONTAINER, "--", "python3", "-c", fetch]
 
 
 def fetch_models(kubectl, namespace, model_name, timeout):
@@ -49,7 +50,8 @@ def fetch_models(kubectl, namespace, model_name, timeout):
     except (OSError, subprocess.TimeoutExpired) as error:
         return None, f"could not run kubectl: {error}"
     if result.returncode != 0:
-        return None, f"model server not reachable from its workload pod: {result.stderr.strip()}"
+        last_line = (result.stderr.strip().splitlines() or [""])[-1]
+        return None, f"model server not reachable from its workload pod: {last_line}"
     try:
         return json.loads(result.stdout), None
     except json.JSONDecodeError as error:
