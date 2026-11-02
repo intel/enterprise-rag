@@ -177,7 +177,6 @@ class DateNormalizer:
         elif operator == 'quarter':
             # "Q3 2024" or "IV kwartał 2024" → specific quarter
             if isinstance(value, (tuple, list)) and len(value) == 2:
-                # Parse quarter number (handles both Arabic and Roman numerals)
                 quarter = self._parse_quarter_number(value[0])
                 try:
                     year = int(value[1])
@@ -416,17 +415,15 @@ class DateNormalizer:
         end = datetime(year, end_month, last_day, 23, 59, 59, tzinfo=timezone.utc)
         return int(start.timestamp()), int(end.timestamp())
     
-    def _parse_quarter_number(self, arabic: Optional[str]) -> Optional[int]:
+    def _parse_quarter_number(self, value: Optional[str]) -> Optional[int]:
         """Parse quarter number from Arabic (1-4) or Roman (I-IV) numerals."""
-        # Try Arabic numeral first
-        if arabic and str(arabic).isdigit():
-            q = int(arabic)
+        if value and str(value).isdigit():
+            q = int(value)
             if 1 <= q <= 4:
                 return q
         
-        # Try Roman numeral
-        if arabic:
-            value_str = str(arabic).upper().strip()
+        if value:
+            value_str = str(value).upper().strip()
             q = ROMAN_TO_INT.get(value_str)
             if q:
                 return q
