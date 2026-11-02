@@ -413,11 +413,6 @@ def disable_guards_at_startup(guard_helper, suppress_logging, temporarily_remove
     Note that suppress_logging fixture is deliberately placed here to ensure that it is executed
     before this fixture (otherwise we'd see a lot of unwanted logs at startup).
     """
-    # Guard helper targets the chatqna pipeline scope; skip on other pipeline types
-    if cfg.get("pipeline_type") not in ("chatqna", "audioqna"):
-        yield
-        return
-
     logger.info("Disabling all guards using permanent validation user")
     guard_helper.disable_all_guards()
     yield

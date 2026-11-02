@@ -3,15 +3,7 @@
 # Copyright (C) 2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
-"""
-Guard tests skip the guards the deployed pipeline variant does not contain.
-
-The fingerprint store seeds every guard group whether or not its step is
-deployed, so a guard test on a variant without that guard would write a config
-nothing reads and fail. The deployed guards are derived from the repo's own
-pipeline and variant files; these tests read the real files, so a variant that
-adds or drops a guard step is reflected here without a second list.
-"""
+"""Guard tests skip the guards the deployed pipeline variant does not contain."""
 
 from unittest.mock import MagicMock, patch
 
@@ -26,6 +18,7 @@ from tests.e2e.helpers.guard_helper import GuardHelper, GuardType, deployed_guar
     ("chatqna", "retrieve-rerank", ()),
     ("chatqna", "upload", ()),
     ("docsum", "base", ()),
+    ("audioqna", "base", (GuardType.INPUT,)),
 ])
 def test_deployed_guard_types_follow_the_variant(pipeline_type, pipeline_variant, expected):
     assert deployed_guard_types(pipeline_type, pipeline_variant) == expected

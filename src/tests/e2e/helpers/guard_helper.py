@@ -3,8 +3,8 @@
 # Copyright (C) 2024-2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
+import importlib.util
 import logging
-import re
 import time
 from enum import Enum
 from pathlib import Path
@@ -59,8 +59,9 @@ CHATQNA_GUARD_TYPES = (GuardType.INPUT, GuardType.OUTPUT)
 
 DATAPREP_GUARD_PARAMS_KEY = GuardType.DATAPREP.value
 
-PIPELINES_DIR = Path(__file__).resolve().parents[4] / "deployment" / "pipelines"
-PARAMS_KIND_PATTERN = re.compile(r"^\s*paramsKind:\s*(\S+)", re.MULTILINE)
+DEPLOYMENT_DIR = Path(__file__).resolve().parents[4] / "deployment"
+PIPELINES_DIR = DEPLOYMENT_DIR / "pipelines"
+COMPOSER_PATH = DEPLOYMENT_DIR / "scripts" / "compose_pipeline.py"
 
 GUARD_ALLOWED_STATUS = 200
 GUARD_BLOCKED_STATUS = 466
@@ -131,29 +132,29 @@ def _disabled_defaults(guard_type, scanner):
     return _fully_specified(guard_type, scanner, {"enabled": False})
 
 
-def deployed_guard_types(pipeline_type, pipeline_variant="base"):
-    """Returns the chatqa guard types the deployed pipeline flow contains.
+def _load_composer():
+    spec = importlib.util.spec_from_file_location("compose_pipeline", COMPOSER_PATH)
+    composer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(composer)
+    return composer
 
-    Composes the flow the way deployment/scripts/compose_pipeline.py does - the
-    base flow minus the steps the variant replaces, plus the variant's own
-    steps - and keeps the guard types whose paramsKind one of those step
-    templates declares. The fingerprint store cannot answer this: it seeds
-    every group under its own scope whether or not the step is deployed.
+
+def deployed_guard_types(pipeline_type, pipeline_variant):
+    """Returns the chatqa guard types whose step the composed pipeline contains.
+
+    The fingerprint store cannot answer this: it seeds every group whether or
+    not the step is deployed.
     """
     pipeline_dir = PIPELINES_DIR / pipeline_type
-    flow = yaml.safe_load((pipeline_dir / "pipeline.yaml").read_text())["base_flow"]
-    templates = []
-    if pipeline_variant != "base":
-        variant_dir = pipeline_dir / "variants" / pipeline_variant
-        replaced = yaml.safe_load((variant_dir / "meta.yaml").read_text()).get("replaces", [])
-        flow = [step for step in flow if step not in replaced]
-        templates.append(variant_dir / "steps.yaml.j2")
-    for step in flow:
-        local_template = pipeline_dir / "steps" / f"{step}.yaml.j2"
-        templates.append(local_template if local_template.exists()
-                         else PIPELINES_DIR / "_shared" / "steps" / f"{step}.yaml.j2")
-    params_kinds = {kind for template in templates
-                    for kind in PARAMS_KIND_PATTERN.findall(template.read_text())}
+    if not (pipeline_dir / "pipeline.yaml").exists():
+        # A config-only flavour (audioqna, pl_chatqna, ...) deploys the pipeline its config.yaml names.
+        flavour_config = yaml.safe_load((pipeline_dir / "config.yaml").read_text())
+        pipeline_dir = PIPELINES_DIR / flavour_config["pipeline_type"]
+    endpoints = yaml.safe_load((pipeline_dir / "pipeline.yaml").read_text())["endpoints"]
+    variants = [] if pipeline_variant == "base" else [pipeline_variant]
+    gmconnector, _ = _load_composer().compose_pipeline(pipeline_dir, variants, {"endpoints": endpoints})
+    params_kinds = {step.get("internalService", {}).get("config", {}).get("paramsKind")
+                    for node in gmconnector["spec"]["nodes"].values() for step in node["steps"]}
     return tuple(guard_type for guard_type in CHATQNA_GUARD_TYPES if guard_type.value in params_kinds)
 
 
