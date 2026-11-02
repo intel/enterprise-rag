@@ -4,10 +4,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
+import re
 import time
 from enum import Enum
+from pathlib import Path
 
+import pytest
 import requests
+import yaml
 
 from comps.system_fingerprint.utils.object_document_mapper import (
     LLMGuardDataprepGuardrailParams,
@@ -54,6 +58,9 @@ class GuardType(Enum):
 CHATQNA_GUARD_TYPES = (GuardType.INPUT, GuardType.OUTPUT)
 
 DATAPREP_GUARD_PARAMS_KEY = GuardType.DATAPREP.value
+
+PIPELINES_DIR = Path(__file__).resolve().parents[4] / "deployment" / "pipelines"
+PARAMS_KIND_PATTERN = re.compile(r"^\s*paramsKind:\s*(\S+)", re.MULTILINE)
 
 GUARD_ALLOWED_STATUS = 200
 GUARD_BLOCKED_STATUS = 466
@@ -122,6 +129,32 @@ def _disabled_defaults(guard_type, scanner):
     disabled rather than skipped.
     """
     return _fully_specified(guard_type, scanner, {"enabled": False})
+
+
+def deployed_guard_types(pipeline_type, pipeline_variant="base"):
+    """Returns the chatqa guard types the deployed pipeline flow contains.
+
+    Composes the flow the way deployment/scripts/compose_pipeline.py does - the
+    base flow minus the steps the variant replaces, plus the variant's own
+    steps - and keeps the guard types whose paramsKind one of those step
+    templates declares. The fingerprint store cannot answer this: it seeds
+    every group under its own scope whether or not the step is deployed.
+    """
+    pipeline_dir = PIPELINES_DIR / pipeline_type
+    flow = yaml.safe_load((pipeline_dir / "pipeline.yaml").read_text())["base_flow"]
+    templates = []
+    if pipeline_variant != "base":
+        variant_dir = pipeline_dir / "variants" / pipeline_variant
+        replaced = yaml.safe_load((variant_dir / "meta.yaml").read_text()).get("replaces", [])
+        flow = [step for step in flow if step not in replaced]
+        templates.append(variant_dir / "steps.yaml.j2")
+    for step in flow:
+        local_template = pipeline_dir / "steps" / f"{step}.yaml.j2"
+        templates.append(local_template if local_template.exists()
+                         else PIPELINES_DIR / "_shared" / "steps" / f"{step}.yaml.j2")
+    params_kinds = {kind for template in templates
+                    for kind in PARAMS_KIND_PATTERN.findall(template.read_text())}
+    return tuple(guard_type for guard_type in CHATQNA_GUARD_TYPES if guard_type.value in params_kinds)
 
 
 class GuardQuestions:
@@ -384,9 +417,10 @@ class GuardQuestions:
 
 class GuardHelper:
 
-    def __init__(self, chatqa_api_helper, fingerprint_api_helper):
+    def __init__(self, chatqa_api_helper, fingerprint_api_helper, deployed_guard_types=CHATQNA_GUARD_TYPES):
         self.chatqa_api_helper = chatqa_api_helper
         self.fingerprint_api_helper = fingerprint_api_helper
+        self.deployed_guard_types = deployed_guard_types
 
     def setup(self, guard_type, name, parameters):
         """Configure one chatqa scanner, sending every field the scanner has.
@@ -401,6 +435,8 @@ class GuardHelper:
         assert guard_type in CHATQNA_GUARD_TYPES, (
             f"{guard_type.value} is not a chatqa guard; use setup_dataprep for "
             f"the dataprep scope")
+        if guard_type not in self.deployed_guard_types:
+            pytest.skip(f"{guard_type.value} is not deployed in this pipeline")
         payload = [
             {
                 "name": guard_type.value,
@@ -546,7 +582,7 @@ class GuardHelper:
             f"{GUARD_CONFIG_READ_RETRIES} attempts: {last_error}") from last_exception
 
     def disable_all_guards(self):
-        """Reset all input and output guards to their disabled defaults.
+        """Reset the deployed input and output guards to their disabled defaults.
 
         Writing only ``enabled: False`` would disable the scanners but leave
         every other field at the value the finished test set, and the write
@@ -556,7 +592,7 @@ class GuardHelper:
         (a threshold, an is_blocked, a match_type) from whatever ran before it.
         """
         logger.info("Disabling all guards")
-        for guard_type in CHATQNA_GUARD_TYPES:
+        for guard_type in self.deployed_guard_types:
             config = self._read_config_when_ready(guard_type.value)
             scanners = config.json()["values"][GUARD_READ_FIELDS[guard_type]].keys()
             change_arguments_body = [{

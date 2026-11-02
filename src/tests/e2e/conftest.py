@@ -25,7 +25,7 @@ from tests.e2e.helpers.chat_history_helper import ChatHistoryHelper
 from tests.e2e.helpers.docsum_helper import DocSumHelper
 from tests.e2e.helpers.edp_helper import EdpHelper
 from tests.e2e.helpers.fingerprint_api_helper import FingerprintApiHelper
-from tests.e2e.helpers.guard_helper import GuardHelper
+from tests.e2e.helpers.guard_helper import GuardHelper, deployed_guard_types
 from tests.e2e.helpers.istio_helper import IstioHelper
 from tests.e2e.helpers.k8s_helper import K8sHelper
 from tests.e2e.helpers.keycloak_helper import KeycloakHelper
@@ -537,7 +537,8 @@ def generic_api_helper():
 
 @pytest.fixture(scope="session")
 def guard_helper(chatqa_api_helper, fingerprint_api_helper):
-    return GuardHelper(chatqa_api_helper, fingerprint_api_helper)
+    return GuardHelper(chatqa_api_helper, fingerprint_api_helper, deployed_guard_types(
+        cfg.get("pipeline_type", "chatqna"), cfg.get("pipeline_variant", "base")))
 
 
 @pytest.fixture(scope="session")
