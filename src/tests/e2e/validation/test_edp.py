@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T120")
+@allure.testcase("DSPTV-T55")
 def test_edp_list_files(edp_helper):
     """Check whether the list of files is returned correctly"""
     response = edp_helper.list_files()
@@ -35,7 +35,7 @@ def test_edp_list_files(edp_helper):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T121")
+@allure.testcase("DSPTV-T56")
 def test_edp_upload_file(edp_helper):
     """Upload a file using presigned URL. Wait for the file to be in ingested state"""
     with edp_helper.temp_txt_file(size=0.001, prefix=method_name()) as temp_file:
@@ -47,7 +47,7 @@ def test_edp_upload_file(edp_helper):
         edp_helper.wait_for_file_upload(file_basename, "ingested", timeout=60)
 
 
-@allure.testcase("IEASG-T627")
+@allure.testcase("DSPTV-T94")
 def test_edp_file_contains_embedding_model_name(edp_helper):
     """Upload a file, wait for ingestion, and verify that the file list response contains the embedding model name"""
     file = edp_helper.upload_test_file(size=0.001, prefix=method_name(), status="ingested", timeout=60)
@@ -59,7 +59,7 @@ def test_edp_file_contains_embedding_model_name(edp_helper):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T122")
+@allure.testcase("DSPTV-T57")
 def test_edp_delete_file(edp_helper):
     """Delete a file using presigned URL. Wait for the file to be removed from the list"""
     file = edp_helper.upload_test_file(size=0.001, prefix=method_name(), status="ingested", timeout=60)
@@ -70,7 +70,7 @@ def test_edp_delete_file(edp_helper):
     edp_helper.wait_for_file_deletion(file_basename)
 
 
-@allure.testcase("IEASG-T123")
+@allure.testcase("DSPTV-T58")
 def test_edp_huge_file_upload(edp_helper):
     """
     Create a temporary file of size 63MB (maximum allowed file size is 64MB)
@@ -80,7 +80,7 @@ def test_edp_huge_file_upload(edp_helper):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T124")
+@allure.testcase("DSPTV-T59")
 def test_edp_cancel_task(edp_helper):
     """Upload a large file and cancel the processing task"""
     file = edp_helper.upload_test_file(size=10, prefix=method_name(), status="processing", timeout=180)
@@ -93,7 +93,7 @@ def test_edp_cancel_task(edp_helper):
             assert file["job_message"] == "Processing task canceled"
 
 
-@allure.testcase("IEASG-T125")
+@allure.testcase("DSPTV-T60")
 def test_edp_delete_file_during_ingestion(edp_helper):
     """Upload a file and delete it while it is being ingested. Expect status code 204"""
     file = edp_helper.upload_test_file(size=2, prefix=method_name(), status="processing", timeout=180)
@@ -102,7 +102,7 @@ def test_edp_delete_file_during_ingestion(edp_helper):
     assert response.status_code == 204, f"Failed to delete file. Response: {response.text}"
 
 
-@allure.testcase("IEASG-T126")
+@allure.testcase("DSPTV-T61")
 def test_edp_upload_unsupported_file(edp_helper):
     """Upload a file with an unsupported file type and check that it is in error state"""
     file = "HelloWorld.c"
@@ -113,7 +113,7 @@ def test_edp_upload_unsupported_file(edp_helper):
     edp_helper.wait_for_file_upload(file, "error", timeout=60)
 
 
-@allure.testcase("IEASG-T128")
+@allure.testcase("DSPTV-T62")
 def test_edp_reupload_file(edp_helper):
     """Upload a file, re-upload the same file (with additional content), and check that the file size has increased"""
     with edp_helper.temp_txt_file(size=0.01, prefix=method_name()) as temp_file:
@@ -129,7 +129,7 @@ def test_edp_reupload_file(edp_helper):
         assert first_upload["size"] < second_upload["size"]
 
 
-@allure.testcase("IEASG-T129")
+@allure.testcase("DSPTV-T63")
 def test_edp_reupload_file_after_deletion(edp_helper):
     """
     Upload a file, delete it, re-upload the same file (with additional content)
@@ -153,14 +153,14 @@ def test_edp_reupload_file_after_deletion(edp_helper):
         assert first_upload["size"] < second_upload["size"]
 
 
-@allure.testcase("IEASG-T130")
+@allure.testcase("DSPTV-T64")
 def test_edp_cancel_nonexistent_task(edp_helper):
     """Cancel a task that does not exist. Expect status code 404"""
     response = edp_helper.cancel_processing_task(str(uuid.uuid4()))
     assert response.status_code == 404, f"Unexpected status code. Response: {response.text}"
 
 
-@allure.testcase("IEASG-T131")
+@allure.testcase("DSPTV-T65")
 def test_edp_cancel_already_ingested_task(edp_helper):
     """Cancel a task that is already ingested. Expect status code 404"""
     file = edp_helper.upload_test_file(size=0.01, prefix=method_name(), status="ingested", timeout=60)
@@ -169,7 +169,7 @@ def test_edp_cancel_already_ingested_task(edp_helper):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T132")
+@allure.testcase("DSPTV-T66")
 def test_edp_list_links(edp_helper):
     """Check whether the list of links is returned correctly"""
     response = edp_helper.list_links()
@@ -181,7 +181,7 @@ def test_edp_list_links(edp_helper):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T133")
+@allure.testcase("DSPTV-T67")
 def test_edp_upload_links(edp_helper):
     """Upload a couple of valid links and verify that they appear in the list of links"""
     links = [f"https://www.example.org/?test_edp_upload_links={uuid.uuid4()}",
@@ -203,7 +203,7 @@ def test_edp_upload_links(edp_helper):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T134")
+@allure.testcase("DSPTV-T68")
 def test_edp_delete_link(edp_helper):
     """Upload a link and delete it. Verify that the link is no longer in the list of links"""
     link_to_delete = f"https://www.example.org/?test_edp_delete_links={uuid.uuid4()}"
@@ -218,7 +218,7 @@ def test_edp_delete_link(edp_helper):
         f"Link {link_to_delete} is still in the list of links"
 
 
-@allure.testcase("IEASG-T135")
+@allure.testcase("DSPTV-T69")
 def test_edp_reupload_link_after_deletion(edp_helper):
     """Upload a link, delete it, and re-upload the same link"""
     # 1. Upload link
@@ -237,7 +237,7 @@ def test_edp_reupload_link_after_deletion(edp_helper):
     edp_helper.wait_for_link_upload(link_to_reupload, "ingested")
 
 
-@allure.testcase("IEASG-T136")
+@allure.testcase("DSPTV-T70")
 def test_edp_reupload_link(edp_helper):
     """Upload a link, and re-upload the same link"""
     # 1. Upload link
@@ -252,7 +252,7 @@ def test_edp_reupload_link(edp_helper):
     edp_helper.wait_for_link_upload(link_to_reupload, "ingested")
 
 
-@allure.testcase("IEASG-T137")
+@allure.testcase("DSPTV-T71")
 def test_edp_upload_nonexistent_link(edp_helper):
     """Upload a link to a nonexistent website"""
     nonexistent_link = "https://some-nonexisting-webpage-test_edp_12345.com"
@@ -260,7 +260,7 @@ def test_edp_upload_nonexistent_link(edp_helper):
     assert response.status_code == 400, f"Unexpected status code. Response: {response.text}"
 
 
-@allure.testcase("IEASG-T242")
+@allure.testcase("DSPTV-T79")
 def test_edp_upload_link_that_redirects_to_another_site(edp_helper, chatqa_api_helper):
     """
     Upload a link that redirects to another site (HTTP to HTTPS).
@@ -287,7 +287,7 @@ def test_edp_upload_link_that_redirects_to_another_site(edp_helper, chatqa_api_h
         edp_helper.delete_link_by_url(link)
 
 
-@allure.testcase("IEASG-T138")
+@allure.testcase("DSPTV-T72")
 def test_edp_upload_invalid_body(edp_helper):
     """Upload a link with an invalid body"""
     response = edp_helper.upload_links({"invalid_body": "invalid"})
@@ -298,7 +298,7 @@ def test_edp_upload_invalid_body(edp_helper):
     assert response.status_code == 422, f"Unexpected status code. Response: {response.text}"
 
 
-@allure.testcase("IEASG-T241")
+@allure.testcase("DSPTV-T78")
 def test_edp_upload_corrupted_file(edp_helper):
     """Upload a corrupted file and check that it is in error state"""
     file = "corrupt_file.docx"
@@ -309,7 +309,7 @@ def test_edp_upload_corrupted_file(edp_helper):
     edp_helper.wait_for_file_upload(file, "error", timeout=60)
 
 
-@allure.testcase("IEASG-T139")
+@allure.testcase("DSPTV-T73")
 def test_edp_delete_nonexistent_link(edp_helper):
     """Delete a link that does not exist"""
     response = edp_helper.delete_link("nonexistent_link_id")
@@ -317,7 +317,7 @@ def test_edp_delete_nonexistent_link(edp_helper):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T715")
+@allure.testcase("DSPTV-T96")
 def test_edp_retrieve(edp_helper):
     """Ingest a file and retrieve it through /api/retrieve. Expect status code 200 and documents returned"""
     file_path = os.path.join(DATAPREP_UPLOAD_DIR, "file_in_public_bucket.txt")
@@ -330,7 +330,7 @@ def test_edp_retrieve(edp_helper):
     logger.info(f"Retrieved documents: {docs}")
 
 
-@allure.testcase("IEASG-T716")
+@allure.testcase("DSPTV-T97")
 def test_edp_retrieve_invalid_parameters(edp_helper):
     """Send /api/retrieve requests with invalid parameters. Expect status code 422 and no internal details leaked"""
     invalid_payloads = [
@@ -350,7 +350,7 @@ def test_edp_retrieve_invalid_parameters(edp_helper):
             f"Internal details leaked for payload {payload}. Response: {response.text}"
 
 
-@allure.testcase("IEASG-T38")
+@allure.testcase("DSPTV-T80")
 def test_edp_responsiveness_while_uploading_file(edp_helper):
     """
     Upload a file and periodically call text extractor and edp health check APIs
@@ -382,7 +382,7 @@ def test_edp_responsiveness_while_uploading_file(edp_helper):
     edp_helper.cancel_processing_task(file["id"])
 
 
-@allure.testcase("IEASG-T153")
+@allure.testcase("DSPTV-T74")
 def test_edp_upload_to_secondary_bucket(edp_helper):
     """
     Upload a file to a secondary bucket and check that the file is in ingested state.
@@ -406,7 +406,7 @@ def test_edp_upload_to_secondary_bucket(edp_helper):
         edp_helper.wait_for_file_upload(file_basename, "ingested", timeout=60)
 
 
-@allure.testcase("IEASG-T707")
+@allure.testcase("DSPTV-T95")
 def test_edp_upload_to_nonexistent_bucket(edp_helper):
     """Upload a file to a nonexistent bucket. Expect status code 404 or 301"""
     with edp_helper.temp_txt_file(size=0.001, prefix=method_name()) as temp_file:
@@ -416,7 +416,7 @@ def test_edp_upload_to_nonexistent_bucket(edp_helper):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T155")
+@allure.testcase("DSPTV-T75")
 def test_edp_list_buckets(edp_helper):
     """Check whether the list of buckets is returned correctly"""
     response = edp_helper.list_buckets()
@@ -424,7 +424,7 @@ def test_edp_list_buckets(edp_helper):
     logger.info(f"Buckets: {response.json()}")
 
 
-@allure.testcase("IEASG-T239")
+@allure.testcase("DSPTV-T77")
 def test_edp_regular_user_has_no_access_to_api(edp_helper, temporarily_remove_regular_user_required_actions):
     """Check that regular user has no access to EDP APIs"""
     fail_msg = "Regular user should not have access to EDP APIs"
@@ -461,7 +461,7 @@ def test_edp_regular_user_has_no_access_to_api(edp_helper, temporarily_remove_re
     assert response.status_code == 403, fail_msg
 
 
-@allure.testcase("IEASG-T217")
+@allure.testcase("DSPTV-T76")
 def test_edp_rbac(edp_helper, chatqa_api_helper, temporarily_remove_regular_user_required_actions):
     """
     Upload files to admin-only and public buckets.
@@ -491,7 +491,7 @@ def test_edp_rbac(edp_helper, chatqa_api_helper, temporarily_remove_regular_user
     assert "944" in chatqa_api_helper.get_text(response)
 
 
-@allure.testcase("IEASG-T729")
+@allure.testcase("DSPTV-T100")
 def test_edp_regular_user_cannot_download_admin_bucket_file(
         edp_helper, tmp_path, temporarily_remove_regular_user_required_actions):
     """RBAC negative: a regular (non-admin) user must not be able to obtain a GET presigned URL for
@@ -510,7 +510,7 @@ def test_edp_regular_user_cannot_download_admin_bucket_file(
     )
 
 
-@allure.testcase("IEASG-T730")
+@allure.testcase("DSPTV-T101")
 def test_edp_regular_user_can_download_from_default_bucket(
         edp_helper, tmp_path, temporarily_remove_regular_user_required_actions):
     """RBAC positive: a regular (non-admin) user can download a file from a bucket they may read
@@ -535,7 +535,7 @@ def test_edp_regular_user_can_download_from_default_bucket(
     assert download.text == content, "Downloaded content does not match"
 
 
-@allure.testcase("IEASG-T738")
+@allure.testcase("DSPTV-T103")
 @pytest.mark.parametrize("bucket", ["default", "only-admin"])
 @pytest.mark.parametrize("method", ["PUT", "DELETE"])
 def test_edp_regular_user_cannot_presign_writes(
@@ -558,7 +558,7 @@ EDP_ADMIN_READ_ONLY_ROUTES = [
 ]
 
 
-@allure.testcase("IEASG-T739")
+@allure.testcase("DSPTV-T104")
 def test_edp_backend_enforces_roles_without_gateway(keycloak_helper, temporarily_remove_regular_user_required_actions):
     """edp-backend itself must refuse a regular user the admin API."""
     user_headers = {"Authorization": f"Bearer {keycloak_helper.get_access_token(as_user=True)}"}
@@ -571,7 +571,7 @@ def test_edp_backend_enforces_roles_without_gateway(keycloak_helper, temporarily
             )
 
 
-@allure.testcase("IEASG-T740")
+@allure.testcase("DSPTV-T105")
 def test_edp_backend_refuses_presigned_url_without_token():
     """edp-backend must not sign a URL for a caller that presents no token."""
     payload = {"bucket_name": "only-admin", "object_name": "any.txt", "method": "GET"}
@@ -585,7 +585,7 @@ def test_edp_backend_refuses_presigned_url_without_token():
 TEXT_EXTRACTOR_POD_LABEL_SELECTOR = "app.kubernetes.io/name=edp-ingestion"
 
 
-@allure.testcase("IEASG-T613")
+@allure.testcase("DSPTV-T88")
 def test_edp_extractor_pod_restart_during_extraction(edp_helper, k8s_helper):
     """
     Delete the text extractor pod to simulate a crash/restart,
@@ -609,7 +609,7 @@ def test_edp_extractor_pod_restart_during_extraction(edp_helper, k8s_helper):
     k8s_helper.wait_for_pod_ready(namespace=EDP_NAMESPACE, label_selector=TEXT_EXTRACTOR_POD_LABEL_SELECTOR, timeout=300)
     logger.info("Ingestion pod is ready.")
 
-@allure.testcase("IEASG-T614")
+@allure.testcase("DSPTV-T89")
 def test_edp_upload_many_links(edp_helper):
     """Upload 20 links at once and verify that all of them are ingested"""
     base_url = "https://arxiv.org/pdf/2007.15619"
@@ -623,7 +623,7 @@ def test_edp_upload_many_links(edp_helper):
         edp_helper.wait_for_link_upload(link, "ingested", timeout=600)
 
 
-@allure.testcase("IEASG-T615")
+@allure.testcase("DSPTV-T90")
 def test_edp_deleted_links_block_processing_queue(edp_helper, k8s_helper):
     """
     Upload 10 links, wait for at least one to start extracting, then delete all.
@@ -709,7 +709,7 @@ def test_edp_deleted_links_block_processing_queue(edp_helper, k8s_helper):
     )
 
 
-@allure.testcase("IEASG-T616")
+@allure.testcase("DSPTV-T91")
 def test_edp_upload_many_links_parallel_requests(edp_helper, temporarily_remove_brute_force_detection):
     """Upload 20 links via 20 parallel requests (1 link per request)"""
     base_url = "https://arxiv.org/pdf/2007.15619"
@@ -734,7 +734,7 @@ def test_edp_upload_many_links_parallel_requests(edp_helper, temporarily_remove_
         edp_helper.wait_for_link_upload(link, "ingested", timeout=600)
 
 
-@allure.testcase("IEASG-T617")
+@allure.testcase("DSPTV-T92")
 def test_edp_upload_many_files(edp_helper, tmp_path):
     """Upload 100 small files at once and verify all are ingested."""
     num_files = 100

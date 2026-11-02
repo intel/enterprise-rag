@@ -64,7 +64,7 @@ def latest_profile_backup(k8s_helper):
     return sorted(backups, key=lambda b: b.metadata["creationTimestamp"])[-1]
 
 
-@allure.testcase("IEASG-T313")
+@allure.testcase("DSPTV-T206")
 def test_post_backup_backup_created(k8s_helper):
     """
     Check the backup is a usable restore point.
@@ -154,7 +154,7 @@ def test_post_backup_identity_database_volume_captured(k8s_helper):
     )
 
 
-@allure.testcase("IEASG-T314")
+@allure.testcase("DSPTV-T207")
 def test_post_backup_data_ingested_after_backup(keycloak_helper, edp_helper, chat_history_helper):
     """
     Ingest some data which should not be present in the backup since backup was already created.

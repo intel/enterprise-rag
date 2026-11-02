@@ -42,7 +42,7 @@ def _skip_if_no_pipeline():
 # ABOUT DIALOG
 # ============================================================================
 
-@allure.testcase("IEASG-T387")
+@allure.testcase("DSPTV-T295")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_about_dialog_open_close(chat_ui_helper):
@@ -109,7 +109,7 @@ async def test_about_dialog_open_close(chat_ui_helper):
 # SIDE MENU
 # ============================================================================
 
-@allure.testcase("IEASG-T388")
+@allure.testcase("DSPTV-T296")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_side_menu_toggle(chat_ui_helper):
@@ -181,7 +181,7 @@ async def test_side_menu_toggle(chat_ui_helper):
 # LOGOUT BUTTON
 # ============================================================================
 
-@allure.testcase("IEASG-T389")
+@allure.testcase("DSPTV-T297")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_logout_button_visible(chat_ui_helper):
@@ -214,7 +214,7 @@ async def test_logout_button_visible(chat_ui_helper):
 # SOURCE DIALOG (ChatQA only — appears after bot response with sources)
 # ============================================================================
 
-@allure.testcase("IEASG-T390")
+@allure.testcase("DSPTV-T298")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_source_dialog_after_response(chat_ui_helper):
@@ -282,7 +282,7 @@ async def test_source_dialog_after_response(chat_ui_helper):
 # SCROLL TO BOTTOM BUTTON
 # ============================================================================
 
-@allure.testcase("IEASG-T391")
+@allure.testcase("DSPTV-T299")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_scroll_to_bottom_button(chat_ui_helper):
@@ -356,7 +356,7 @@ async def test_scroll_to_bottom_button(chat_ui_helper):
 # CONVERSATION FEED
 # ============================================================================
 
-@allure.testcase("IEASG-T392")
+@allure.testcase("DSPTV-T300")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_conversation_feed_renders(chat_ui_helper):
@@ -398,7 +398,7 @@ async def test_conversation_feed_renders(chat_ui_helper):
 # PROMPT INPUT FORM
 # ============================================================================
 
-@allure.testcase("IEASG-T393")
+@allure.testcase("DSPTV-T301")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_prompt_input_form_elements(chat_ui_helper):

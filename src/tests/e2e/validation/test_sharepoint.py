@@ -162,7 +162,7 @@ def restore_connected_sites(edp_helper):
             logger.warning(f"Restore: failed to reconnect '{site_name}': {e}")
 
 
-@allure.testcase("IEASG-T523")
+@allure.testcase("DSPTV-T246")
 def test_sp_connect_site(edp_helper):
     """Verify connecting a new site and connecting the same site again"""
     # Ensure site not connected
@@ -180,7 +180,7 @@ def test_sp_connect_site(edp_helper):
     assert response.status_code == 409
 
 
-@allure.testcase("IEASG-T525")
+@allure.testcase("DSPTV-T248")
 def test_sp_connect_nonexistent_site(edp_helper):
     """Verify that connecting a nonexistent SharePoint site returns 404"""
     response = edp_helper.connect_site("https://intel.sharepoint.com/sites/this-site-does-not-exist-at-all")
@@ -188,7 +188,7 @@ def test_sp_connect_nonexistent_site(edp_helper):
         f"Expected 404 for nonexistent site, but got {response.status_code}: {response.text}"
 
 
-@allure.testcase("IEASG-T524")
+@allure.testcase("DSPTV-T247")
 def test_sp_disconnect_site(edp_helper):
     """Verify disconnecting an existing site and disconnecting the same site again"""
     # Ensure site is connected before disconnecting
@@ -209,7 +209,7 @@ def test_sp_disconnect_site(edp_helper):
     assert response.status_code == 404
 
 
-@allure.testcase("IEASG-T526")
+@allure.testcase("DSPTV-T249")
 def test_sp_disconnect_nonexistent_site(edp_helper):
     """Verify that disconnecting a nonexistent SharePoint site returns 404"""
     response = edp_helper.disconnect_site("this-site-does-not-exist-at-all")
@@ -217,7 +217,7 @@ def test_sp_disconnect_nonexistent_site(edp_helper):
         f"Expected 404 for nonexistent site, but got {response.status_code}: {response.text}"
 
 
-@allure.testcase("IEASG-T528")
+@allure.testcase("DSPTV-T251")
 def test_sp_list_sites(edp_helper):
     """Ensure list_sites API call completes without failure"""
     response = edp_helper.list_sites()
@@ -225,7 +225,7 @@ def test_sp_list_sites(edp_helper):
     logger.info(f"Sites: {response.json()}")
 
 
-@allure.testcase("IEASG-T527")
+@allure.testcase("DSPTV-T250")
 @pytest.mark.skipif(_rbac_enabled, reason="EDP RBAC is enabled. Skipping non-RBAC SharePoint test")
 def test_sp_add_file_via_edp(edp_helper, sharepoint_helper, chatqa_api_helper):
     """Verify adding a file to the connected site using EDP API and checking its presence using Microsoft Graph APII"""
@@ -259,7 +259,7 @@ def test_sp_add_file_via_edp(edp_helper, sharepoint_helper, chatqa_api_helper):
     assert "362" in response_text, f"Unexpected ChatQA response: {response_text}"
 
 
-@allure.testcase("IEASG-T529")
+@allure.testcase("DSPTV-T252")
 @pytest.mark.skipif(_rbac_enabled, reason="EDP RBAC is enabled. Skipping non-RBAC SharePoint test")
 def test_sp_add_file_via_sharepoint(edp_helper, sharepoint_helper, chatqa_api_helper):
     """Verify adding a file directly to SharePoint site and checking it gets ingested into EDP"""
@@ -292,7 +292,7 @@ def test_sp_add_file_via_sharepoint(edp_helper, sharepoint_helper, chatqa_api_he
     assert "7592" in response_text, f"Unexpected ChatQA response: {response_text}"
 
 
-@allure.testcase("IEASG-T530")
+@allure.testcase("DSPTV-T253")
 @pytest.mark.skipif(_rbac_enabled, reason="EDP RBAC is enabled. Skipping non-RBAC SharePoint test")
 def test_sp_delete_file_via_edp(edp_helper, sharepoint_helper, chatqa_api_helper):
     """Verify deleting a file via EDP API removes it from SharePoint and the chatbot forgets its content"""
@@ -336,7 +336,7 @@ def test_sp_delete_file_via_edp(edp_helper, sharepoint_helper, chatqa_api_helper
     assert "910" not in response_text, f"Chatbot still mentions '910' after file deletion: {response_text}"
 
 
-@allure.testcase("IEASG-T531")
+@allure.testcase("DSPTV-T254")
 @pytest.mark.skipif(_rbac_enabled, reason="EDP RBAC is enabled. Skipping non-RBAC SharePoint test")
 def test_sp_delete_file_via_sharepoint(edp_helper, sharepoint_helper, chatqa_api_helper):
     """Verify deleting a file via SharePoint API removes it from EDP and chatbot forgets its content"""
@@ -383,7 +383,7 @@ def test_sp_delete_file_via_sharepoint(edp_helper, sharepoint_helper, chatqa_api
     assert "539" not in response_text, f"Chatbot still mentions '539' after file deletion: {response_text}"
 
 
-@allure.testcase("IEASG-T532")
+@allure.testcase("DSPTV-T255")
 def test_sp_add_file_to_disconnected_site(edp_helper):
     """Verify that uploading a file to a SharePoint bucket is rejected when the site is disconnected"""
 
@@ -400,7 +400,7 @@ def test_sp_add_file_to_disconnected_site(edp_helper):
             f"Expected upload to be rejected for disconnected site, but got status {response.status_code}: {response.text}"
 
 
-@allure.testcase("IEASG-T533")
+@allure.testcase("DSPTV-T256")
 def test_sp_add_file_to_nonexistent_site(edp_helper):
     """Verify that uploading a file to a completely unknown/invented site is rejected"""
     nonexistent_site = "this-site-does-not-exist-at-all"
@@ -413,7 +413,7 @@ def test_sp_add_file_to_nonexistent_site(edp_helper):
             f"Expected upload to be rejected for nonexistent site, but got status {response.status_code}: {response.text}"
 
 
-@allure.testcase("IEASG-T541")
+@allure.testcase("DSPTV-T257")
 def test_sp_get_file_url(edp_helper):
     """Verify that a file uploaded to SharePoint can be retrieved via the file-url API and returns a valid URL"""
     file_name = "test_sp_add_file_via_edp.txt"
@@ -445,7 +445,7 @@ def test_sp_get_file_url(edp_helper):
     assert urlparse(file_url).hostname.endswith(".sharepoint.com"), f"File URL does not point to SharePoint: {file_url}"
 
 
-@allure.testcase("IEASG-T542")
+@allure.testcase("DSPTV-T258")
 def test_sp_get_file_url_negative(edp_helper):
     """Verify that get_file_url returns error responses for invalid inputs"""
 
@@ -483,7 +483,7 @@ def test_sp_get_file_url_negative(edp_helper):
         f"Expected error for both empty params, but got {response.status_code}: {response.text}"
 
 
-@allure.testcase("IEASG-T612")
+@allure.testcase("DSPTV-T262")
 @pytest.mark.skipif(_rbac_enabled, reason="EDP RBAC is enabled. Skipping non-RBAC SharePoint test")
 def test_sp_reupload_file_content_changes(edp_helper, chatqa_api_helper):
     """Verify that re-uploading a file with the same name but different content updates the chatbot's knowledge"""
@@ -539,7 +539,7 @@ def test_sp_reupload_file_content_changes(edp_helper, chatqa_api_helper):
     assert "4817" not in response_text, f"Chatbot still mentions '4817' from v1 after re-upload: {response_text}"
 
 
-@allure.testcase("IEASG-T619")
+@allure.testcase("DSPTV-T263")
 @pytest.mark.skipif(_rbac_enabled, reason="EDP RBAC is enabled. Skipping non-RBAC SharePoint test")
 def test_sp_upload_file_in_subdirectory(edp_helper, sharepoint_helper, chatqa_api_helper):
     """Verify uploading a file to a subdirectory in SharePoint, querying its content, and deleting it"""
@@ -600,7 +600,7 @@ def test_sp_upload_file_in_subdirectory(edp_helper, sharepoint_helper, chatqa_ap
     assert "8471" not in response_text, f"Chatbot still mentions '8471' after file deletion: {response_text}"
 
 
-@allure.testcase("IEASG-T552")
+@allure.testcase("DSPTV-T259")
 @pytest.mark.skipif(not _rbac_enabled, reason="EDP RBAC is not enabled. Skipping RBAC SharePoint test")
 @pytest.mark.skipif(_sso_credentials_missing, reason=_sso_skip_reason)
 def test_sp_rbac_sso_admin_site_not_visible_to_user(edp_helper, sharepoint_helper, chatqa_api_helper, bootstrap_sso_user):
@@ -647,7 +647,7 @@ def test_sp_rbac_sso_admin_site_not_visible_to_user(edp_helper, sharepoint_helpe
         f"SSO user should NOT see content from admin-only site but got: {response_text}"
 
 
-@allure.testcase("IEASG-T553")
+@allure.testcase("DSPTV-T260")
 @pytest.mark.skipif(not _rbac_enabled, reason="EDP RBAC is not enabled. Skipping RBAC SharePoint test")
 @pytest.mark.skipif(_sso_credentials_missing, reason=_sso_skip_reason)
 def test_sp_rbac_sso_user_site_not_visible_to_admin(edp_helper, sharepoint_helper, chatqa_api_helper, bootstrap_sso_user):
@@ -694,7 +694,7 @@ def test_sp_rbac_sso_user_site_not_visible_to_admin(edp_helper, sharepoint_helpe
         f"SSO admin should NOT see content from user-only site but got: {response_text}"
 
 
-@allure.testcase("IEASG-T554")
+@allure.testcase("DSPTV-T261")
 @pytest.mark.skipif(not _rbac_enabled, reason="EDP RBAC is not enabled. Skipping RBAC SharePoint test")
 @pytest.mark.skipif(_sso_credentials_missing, reason=_sso_skip_reason)
 def test_sp_rbac_shared_site_visible_to_both_users(edp_helper, sharepoint_helper, chatqa_api_helper, bootstrap_sso_user):
@@ -741,7 +741,7 @@ def test_sp_rbac_shared_site_visible_to_both_users(edp_helper, sharepoint_helper
         f"SSO user should see content from shared site but got: {response_text}"
 
 
-@allure.testcase("IEASG-T618")
+@allure.testcase("DSPTV-T93")
 @pytest.mark.skipif(
     _rbac_enabled,
     reason="EDP RBAC is enabled. Skipping non-RBAC SharePoint test"

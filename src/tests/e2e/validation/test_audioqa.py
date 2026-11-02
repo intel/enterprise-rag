@@ -25,7 +25,7 @@ def audioqa_api_helper(keycloak_helper):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T321")
+@allure.testcase("DSPTV-T15")
 def test_asr_basic(audioqa_api_helper):
     """Basic test case for ASR functionality."""
     audio = audioqa_api_helper.generate_audio("Hello, this is a test audio.")
@@ -36,7 +36,7 @@ def test_asr_basic(audioqa_api_helper):
     assert_all_words_in_transcription(["hello", "this", "is", "test", "audio"], transcription)
 
 
-@allure.testcase("IEASG-T323")
+@allure.testcase("DSPTV-T17")
 def test_asr_slow_speech(audioqa_api_helper):
     """Test ASR with slow speech audio at various speeds."""
     test_cases = [
@@ -65,7 +65,7 @@ def test_asr_slow_speech(audioqa_api_helper):
     _run_speed_test_cases(audioqa_api_helper, test_cases)
 
 
-@allure.testcase("IEASG-T322")
+@allure.testcase("DSPTV-T16")
 def test_asr_fast_speech(audioqa_api_helper):
     """Test ASR with fast speech audio at various speeds."""
     test_cases = [
@@ -93,7 +93,7 @@ def test_asr_fast_speech(audioqa_api_helper):
     _run_speed_test_cases(audioqa_api_helper, test_cases)
 
 
-@allure.testcase("IEASG-T324")
+@allure.testcase("DSPTV-T18")
 def test_asr_complete_silence(audioqa_api_helper):
     """
     Test ASR with silence to ensure it doesn't hallucinate words.
@@ -107,7 +107,7 @@ def test_asr_complete_silence(audioqa_api_helper):
     assert transcription == "" or "BLANK" in transcription, f"ASR hallucinated text during silence: '{transcription}'"
 
 
-@allure.testcase("IEASG-T348")
+@allure.testcase("DSPTV-T23")
 def test_asr_long_pause_between_words(audioqa_api_helper):
     """
     Use an existing mp3 file that contains a pause (silence) between words to test ASR's handling of silence.
@@ -125,7 +125,7 @@ def test_asr_long_pause_between_words(audioqa_api_helper):
     assert_all_words_in_transcription(text_from_audio.lower().split(), transcription)
 
 
-@allure.testcase("IEASG-T325")
+@allure.testcase("DSPTV-T19")
 def test_asr_payload_limit_stress(audioqa_api_helper):
     """
     Stress test ASR API by increasing word counts in a loop to find the breaking point.
@@ -153,7 +153,7 @@ def test_asr_payload_limit_stress(audioqa_api_helper):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T326")
+@allure.testcase("DSPTV-T20")
 def test_asr_upload_wav(audioqa_api_helper, edp_helper, chatqa_api_helper):
     """Check whether user can upload *.wav audio. Ask a question related to audio content and verify the answer"""
     audio_text = "There are 2568 words in a book called 'My puppet and I' by author John Doe"
@@ -166,7 +166,7 @@ def test_asr_upload_wav(audioqa_api_helper, edp_helper, chatqa_api_helper):
     assert chatqa_api_helper.words_in_response(["2568", "2,568"], response_text)
 
 
-@allure.testcase("IEASG-T327")
+@allure.testcase("DSPTV-T21")
 def test_asr_upload_mp3(audioqa_api_helper, edp_helper, chatqa_api_helper):
     """Check whether user can upload *.mp3 audio. Ask a question related to audio content and verify the answer"""
     audio_text = "There are 11689 words in a book called 'Wooden Dreams' by author Anna Black"
@@ -179,7 +179,7 @@ def test_asr_upload_mp3(audioqa_api_helper, edp_helper, chatqa_api_helper):
     assert chatqa_api_helper.words_in_response(["11689", "11,689"], response_text)
 
 
-@allure.testcase("IEASG-T352")
+@allure.testcase("DSPTV-T13")
 def test_asr_as_user(audioqa_api_helper, temporarily_remove_regular_user_required_actions):
     """Test ASR API call with user authentication to ensure that it works for authenticated users"""
     input_text = "Check whether user can access automatic speech recognition API"
@@ -200,7 +200,7 @@ def test_asr_as_user(audioqa_api_helper, temporarily_remove_regular_user_require
     assert_all_words_in_transcription(expected_words, transcription)
 
 
-@allure.testcase("IEASG-T354")
+@allure.testcase("DSPTV-T28")
 def test_asr_concurrent_requests(audioqa_api_helper, temporarily_remove_brute_force_detection):
     """
     Make concurrent ASR API requests. Measure min, max, avg response time.
@@ -231,7 +231,7 @@ def test_asr_concurrent_requests(audioqa_api_helper, temporarily_remove_brute_fo
     )
 
 
-@allure.testcase("IEASG-T346")
+@allure.testcase("DSPTV-T22")
 def test_tts_basic(audioqa_api_helper):
     """
     Test text-to-speech API by converting text to audio and then back to text using ASR.
@@ -245,7 +245,7 @@ def test_tts_basic(audioqa_api_helper):
     assert_all_words_in_transcription(expected_words, transcription)
 
 
-@allure.testcase("IEASG-T349")
+@allure.testcase("DSPTV-T24")
 def test_tts_empty_text(audioqa_api_helper):
     """Test TTS API with empty text input. Verify that the API handles it gracefully"""
 
@@ -262,7 +262,7 @@ def test_tts_empty_text(audioqa_api_helper):
     assert response.status_code == 200, f"TTS API call failed for empty text: {response.text}"
 
 
-@allure.testcase("IEASG-T350")
+@allure.testcase("DSPTV-T25")
 def test_tts_overload(audioqa_api_helper):
     """
     Test TTS API with a very long text input to check if it can handle large payloads without crashing.
@@ -273,7 +273,7 @@ def test_tts_overload(audioqa_api_helper):
     assert tts_response.status_code != 500, f"TTS API call failed: {tts_response.text}"
 
 
-@allure.testcase("IEASG-T351")
+@allure.testcase("DSPTV-T26")
 def test_tts_as_user(audioqa_api_helper, temporarily_remove_regular_user_required_actions):
     """Test TTS API call with user authentication to ensure that it works for authenticated users"""
     input_text = "Check whether user can access text-to-speech API"
@@ -284,7 +284,7 @@ def test_tts_as_user(audioqa_api_helper, temporarily_remove_regular_user_require
     assert_all_words_in_transcription(expected_words, transcription)
 
 
-@allure.testcase("IEASG-T353")
+@allure.testcase("DSPTV-T27")
 def test_tts_concurrent_requests(audioqa_api_helper, temporarily_remove_brute_force_detection):
     """
     Make concurrent TTS API requests. Measure min, max, avg response time.
@@ -311,7 +311,7 @@ def test_tts_concurrent_requests(audioqa_api_helper, temporarily_remove_brute_fo
     )
 
 
-@allure.testcase("IEASG-T355")
+@allure.testcase("DSPTV-T29")
 def test_asr_all_voice_models(audioqa_api_helper):
     """
     Test ASR transcription accuracy across all available Sherpa TTS voice models.

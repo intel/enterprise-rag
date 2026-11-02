@@ -104,7 +104,7 @@ def _wait_for_uncapped_answer(chatqa_api_helper):
     return words
 
 
-@allure.testcase("IEASG-T696")
+@allure.testcase("DSPTV-T135")
 def test_fingerprint_write_scope_reaches_only_matching_router(fingerprint_api_helper, chatqa_api_helper):
     """
     A write to chatqna's scope changes chatqna's answer; a write to a different
