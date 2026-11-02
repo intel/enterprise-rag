@@ -204,6 +204,8 @@ func entryRequestFor(ctx context.Context, body []byte, headers http.Header) (map
 	if initReqData, ok := ctx.Value(entryRequestCtxKey{}).(map[string]interface{}); ok {
 		return initReqData, nil
 	}
+	// Reached by direct routeStep callers, and by a body mcGraphHandler could not
+	// parse, so the pipeline handler reports the parse error with its status code.
 	return entryRequestData(body, headers)
 }
 
@@ -1133,6 +1135,11 @@ func handleEnsemblePipeline(
 ) (io.ReadCloser, int, error) {
 	currentNode := graph.Spec.Nodes[nodeName]
 
+	if isMultipartBody(headers) {
+		err := errors.New("an Ensemble node cannot take a multipart entry request")
+		otlpr.WithContext(log, ctx).Error(err, "Rejecting multipart request")
+		return nil, http.StatusBadRequest, err
+	}
 	initReqData, err := entryRequestFor(ctx, initInput, headers)
 	if err != nil {
 		otlpr.WithContext(log, ctx).Error(err, "Error unmarshaling initReqData:")

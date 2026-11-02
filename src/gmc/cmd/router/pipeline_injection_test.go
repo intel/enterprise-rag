@@ -341,3 +341,28 @@ func TestMcGraphHandlerCallerParamsReachLeaf(t *testing.T) {
 		})
 	}
 }
+
+func TestEnsembleRejectsMultipartEntry(t *testing.T) {
+	url, received, closeFn := echoService(t)
+	defer closeFn()
+
+	graph := mcv1alpha3.GMConnector{
+		Spec: mcv1alpha3.GMConnectorSpec{
+			Nodes: map[string]mcv1alpha3.Router{
+				"root": {
+					RouterType: mcv1alpha3.Ensemble,
+					Steps:      []mcv1alpha3.Step{leafStep("Llm", url, "llm")},
+				},
+			},
+		},
+	}
+
+	body, contentType := multipartUpload(t, `{"summary_type": "stuff"}`)
+	headers := http.Header{"Content-Type": []string{contentType}}
+	ctx := withEntryRequest(context.Background(), []byte(body), headers)
+	respBody, statusCode, err := routeStep(ctx, "root", graph, []byte(body), []byte(body), headers)
+	assert.Error(t, err)
+	assert.Equal(t, http.StatusBadRequest, statusCode)
+	closeResponse(t, respBody)
+	assert.Empty(t, received)
+}
