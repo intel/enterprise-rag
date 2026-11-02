@@ -359,7 +359,9 @@ QUARTER_RANGE_QUERIES = {
 
 def _write_pdf(path, text, creation_date):
     """Write a one-page PDF whose /Info /CreationDate is the given UTC datetime."""
-    content = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode()
+    # The text extractor's layout analysis returns no text for a page holding a single short line
+    lines = [text] + ["The Zorbelix division reviewed sales, logistics and staffing for the quarter."] * 8
+    content = ("BT /F1 12 Tf 14 TL 72 720 Td " + " T* ".join(f"({line}) Tj" for line in lines) + " ET").encode()
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
