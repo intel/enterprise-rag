@@ -5,6 +5,7 @@
 
 import allure
 import concurrent.futures
+from datetime import UTC, datetime
 import inspect
 import logging
 import pytest
@@ -348,6 +349,58 @@ def test_edp_retrieve_invalid_parameters(edp_helper):
             f"Unexpected status code for payload {payload}. Response: {response.text}"
         assert "Traceback" not in response.text, \
             f"Internal details leaked for payload {payload}. Response: {response.text}"
+
+
+QUARTER_RANGE_QUERIES = {
+    "en": "Zorbelix quarterly report from Q1-Q3 2024",
+    "pl": "Raport kwartalny Zorbelix z I-III kwartał 2024",
+}
+
+
+def _write_pdf(path, text, creation_date):
+    """Write a one-page PDF whose /Info /CreationDate is the given UTC datetime."""
+    content = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode()
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        (b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R"
+         b" /Resources << /Font << /F1 5 0 R >> >> >>"),
+        b"<< /Length %d >>\nstream\n%s\nendstream" % (len(content), content),
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        f"<< /CreationDate (D:{creation_date:%Y%m%d%H%M%S}Z) >>".encode(),
+    ]
+    pdf = bytearray(b"%PDF-1.4\n")
+    offsets = []
+    for number, body in enumerate(objects, start=1):
+        offsets.append(len(pdf))
+        pdf += b"%d 0 obj\n%s\nendobj\n" % (number, body)
+    xref_offset = len(pdf)
+    pdf += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objects) + 1)
+    pdf += b"".join(b"%010d 00000 n \n" % offset for offset in offsets)
+    pdf += b"trailer\n<< /Size %d /Root 1 0 R /Info %d 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (
+        len(objects) + 1, len(objects), xref_offset)
+    path.write_bytes(bytes(pdf))
+
+
+# IMPORTANT: no Allure test case id yet - get the real one from the validation team.
+def test_edp_retrieve_filters_by_quarter_range(edp_helper, tmp_path, test_language):
+    """Ingest PDFs created inside and outside Q1-Q3 2024 and retrieve with a quarter-range query.
+    Expect only the PDF created inside the range to be retrieved"""
+    in_range_pdf = tmp_path / f"zorbelix_in_range_{uuid.uuid4().hex[:8]}.pdf"
+    out_of_range_pdf = tmp_path / f"zorbelix_out_of_range_{uuid.uuid4().hex[:8]}.pdf"
+    _write_pdf(in_range_pdf, "Zorbelix quarterly report: 42 widgets shipped.", datetime(2024, 5, 15, tzinfo=UTC))
+    _write_pdf(out_of_range_pdf, "Zorbelix quarterly report: 57 widgets shipped.", datetime(2024, 11, 15, tzinfo=UTC))
+
+    with edp_helper.ephemeral_upload(in_range_pdf), edp_helper.ephemeral_upload(out_of_range_pdf):
+        response = edp_helper.retrieve({
+            "query": QUARTER_RANGE_QUERIES[test_language],
+            "metadata_extraction_mode": "regex_only",
+        })
+        assert response.status_code == 200, f"Failed to retrieve documents. Response: {response.text}"
+        retrieved = {doc["metadata"].get("object_name") for doc in response.json()["docs"]["retrieved_docs"]}
+
+    assert in_range_pdf.name in retrieved, f"PDF created inside the range was not retrieved: {retrieved}"
+    assert out_of_range_pdf.name not in retrieved, f"PDF created outside the range was retrieved: {retrieved}"
 
 
 @allure.testcase("DSPTV-T80")
