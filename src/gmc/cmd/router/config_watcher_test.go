@@ -752,6 +752,17 @@ func TestInjectTopLevelSuppliesSummaryTypeWhenAbsent(t *testing.T) {
 	assert.Equal(t, "refine", got["summary_type"])
 }
 
+func TestInjectTopLevelKeepsRequestStream(t *testing.T) {
+	// The caller's stream value must reach the service so it can validate it.
+	out := injectTopLevel(
+		[]byte(`{"stream": "this_should_be_a_boolean"}`),
+		map[string]interface{}{"stream": true})
+
+	var got map[string]interface{}
+	assert.NoError(t, json.Unmarshal(out, &got))
+	assert.Equal(t, "this_should_be_a_boolean", got["stream"])
+}
+
 func TestInjectTopLevelStoreStillWinsForGuardConfig(t *testing.T) {
 	// The guard services read their scanner config out of the request body, so a
 	// caller must not be able to relax one by sending it. Only the parameters in

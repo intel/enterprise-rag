@@ -847,6 +847,8 @@ var requestOverridableParams = map[string]struct{}{
 	// docsum exposes the chain type as a per-summary choice in its UI, so the
 	// stored value is the default rather than an override.
 	"summary_type": {},
+	// Response framing only; the stored value is the default when a caller omits it.
+	"stream": {},
 }
 
 // injectTopLevel overlays params onto the top level of a JSON object request.
