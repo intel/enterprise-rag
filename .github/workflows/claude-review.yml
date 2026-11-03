@@ -60,3 +60,17 @@ jobs:
         run: |
           f="$RUNNER_TEMP/claude-execution-output.json"
           [ ! -f "$f" ] || jq -r '.. | objects | select(.type? == "result") | .result // .error // empty' "$f" | head -c 3000
+      - name: label verdict
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.AI_SYS_BOT_GH_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          LABELED: ${{ contains(github.event.pull_request.labels.*.name, 'ready-for-review') }}
+        run: |
+          if gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+               --jq ".[] | select(.user.login == \"sys-aibot\" and (.body | contains(\"actions/runs/$GITHUB_RUN_ID\"))) | .body" \
+             | grep -qxF 'Verdict: LGTM'; then
+            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/labels" -f 'labels[]=ready-for-review' --silent
+          elif [ "$LABELED" = true ]; then
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/ready-for-review" --silent
+          fi
