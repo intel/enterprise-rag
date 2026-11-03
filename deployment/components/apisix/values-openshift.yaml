@@ -33,7 +33,7 @@ apisix:
   # Replaces the list in values.yaml: keep wait-for-etcd in step with it.
   extraInitContainers:
     - name: seed-conf
-      image: apache/apisix:3.16.0-ubuntu
+      image: apache/apisix:3.16.0-ubuntu  # = apisix.image in values.yaml
       imagePullPolicy: IfNotPresent
       securityContext:
         allowPrivilegeEscalation: false
