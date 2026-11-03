@@ -21,7 +21,7 @@
       kind: Namespace
       metadata:
         name: "{{ nats_namespace }}"
-        labels: "{{ istio_namespace_labels | combine({'erag-istio-protected': 'true'}) }}"
+        labels: "{{ istio_namespace_labels | default({'istio.io/dataplane-mode': 'ambient'}) | combine({'erag-istio-protected': 'true'}) }}"
   when: istio_enabled | default(false) | bool
 
 - name: "app_nats | Label namespace — PSS"
