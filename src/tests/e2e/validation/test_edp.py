@@ -356,7 +356,7 @@ QUARTER_RANGE_QUERIES = {
 }
 
 
-# IMPORTANT: no Allure test case id yet - get the real one from the validation team.
+@allure.testcase("DSPTV-T394")
 def test_edp_retrieve_filters_by_quarter_range(edp_helper, test_language):
     """Ingest PDFs created inside and outside Q1-Q3 2024 and retrieve with a quarter-range query.
     Expect only the PDF created inside the range to be retrieved"""
