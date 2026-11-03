@@ -21,6 +21,13 @@ common_registry: &repo "{{ registry }}"
 {# their curl init containers at it.                                             #}
 openshift_service_ca: &service_ca "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
 {% endif %}
+{% macro service_ca_envs() %}
+{% if cluster_distribution | default('kubernetes') == 'openshift' %}
+      SSL_CERT_FILE: *service_ca
+      REQUESTS_CA_BUNDLE: *service_ca
+      CURL_CA_BUNDLE: *service_ca
+{% endif %}
+{% endmacro %}
 
 {# Resolve solution language: explicit value or auto-detect from LLM model name #}
 {% if solution_language is defined and solution_language != "auto" %}
@@ -106,11 +113,7 @@ images:
       EMBEDDING_MODEL_SERVER_ENDPOINT: "{{ embedding_endpoint }}"
       EMBEDDING_MODEL_SERVER: "vllm"
 {% endif %}
-{% if cluster_distribution | default('kubernetes') == 'openshift' %}
-      SSL_CERT_FILE: *service_ca
-      REQUESTS_CA_BUNDLE: *service_ca
-      CURL_CA_BUNDLE: *service_ca
-{% endif %}
+{{ service_ca_envs() }}
   reranking-usvc:
     image: "enterprise-rag-reranking"
     repository: *repo
@@ -121,11 +124,7 @@ images:
       RERANKING_SERVICE_ENDPOINT: "{{ reranking_endpoint }}"
       RERANKING_MODEL_SERVER: "vllm"
 {% endif %}
-{% if cluster_distribution | default('kubernetes') == 'openshift' %}
-      SSL_CERT_FILE: *service_ca
-      REQUESTS_CA_BUNDLE: *service_ca
-      CURL_CA_BUNDLE: *service_ca
-{% endif %}
+{{ service_ca_envs() }}
 {% if edp_late_chunking_enabled is true %}
       RERANKING_LATE_CHUNKING_ENABLED: "True"
 {% else %}
@@ -171,11 +170,7 @@ images:
       LLM_MODEL_SERVER_ENDPOINT: "{{ llm_endpoint }}"
       LLM_MODEL_NAME: "{{ llm_model_name }}"
       LLM_MODEL_SERVER: "vllm"
-{% if cluster_distribution | default('kubernetes') == 'openshift' %}
-      SSL_CERT_FILE: *service_ca
-      REQUESTS_CA_BUNDLE: *service_ca
-      CURL_CA_BUNDLE: *service_ca
-{% endif %}
+{{ service_ca_envs() }}
 {% if pipeline_variant == 'output_guard' %}
       LLM_OUTPUT_GUARD_EXISTS: "True"
 {% endif %}
@@ -213,6 +208,11 @@ images:
     image: "enterprise-rag-query-rewrite"
     repository: *repo
     tag: *tag
+{% if cluster_distribution | default('kubernetes') == 'openshift' %}
+{# Calls the LLM's https endpoint itself (QUERY_REWRITE_LLM_ENDPOINT). #}
+    envs:
+{{ service_ca_envs() }}
+{% endif %}
   init-container:
     image: "enterprise-rag-init-container"
     repository: *repo
