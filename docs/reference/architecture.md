@@ -188,7 +188,7 @@ Enabled via `mcp_enabled: true` in `config.erag.yaml`. Requires `app_edp` and `a
 | `keycloak` | Platform layer | Keycloak |
 | `monitoring` | Platform layer | Prometheus, Grafana, Loki, Tempo |
 
-All RAG namespaces join the Istio ambient mesh via `istio.io/dataplane-mode: ambient` label.
+All RAG namespaces join the Istio ambient mesh via `istio.io/dataplane-mode: ambient` label. On OpenShift they join the cluster's Service Mesh 3 with sidecars instead ([Mesh](mesh.md#openshift-sidecars)).
 
 ## Istio Mesh Integration
 

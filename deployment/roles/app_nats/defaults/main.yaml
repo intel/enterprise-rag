@@ -21,7 +21,7 @@ nats_helm_default_values_file: "{{ deployment_dir }}/components/nats/values.yaml
 # mirrored to the consumer namespaces below so the controller and router can
 # mount it. NKey authorization is always on: it keeps the leader-elected
 # controller the sole KV writer. Transport encryption is left to the Istio
-# ambient mesh when Istio is enabled and is otherwise absent.
+# mesh when Istio is enabled and is otherwise absent.
 nats_auth_secret_name: "nats-auth"
 # Keys every valid nats-auth secret must carry and populate; a secret missing or
 # empty in any of these is treated as incomplete and regenerated.

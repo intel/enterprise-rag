@@ -70,3 +70,5 @@ securityContext:
 securityContextWithTemp:
   runAsUser: null
 {% endif %}
+
+jobPodAnnotations: {{ istio_pod_annotations | default({}) | to_json }}

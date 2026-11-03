@@ -30,7 +30,7 @@ cluster:
 
 # Client authorization. Clients authenticate with an NKey so only the
 # leader-elected controller writes the KV bucket; this is enforced regardless of
-# Istio. Transport encryption comes from the Istio ambient mesh when Istio is
+# Istio. Transport encryption comes from the Istio mesh when Istio is
 # enabled and is otherwise absent, so the server runs no NATS-native TLS. The
 # NKey material lives in a Secret with these keys:
 #   user.pub — authorized client NKey public key (read by the server)
@@ -95,6 +95,8 @@ containerSecurityContext:
   readOnlyRootFilesystem: true
 
 podAnnotations: {}
+# Pod annotations of the kv-init Job (the installer sets native sidecars in sidecar mode).
+jobPodAnnotations: {}
 imagePullSecrets: []
 nodeSelector: {}
 tolerations: []

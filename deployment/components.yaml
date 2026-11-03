@@ -95,9 +95,10 @@ components:
     depends_on: [app_pipeline, app_apisix]
 
   # --- Reboot recovery ---
+  # Repairs ambient capture after a reboot; sidecars (OpenShift) have nothing to repair.
   - name: app_watcher
     layer: erag
-    enabled: "{{ watcher_enabled | default(true) | bool }}"
+    enabled: "{{ watcher_enabled | default(true) | bool and istio_dataplane_mode | default('ambient') == 'ambient' }}"
     depends_on: [app_pre_install]
 
   #--- Finalization ---

@@ -185,6 +185,8 @@ apisix:
   enabled: {{ (apisix_enabled | default(false)) | bool | string | lower }}
   ingressClassName: apisix
   routeHost: "{{ (ui_domain_name if ui_domain_name is defined else '') }}"
+  # Sidecars: send to the Service, so the gateway's sidecar can pick the endpoint (mTLS).
+  resolveGranularity: "{{ 'service' if istio_enabled | default(false) | bool and istio_dataplane_mode | default('ambient') == 'sidecar' else 'endpoint' }}"
   auth:
     realm: "{{ _apisix_realm }}"
     client_id: "{{ apisix_oidc_client_id | default('EnterpriseRAG-oidc-backend') }}"
