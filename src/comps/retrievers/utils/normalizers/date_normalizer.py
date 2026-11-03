@@ -415,20 +415,13 @@ class DateNormalizer:
         end = datetime(year, end_month, last_day, 23, 59, 59, tzinfo=timezone.utc)
         return int(start.timestamp()), int(end.timestamp())
     
-    def _parse_quarter_number(self, value: Optional[str]) -> Optional[int]:
+    def _parse_quarter_number(self, value: str) -> Optional[int]:
         """Parse quarter number from Arabic (1-4) or Roman (I-IV) numerals."""
-        if value and str(value).isdigit():
+        value = str(value).upper().strip()
+        if value.isdigit():
             q = int(value)
-            if 1 <= q <= 4:
-                return q
-        
-        if value:
-            value_str = str(value).upper().strip()
-            q = ROMAN_TO_INT.get(value_str)
-            if q:
-                return q
-        
-        return None
+            return q if 1 <= q <= 4 else None
+        return ROMAN_TO_INT.get(value)
     
     def _last_quarter_range(self) -> Tuple[int, int]:
         """Get timestamp range for previous quarter."""
