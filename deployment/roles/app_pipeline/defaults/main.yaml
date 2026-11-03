@@ -43,7 +43,7 @@ llm_max_model_len: ""
 
 # --- Fingerprint config source (controller Postgres->KV bridge + router KV read) ---
 nats_auth_secret_name: "nats-auth"
-# Plaintext scheme: transport encryption is left to the Istio ambient mesh, and
+# Plaintext scheme: transport encryption is left to the Istio mesh, and
 # clients still authenticate with the NKey seed from the nats-auth secret.
 nats_url: "nats://nats-svc.{{ nats_namespace }}.svc:4222"
 fingerprint_service_url: "http://fingerprint-svc.{{ fingerprint_namespace }}.svc:6012"

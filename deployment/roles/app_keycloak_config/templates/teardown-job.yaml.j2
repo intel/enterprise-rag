@@ -13,6 +13,10 @@ spec:
   backoffLimit: 2
   template:
     metadata:
+{% if istio_pod_annotations | default({}) | length > 0 %}
+      # The Job ends only when its sidecar does: native sidecars do.
+      annotations: {{ istio_pod_annotations | to_json }}
+{% endif %}
       labels:
         app.kubernetes.io/name: keycloak-configurator
         app.kubernetes.io/component: teardown

@@ -15,6 +15,11 @@ spec:
   backoffLimit: 10
   template:
     metadata:
+      {{- with .Values.jobPodAnnotations }}
+      # The Job ends only when its sidecar does: native sidecars do.
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
         {{- include "nats.selectorLabels" . | nindent 8 }}
     spec:

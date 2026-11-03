@@ -201,10 +201,29 @@
       kind: Namespace
       metadata:
         name: "{{ pipeline_namespace }}"
-        labels:
-          istio.io/dataplane-mode: "ambient"
-          erag-istio-protected: "true"
+        labels: "{{ istio_namespace_labels | combine({'erag-istio-protected': 'true'}) }}"
   when: istio_enabled | default(false) | bool
+
+# KServe's DestinationRules for the models originate TLS (mode SIMPLE) from the
+# client's sidecar, but the usvcs already speak https to vLLM: TLS in TLS, which
+# vLLM refuses. A rule in the client namespace takes precedence over the service
+# namespace's; without a tls setting the sidecars use mutual TLS, with the usvcs'
+# https inside, as in ambient mode.
+- name: "app_pipeline | Mutual TLS to the models (sidecar)"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: networking.istio.io/v1
+      kind: DestinationRule
+      metadata:
+        name: inference-mtls
+        namespace: "{{ pipeline_namespace }}"
+      spec:
+        host: "*.{{ inference_namespace }}.svc.cluster.local"
+        exportTo: ["."]
+  when:
+    - istio_enabled | default(false) | bool
+    - istio_dataplane_mode | default('ambient') == 'sidecar'
 
 - name: "app_pipeline | Label pipeline namespace - PSS"
   kubernetes.core.k8s:
@@ -237,9 +256,7 @@
       kind: Namespace
       metadata:
         name: "{{ gmc_namespace }}"
-        labels:
-          istio.io/dataplane-mode: "ambient"
-          erag-istio-protected: "true"
+        labels: "{{ istio_namespace_labels | combine({'erag-istio-protected': 'true'}) }}"
   when: istio_enabled | default(false) | bool
 
 # Host-network apiserver (no mesh identity) can't reach the GMC controller's

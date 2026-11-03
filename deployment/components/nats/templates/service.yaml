@@ -3,6 +3,10 @@
 
 # Headless service backing the StatefulSet. Cluster peers resolve each other
 # through its per-pod DNS records.
+#
+# appProtocol tcp on client and cluster: NATS speaks first (INFO on connect), and
+# an Istio sidecar that does not know a port's protocol waits for the client's
+# first bytes to detect it, so neither side would ever send.
 apiVersion: v1
 kind: Service
 metadata:
@@ -18,9 +22,11 @@ spec:
     - name: client
       port: {{ .Values.service.clientPort }}
       targetPort: client
+      appProtocol: tcp
     - name: cluster
       port: {{ .Values.service.clusterPort }}
       targetPort: cluster
+      appProtocol: tcp
     - name: monitor
       port: {{ .Values.service.monitorPort }}
       targetPort: monitor
@@ -43,9 +49,11 @@ spec:
     - name: client
       port: {{ .Values.service.clientPort }}
       targetPort: client
+      appProtocol: tcp
     - name: cluster
       port: {{ .Values.service.clusterPort }}
       targetPort: cluster
+      appProtocol: tcp
     - name: monitor
       port: {{ .Values.service.monitorPort }}
       targetPort: monitor
