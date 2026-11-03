@@ -97,7 +97,7 @@ def test_get_gmconnector_propagates_other_api_errors():
 
 def test_setup_skips_a_guard_that_is_not_deployed():
     fingerprint = MagicMock()
-    guard_helper = GuardHelper(MagicMock(), fingerprint, deployed_guard_types=(GuardType.INPUT,))
+    guard_helper = GuardHelper(MagicMock(), fingerprint, deployed_guards=(GuardType.INPUT,))
 
     with pytest.raises(pytest.skip.Exception, match="output_guard is not deployed"):
         guard_helper.setup(GuardType.OUTPUT, "regex", {"enabled": True})
@@ -108,7 +108,7 @@ def test_disable_all_guards_touches_only_deployed_guards():
     fingerprint = MagicMock()
     fingerprint.read_config.return_value = MagicMock(
         status_code=200, json=lambda: {"values": {"input_guardrail_params": {}}})
-    guard_helper = GuardHelper(MagicMock(), fingerprint, deployed_guard_types=(GuardType.INPUT,))
+    guard_helper = GuardHelper(MagicMock(), fingerprint, deployed_guards=(GuardType.INPUT,))
 
     with patch("tests.e2e.helpers.guard_helper.time.sleep"):
         guard_helper.disable_all_guards()

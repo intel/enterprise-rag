@@ -397,10 +397,10 @@ class GuardQuestions:
 
 class GuardHelper:
 
-    def __init__(self, chatqa_api_helper, fingerprint_api_helper, deployed_guard_types=CHATQNA_GUARD_TYPES):
+    def __init__(self, chatqa_api_helper, fingerprint_api_helper, deployed_guards=CHATQNA_GUARD_TYPES):
         self.chatqa_api_helper = chatqa_api_helper
         self.fingerprint_api_helper = fingerprint_api_helper
-        self.deployed_guard_types = deployed_guard_types
+        self.deployed_guards = tuple(deployed_guards)
 
     def setup(self, guard_type, name, parameters):
         """Configure one chatqa scanner, sending every field the scanner has.
@@ -415,7 +415,7 @@ class GuardHelper:
         assert guard_type in CHATQNA_GUARD_TYPES, (
             f"{guard_type.value} is not a chatqa guard; use setup_dataprep for "
             f"the dataprep scope")
-        if guard_type not in self.deployed_guard_types:
+        if guard_type not in self.deployed_guards:
             pytest.skip(f"{guard_type.value} is not deployed in this pipeline")
         payload = [
             {
@@ -572,7 +572,7 @@ class GuardHelper:
         (a threshold, an is_blocked, a match_type) from whatever ran before it.
         """
         logger.info("Disabling all guards")
-        for guard_type in self.deployed_guard_types:
+        for guard_type in self.deployed_guards:
             config = self._read_config_when_ready(guard_type.value)
             scanners = config.json()["values"][GUARD_READ_FIELDS[guard_type]].keys()
             change_arguments_body = [{
