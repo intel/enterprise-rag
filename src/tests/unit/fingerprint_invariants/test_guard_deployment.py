@@ -11,7 +11,7 @@ import kr8s
 import pytest
 
 from tests.e2e.helpers.guard_helper import GuardHelper, GuardType, deployed_guard_types
-from tests.e2e.helpers.k8s_helper import K8sHelper, ResourceNotFound
+from tests.e2e.helpers.k8s_helper import K8sHelper
 
 
 def _step(name, params_kind=None, node_name=None):
@@ -68,18 +68,22 @@ def test_deployed_guard_types_reads_the_graph_named_after_the_guard_scope():
 
 def test_deployed_guard_types_without_a_deployed_graph_deploys_no_guards():
     k8s_helper = MagicMock()
-    k8s_helper.get_gmconnector.side_effect = ResourceNotFound("No GMConnector named 'chatqna' is deployed.")
+    k8s_helper.get_gmconnector.return_value = None
 
     assert deployed_guard_types(k8s_helper) == ()
 
 
-def test_get_gmconnector_reports_an_unserved_kind_as_not_found():
+def test_get_gmconnector_without_a_deployed_graph_returns_nothing():
+    with patch("tests.e2e.helpers.k8s_helper.kr8s.get", return_value=iter([])):
+        assert K8sHelper().get_gmconnector("chatqna") is None
+
+
+def test_get_gmconnector_with_an_unserved_kind_returns_nothing():
     """A cluster without the pipeline layer has no GMConnector CRD; that must not error the session."""
     error = kr8s.ServerError("404 page not found", response=MagicMock(status_code=404))
 
     with patch("tests.e2e.helpers.k8s_helper.kr8s.get", side_effect=error):
-        with pytest.raises(ResourceNotFound):
-            K8sHelper().get_gmconnector("chatqna")
+        assert K8sHelper().get_gmconnector("chatqna") is None
 
 
 def test_get_gmconnector_propagates_other_api_errors():

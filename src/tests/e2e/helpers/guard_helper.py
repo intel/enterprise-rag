@@ -15,7 +15,6 @@ from comps.system_fingerprint.utils.object_document_mapper import (
     LLMGuardInputGuardrailParams,
     LLMGuardOutputGuardrailParams,
 )
-from tests.e2e.helpers.k8s_helper import ResourceNotFound
 
 logger = logging.getLogger(__name__)
 
@@ -128,10 +127,9 @@ def _disabled_defaults(guard_type, scanner):
 
 def deployed_guard_types(k8s_helper, pipeline=CHATQNA_PIPELINE):
     """Returns the chatqa guard types the deployed pipeline graph declares, none when it is absent."""
-    try:
-        graph = k8s_helper.get_gmconnector(pipeline)
-    except ResourceNotFound as error:
-        logger.warning(f"Treating all guards as not deployed: {error}")
+    graph = k8s_helper.get_gmconnector(pipeline)
+    if graph is None:
+        logger.warning(f"No '{pipeline}' pipeline is deployed; treating all guards as not deployed")
         return ()
     params_kinds = {step.get("internalService", {}).get("config", {}).get("paramsKind")
                     for node in graph.raw["spec"]["nodes"].values() for step in node["steps"]}

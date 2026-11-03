@@ -92,17 +92,16 @@ class K8sHelper:
         return list(kr8s.get(_VolumeSnapshotClass))
 
     def get_gmconnector(self, name):
-        """Returns the GMConnector graph of that name from any namespace (ResourceNotFound when absent)."""
+        """Returns the GMConnector graph of that name from any namespace, or None when the cluster has none."""
         logger.debug(f"Getting GMConnector '{name}'")
         try:
             graphs = [graph for graph in kr8s.get(_GMConnector, namespace=kr8s.ALL) if graph.name == name]
         except kr8s.ServerError as error:
             if getattr(error.response, "status_code", None) != 404:
                 raise
-            raise ResourceNotFound(f"The cluster does not serve the GMConnector kind: {error}") from error
-        if not graphs:
-            raise ResourceNotFound(f"No GMConnector named '{name}' is deployed.")
-        return graphs[0]
+            logger.warning(f"The cluster does not serve the GMConnector kind: {error}")
+            return None
+        return graphs[0] if graphs else None
 
     def list_pvcs(self, namespace):
         """List all PersistentVolumeClaims in a namespace"""
