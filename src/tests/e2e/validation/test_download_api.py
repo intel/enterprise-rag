@@ -49,7 +49,7 @@ def _get_auth_header_for_s3(edp_helper):
     return headers
 
 
-@allure.testcase("IEASG-T605")
+@allure.testcase("DSPTV-T81")
 def test_download_presigned_url_generation(edp_helper, ingested_test_file):
     """Generate a presigned GET URL for a previously uploaded file and verify the response structure."""
     response = edp_helper.generate_presigned_url(ingested_test_file, method="GET")
@@ -65,7 +65,7 @@ def test_download_presigned_url_generation(edp_helper, ingested_test_file):
 
 
 @pytest.mark.smoke
-@allure.testcase("IEASG-T606")
+@allure.testcase("DSPTV-T82")
 def test_download_file_content(edp_helper, ingested_test_file):
     """Download a file via presigned URL and verify its content matches the original."""
     response = edp_helper.generate_presigned_url(ingested_test_file, method="GET")
@@ -83,7 +83,7 @@ def test_download_file_content(edp_helper, ingested_test_file):
     )
 
 
-@allure.testcase("IEASG-T724")
+@allure.testcase("DSPTV-T98")
 def test_download_denied_without_authorization(edp_helper, tmp_path):
     """Security: NO bucket should serve an object without authentication/signature. For every
     bucket, upload a probe, take the GET presigned URL, strip its query (any X-Amz-* signature) and
@@ -109,7 +109,7 @@ def test_download_denied_without_authorization(edp_helper, tmp_path):
     )
 
 
-@allure.testcase("IEASG-T727")
+@allure.testcase("DSPTV-T99")
 def test_download_admin_bucket_file_as_admin(edp_helper, tmp_path):
     """Positive RBAC case: an admin can download a file stored in the admin-only bucket. Upload a
     file with distinctive content to only-admin, then download it as admin via the authorized path
@@ -136,7 +136,7 @@ def test_download_admin_bucket_file_as_admin(edp_helper, tmp_path):
     )
 
 
-@allure.testcase("IEASG-T607")
+@allure.testcase("DSPTV-T83")
 def test_download_file_from_chatqa_citation(edp_helper, chatqa_api_helper, ingested_test_file):
     """
     Full download flow: upload file, ask chatqa a question, extract citation metadata,
@@ -183,7 +183,7 @@ def test_download_file_from_chatqa_citation(edp_helper, chatqa_api_helper, inges
     )
 
 
-@allure.testcase("IEASG-T608")
+@allure.testcase("DSPTV-T84")
 def test_download_presigned_url_nonexistent_bucket(edp_helper, ingested_test_file):
     """Attempt to generate a download URL for a nonexistent bucket. Expect 404."""
     response = edp_helper.generate_presigned_url(ingested_test_file, method="GET", bucket="nonexistent-bucket")
@@ -192,7 +192,7 @@ def test_download_presigned_url_nonexistent_bucket(edp_helper, ingested_test_fil
     )
 
 
-@allure.testcase("IEASG-T609")
+@allure.testcase("DSPTV-T85")
 def test_download_presigned_url_nonexistent_file(edp_helper):
     """
     Generate a presigned GET URL for a file that does not exist in storage.
@@ -211,7 +211,7 @@ def test_download_presigned_url_nonexistent_file(edp_helper):
     )
 
 
-@allure.testcase("IEASG-T610")
+@allure.testcase("DSPTV-T86")
 def test_download_binary_file_integrity(edp_helper):
     """
     Upload a binary file, download it via presigned URL,
@@ -247,7 +247,7 @@ def test_download_binary_file_integrity(edp_helper):
     assert downloaded_bytes == original_bytes, f"Content mismatch for {file_name}: bytes differ after download"
 
 
-@allure.testcase("IEASG-T611")
+@allure.testcase("DSPTV-T87")
 def test_download_after_file_deletion(edp_helper, ingested_test_file):
     """
     Generate a presigned download URL for an ingested file, then delete the file from storage.

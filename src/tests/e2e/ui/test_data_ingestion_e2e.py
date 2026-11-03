@@ -326,7 +326,7 @@ async def _delete_row_via_table(chat_ui_helper, identifier: str,
 # TEST CASES
 # ============================================================================
 
-@allure.testcase("IEASG-T397")
+@allure.testcase("DSPTV-T305")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_upload_file_via_ui(chat_ui_helper):
@@ -419,7 +419,7 @@ async def test_upload_file_via_ui(chat_ui_helper):
     logger.info("Test completed: File upload via UI validated")
 
 
-@allure.testcase("IEASG-T398")
+@allure.testcase("DSPTV-T306")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_upload_link_via_ui(chat_ui_helper):
@@ -475,7 +475,7 @@ async def test_upload_link_via_ui(chat_ui_helper):
     logger.info("Test completed: Link upload via UI validated")
 
 
-@allure.testcase("IEASG-T399")
+@allure.testcase("DSPTV-T307")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_delete_ingested_file_via_ui(chat_ui_helper):
@@ -557,7 +557,7 @@ async def test_delete_ingested_file_via_ui(chat_ui_helper):
     logger.info("Test completed: File deletion via UI validated")
 
 
-@allure.testcase("IEASG-T400")
+@allure.testcase("DSPTV-T308")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_delete_ingested_link_via_ui(chat_ui_helper):
@@ -638,7 +638,7 @@ async def _select_named_destination(page, name: str) -> bool:
         return False
 
 
-@allure.testcase("IEASG-T731")
+@allure.testcase("DSPTV-T102")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_download_admin_bucket_file_via_ui(chat_ui_helper):

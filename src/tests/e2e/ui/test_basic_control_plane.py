@@ -33,7 +33,7 @@ pytestmark = requires_chatqna
 # TEST CASES
 # ============================================================================
 
-@allure.testcase("IEASG-T283")
+@allure.testcase("DSPTV-T334")
 @pytest.mark.ui
 @pytest.mark.ui_smoke
 @pytest.mark.asyncio
@@ -87,7 +87,7 @@ async def test_control_plane_navigation(chat_ui_helper):
     logger.info("Test completed: Control Plane round-trip navigation validated")
 
 
-@allure.testcase("IEASG-T284")
+@allure.testcase("DSPTV-T337")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_no_service_selected_card(chat_ui_helper):
@@ -122,7 +122,7 @@ async def test_no_service_selected_card(chat_ui_helper):
     logger.info("Test completed: No service selected card validated")
 
 
-@allure.testcase("IEASG-T285")
+@allure.testcase("DSPTV-T338")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_control_plane_panel_rendered(chat_ui_helper):
@@ -160,7 +160,7 @@ async def test_control_plane_panel_rendered(chat_ui_helper):
     logger.info("Test completed: Control Plane panel validated")
 
 
-@allure.testcase("IEASG-T286")
+@allure.testcase("DSPTV-T339")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_chatqa_graph_controls_rendered(chat_ui_helper):
@@ -200,7 +200,7 @@ async def test_chatqa_graph_controls_rendered(chat_ui_helper):
     logger.info("Test completed: ChatQnA graph controls validated")
 
 
-@allure.testcase("IEASG-T287")
+@allure.testcase("DSPTV-T340")
 @pytest.mark.ui
 @pytest.mark.asyncio
 async def test_control_plane_zoom_controls(chat_ui_helper):
@@ -278,7 +278,7 @@ async def test_control_plane_zoom_controls(chat_ui_helper):
     logger.info("Test completed: Control Plane zoom controls validated")
 
 
-@allure.testcase("IEASG-T705")
+@allure.testcase("DSPTV-T335")
 @pytest.mark.ui
 @pytest.mark.ui_smoke
 @pytest.mark.asyncio

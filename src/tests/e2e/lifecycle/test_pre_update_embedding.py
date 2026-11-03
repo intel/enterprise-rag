@@ -38,7 +38,7 @@ def edp_cleanup_after_session():
     yield
 
 
-@allure.testcase("IEASG-T722")
+@allure.testcase("DSPTV-T225")
 def test_pre_update_embedding(k8s_helper, edp_helper, chatqa_api_helper):
     """
     Baseline before an embedding-model update (CLUSTER_STATE=before-update).

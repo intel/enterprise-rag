@@ -54,7 +54,7 @@ def edp_cleanup_after_session():
     yield
 
 
-@allure.testcase("IEASG-T717")
+@allure.testcase("DSPTV-T220")
 def test_upload_variant_disables_chat_models(k8s_helper):
     """Upload is an embedding-only variant: the LLM and reranking model servers must be undeployed
     (reconcile frees their cores) and only embedding remains."""
@@ -70,7 +70,7 @@ def test_upload_variant_disables_chat_models(k8s_helper):
     assert embedding_pod, "Embedding model server should be running in the upload variant"
 
 
-@allure.testcase("IEASG-T718")
+@allure.testcase("DSPTV-T221")
 def test_upload_variant_embedding_scaled_up(k8s_helper):
     """The upload variant reclaims the freed LLM/reranking cores and scales embedding out to several
     replicas (its upload footprint)."""
@@ -86,7 +86,7 @@ def test_upload_variant_embedding_scaled_up(k8s_helper):
     )
 
 
-@allure.testcase("IEASG-T719")
+@allure.testcase("DSPTV-T222")
 def test_upload_variant_bulk_ingestion(edp_helper):
     """The upload variant exists for bulk ingestion. Ingest a distinctive document through the
     embedding-only pipeline and confirm it is ingested; record it so the base phase can verify it

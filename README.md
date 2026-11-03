@@ -165,21 +165,12 @@ The Quick Start deploys the ChatQnA flavour with defaults. From here you can cha
 
 ## Publications
 
-* [How to Integrate SharePoint Online with a RAG system](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/How-to-Integrate-SharePoint-Online-with-a-RAG-system/post/1745333)
 * [Lenovo Validated Design: AI POD Mini for Enterprise RAG Implementation](https://lenovopress.lenovo.com/lp2417-lenovo-validated-design-ai-pod-mini-for-enterprise-rag-implementation)
-* [Give Your RAG a Voice: Building an Audio Q&A Experience with Intel® AI for Enterprise RAG](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Give-Your-RAG-a-Voice-Building-an-Audio-Q-A-Experience-with/post/1739148)
 * [Accelerate AI Value Creation with Nutanix and Intel® AI for Enterprise RAG](https://www.youtube.com/watch?v=7ghQiKXrzew)
 * [Converging Paradigms: Architecting a Hybrid and Open Platform for Unified HPC and AI Workloads](https://www.intel.com/content/www/us/en/content-details/913576/converging-paradigms-architecting-a-hybrid-and-open-platform-for-unified-hpc-and-ai-workloads.html)
 * [Starting With the End in Mind: Intel and Nutanix's Blueprint for an Enterprise-Grade RAG Chatbot](https://www.intel.com/content/www/us/en/content-details/898778/starting-with-the-end-in-mind-intel-and-nutanix-s-blueprint-for-an-enterprise-grade-rag-chatbot.html)
 * [Securing Enterprise RAG Deployments](https://www.intel.com/content/www/us/en/content-details/870124/securing-enterprise-rag-deployments.html)
-* [Document Summarization: Transforming Enterprise Content with Intel® AI for Enterprise RAG](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Document-Summarization-Transforming-Enterprise-Content-with/post/1728252)
-* [Scaling Intel® AI for Enterprise RAG Performance: 64-Core vs 96-Core Intel® Xeon®](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Scaling-Intel-AI-for-Enterprise-RAG-Performance-64-Core-vs-96/post/1723234)
-* [Comprehensive Analysis: Intel® AI for Enterprise RAG Performance](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Comprehensive-Analysis-Intel-AI-for-Enterprise-RAG-Performance/post/1723226)
-* [Monitoring and Debugging RAG Systems in Production](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Monitoring-and-Debugging-RAG-Systems-in-Production/post/1720292)
 * [NetApp AIPod Mini - Deployment Automation](https://community.netapp.com/t5/Tech-ONTAP-Blogs/NetApp-AIPod-Mini-Deployment-Automation/ba-p/463257)
-* [Multi-node deployments using Intel® AI for Enterprise RAG](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Multi-node-deployments-using-Intel-AI-for-Enterprise-RAG/post/1710214)
-* [Rethinking AI Infrastructure: How NetApp and Intel Are Unlocking the Future with AIPod Mini](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Rethinking-AI-Infrastructure-How-NetApp-and-Intel-Are-Unlocking/post/1705557)
-* [Deploying Scalable Enterprise RAG on Kubernetes with Ansible Automation](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Deploying-Scalable-Enterprise-RAG-on-Kubernetes-with-Ansible/post/1701296)
 
 ---
 

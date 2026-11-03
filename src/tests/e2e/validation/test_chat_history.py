@@ -31,7 +31,7 @@ def cleanup(chat_history_helper):
     clean_all_history(chat_history_helper)
 
 
-@allure.testcase("IEASG-T209")
+@allure.testcase("DSPTV-T30")
 def test_save_chat_history(chat_history_helper):
     response = chat_history_helper.save_history(SIMPLE_CHAT_HISTORY)
 
@@ -42,7 +42,7 @@ def test_save_chat_history(chat_history_helper):
     assert output_chat_history == SIMPLE_CHAT_HISTORY, f"Chat history is not the same, {output_chat_history} =/= {SIMPLE_CHAT_HISTORY}"
 
 
-@allure.testcase("IEASG-T214")
+@allure.testcase("DSPTV-T35")
 def test_append_chat_history(chat_history_helper):
     chat_history_appendage = [
         {
@@ -71,7 +71,7 @@ def test_append_chat_history(chat_history_helper):
         assert qna in output_appended_chat_history, f"Base history missing from output, {output_appended_chat_history}"
 
 
-@allure.testcase("IEASG-T210")
+@allure.testcase("DSPTV-T31")
 def test_get_all_histories(chat_history_helper):
     additional_chat_history = [ 
         {
@@ -90,7 +90,7 @@ def test_get_all_histories(chat_history_helper):
             f"History list does not contain one or more histories, output: {response.json()}, id1: {history_id1}, id2: {history_id2}"
 
 
-@allure.testcase("IEASG-T211")
+@allure.testcase("DSPTV-T32")
 def test_get_history_details(chat_history_helper):
     response = chat_history_helper.save_history(SIMPLE_CHAT_HISTORY)
     history_id = response.json().get("id")
@@ -102,7 +102,7 @@ def test_get_history_details(chat_history_helper):
     assert output_chat_history == SIMPLE_CHAT_HISTORY, f"Chat history is not the same, {output_chat_history} =/= {SIMPLE_CHAT_HISTORY}"
 
 
-@allure.testcase("IEASG-T212")
+@allure.testcase("DSPTV-T33")
 def test_change_history_name(chat_history_helper):
     response = chat_history_helper.save_history(SIMPLE_CHAT_HISTORY)
     history_id = response.json().get("id")
@@ -116,7 +116,7 @@ def test_change_history_name(chat_history_helper):
         f"History name is incorrect, history name: {response.json()["history_name"]}, expected name: {new_history_name}"
 
 
-@allure.testcase("IEASG-T213")
+@allure.testcase("DSPTV-T34")
 def test_delete_history_by_id(chat_history_helper):
     response = chat_history_helper.save_history(SIMPLE_CHAT_HISTORY)
     assert response.status_code == 200, f"Failed to save chat history, {response.text}"
@@ -129,7 +129,7 @@ def test_delete_history_by_id(chat_history_helper):
     assert response.status_code == 400, f"Unexpected status of getting history details after deletion, {response.text}"
 
 
-@allure.testcase("IEASG-T238")
+@allure.testcase("DSPTV-T36")
 def test_empty_history(chat_history_helper):
     """Check the behavior when empty conversation history is passed"""
     # Empty list

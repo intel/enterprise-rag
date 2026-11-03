@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 LLM_POD_LABEL_SELECTOR = "app.kubernetes.io/name=llm-usvc"
 
 
-@allure.testcase("IEASG-T288")
+@allure.testcase("DSPTV-T201")
 def test_update_llm_model(k8s_helper):
     """
     Verify the LLM microservice pod serves the model selected in the config's

@@ -222,7 +222,7 @@ class TestIstioInMesh:
         yield
         istio_helper.delete_namespace()
 
-    @allure.testcase("IEASG-T142")
+    @allure.testcase("DSPTV-T153")
     def test_authorization_gets_connections_blocked(self, istio_helper):
         endpoints = {endpoint: connection_type for connection_type, endpoint_list in istio_test_data.items() for endpoint in endpoint_list}
         connections_not_blocked = check_if_connections_blocked(istio_helper, endpoints)
@@ -238,7 +238,7 @@ class TestIstioOutOfMesh:
         yield
         istio_helper.delete_namespace()
 
-    @allure.testcase("IEASG-T146")
+    @allure.testcase("DSPTV-T154")
     def test_authorization_gets_connections_blocked(self, istio_helper):
         endpoints = {endpoint: connection_type for connection_type, endpoint_list in istio_test_data.items() for endpoint in endpoint_list}
         connections_not_blocked = check_if_connections_blocked(istio_helper, endpoints)

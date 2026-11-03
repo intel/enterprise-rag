@@ -26,7 +26,7 @@ def _load_pre_upgrade_state():
         )
 
 
-@allure.testcase("IEASG-T621")
+@allure.testcase("DSPTV-T211")
 def test_post_upgrade_version_changed(k8s_helper):
     """Verify the system version is higher after upgrade."""
     state = _load_pre_upgrade_state()
@@ -40,7 +40,7 @@ def test_post_upgrade_version_changed(k8s_helper):
     )
 
 
-@allure.testcase("IEASG-T622")
+@allure.testcase("DSPTV-T212")
 def test_post_upgrade_fingerprint_preserved(fingerprint_api_helper):
     """Verify the fingerprint LLM temperature change survived the upgrade."""
     state = _load_pre_upgrade_state()
@@ -58,7 +58,7 @@ def test_post_upgrade_fingerprint_preserved(fingerprint_api_helper):
     )
 
 
-@allure.testcase("IEASG-T623")
+@allure.testcase("DSPTV-T213")
 def test_post_upgrade_documents_exist(edp_helper):
     """Verify both pre-upgrade documents are still present in EDP."""
     state = _load_pre_upgrade_state()
@@ -82,7 +82,7 @@ def test_post_upgrade_documents_exist(edp_helper):
             )
 
 
-@allure.testcase("IEASG-T624")
+@allure.testcase("DSPTV-T214")
 def test_post_upgrade_chatqa_retrieval_works(chatqa_api_helper):
     """Verify ChatQA can retrieve and answer from pre-upgrade documents."""
     response = chatqa_api_helper.call_chatqa(
@@ -97,7 +97,7 @@ def test_post_upgrade_chatqa_retrieval_works(chatqa_api_helper):
     )
 
 
-@allure.testcase("IEASG-T625")
+@allure.testcase("DSPTV-T215")
 def test_post_upgrade_chat_history_exists(chat_history_helper):
     """Verify the chat history entry from before upgrade still exists."""
     response = chat_history_helper.get_all_histories()
@@ -116,7 +116,7 @@ def test_post_upgrade_chat_history_exists(chat_history_helper):
         )
 
 
-@allure.testcase("IEASG-T626")
+@allure.testcase("DSPTV-T216")
 def test_post_upgrade_user_exists_and_can_auth(keycloak_helper):
     """Verify the pre-upgrade Keycloak user exists and can authenticate."""
     state = _load_pre_upgrade_state()

@@ -186,7 +186,7 @@ async def audio_chat_ui_helper(audio_page, admin_credentials):
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T331")
+@allure.testcase("DSPTV-T309")
 async def test_voice_input_button_visible(chat_ui_helper):
     """
     Test that the voice input (microphone) button is visible when audio is enabled.
@@ -215,7 +215,7 @@ async def test_voice_input_button_visible(chat_ui_helper):
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T332")
+@allure.testcase("DSPTV-T310")
 async def test_audio_recording_starts_stops(audio_chat_ui_helper, unified_audio_input):
     """
     Test that clicking the microphone button starts and stops recording.
@@ -268,7 +268,7 @@ async def test_audio_recording_starts_stops(audio_chat_ui_helper, unified_audio_
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T333")
+@allure.testcase("DSPTV-T311")
 async def test_audio_transcription_to_prompt(audio_chat_ui_helper, unified_audio_input):
     """
     Test that recorded audio is transcribed and appears in the prompt input.
@@ -350,7 +350,7 @@ async def test_audio_transcription_to_prompt(audio_chat_ui_helper, unified_audio
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T334")
+@allure.testcase("DSPTV-T312")
 async def test_voice_question_receives_response(audio_chat_ui_helper, unified_audio_input):
     """
     Test full voice UI flow: voice input -> transcription -> send -> receive response.
@@ -439,7 +439,7 @@ async def test_voice_question_receives_response(audio_chat_ui_helper, unified_au
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T335")
+@allure.testcase("DSPTV-T313")
 async def test_recording_animation_visible(audio_chat_ui_helper, unified_audio_input):
     """
     Test that recording animation (CSS pulse) is visible during recording.
@@ -509,7 +509,7 @@ async def test_recording_animation_visible(audio_chat_ui_helper, unified_audio_i
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T336")
+@allure.testcase("DSPTV-T314")
 async def test_asr_slow_speech_ui(audio_chat_ui_helper, unified_audio_input):
     """
     Test ASR with slow speech audio at moderate speeds (0.9-0.95x).
@@ -587,7 +587,7 @@ async def test_asr_slow_speech_ui(audio_chat_ui_helper, unified_audio_input):
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T337")
+@allure.testcase("DSPTV-T315")
 async def test_asr_fast_speech_ui(audio_chat_ui_helper, unified_audio_input):
     """
     Test ASR with fast speech audio at moderate speeds (1.1-1.15x).
@@ -663,7 +663,7 @@ async def test_asr_fast_speech_ui(audio_chat_ui_helper, unified_audio_input):
 
 @pytest.mark.ui
 @pytest.mark.asyncio
-@allure.testcase("IEASG-T338")
+@allure.testcase("DSPTV-T316")
 async def test_asr_silence_ui(audio_chat_ui_helper, unified_audio_input):
     """
     Test ASR with silence to ensure it doesn't hallucinate words.
