@@ -531,9 +531,8 @@ def generic_api_helper():
 
 
 @pytest.fixture(scope="session")
-def guard_helper(chatqa_api_helper, fingerprint_api_helper):
-    return GuardHelper(chatqa_api_helper, fingerprint_api_helper, deployed_guard_types(
-        cfg.get("pipeline_type", "chatqna"), cfg.get("pipeline_variant", "base")))
+def guard_helper(chatqa_api_helper, fingerprint_api_helper, k8s_helper):
+    return GuardHelper(chatqa_api_helper, fingerprint_api_helper, deployed_guard_types(k8s_helper))
 
 
 @pytest.fixture(scope="session")

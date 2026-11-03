@@ -3,21 +3,19 @@
 # Copyright (C) 2024-2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
-import importlib.util
 import logging
 import time
 from enum import Enum
-from pathlib import Path
 
 import pytest
 import requests
-import yaml
 
 from comps.system_fingerprint.utils.object_document_mapper import (
     LLMGuardDataprepGuardrailParams,
     LLMGuardInputGuardrailParams,
     LLMGuardOutputGuardrailParams,
 )
+from tests.e2e.helpers.k8s_helper import ResourceNotFound
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +56,6 @@ class GuardType(Enum):
 CHATQNA_GUARD_TYPES = (GuardType.INPUT, GuardType.OUTPUT)
 
 DATAPREP_GUARD_PARAMS_KEY = GuardType.DATAPREP.value
-
-DEPLOYMENT_DIR = Path(__file__).resolve().parents[4] / "deployment"
-PIPELINES_DIR = DEPLOYMENT_DIR / "pipelines"
-COMPOSER_PATH = DEPLOYMENT_DIR / "scripts" / "compose_pipeline.py"
 
 GUARD_ALLOWED_STATUS = 200
 GUARD_BLOCKED_STATUS = 466
@@ -132,29 +126,16 @@ def _disabled_defaults(guard_type, scanner):
     return _fully_specified(guard_type, scanner, {"enabled": False})
 
 
-def _load_composer():
-    spec = importlib.util.spec_from_file_location("compose_pipeline", COMPOSER_PATH)
-    composer = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(composer)
-    return composer
-
-
-def deployed_guard_types(pipeline_type, pipeline_variant):
-    """Returns the chatqa guard types whose step the composed pipeline contains.
-
-    The fingerprint store cannot answer this: it seeds every group whether or
-    not the step is deployed.
-    """
-    pipeline_dir = PIPELINES_DIR / pipeline_type
-    if not (pipeline_dir / "pipeline.yaml").exists():
-        # A config-only flavour (audioqna, pl_chatqna, ...) deploys the pipeline its config.yaml names.
-        flavour_config = yaml.safe_load((pipeline_dir / "config.yaml").read_text())
-        pipeline_dir = PIPELINES_DIR / flavour_config["pipeline_type"]
-    endpoints = yaml.safe_load((pipeline_dir / "pipeline.yaml").read_text())["endpoints"]
-    variants = [] if pipeline_variant == "base" else [pipeline_variant]
-    gmconnector, _ = _load_composer().compose_pipeline(pipeline_dir, variants, {"endpoints": endpoints})
+def deployed_guard_types(k8s_helper, pipeline=CHATQNA_PIPELINE):
+    """Returns the chatqa guard types the deployed pipeline graph declares, none when it is absent."""
+    try:
+        graph = k8s_helper.get_gmconnector(pipeline)
+    except ResourceNotFound as error:
+        logger.warning(f"Treating all guards as not deployed: {error}")
+        return ()
     params_kinds = {step.get("internalService", {}).get("config", {}).get("paramsKind")
-                    for node in gmconnector["spec"]["nodes"].values() for step in node["steps"]}
+                    for node in graph.raw["spec"]["nodes"].values() for step in node["steps"]}
+    logger.info(f"Pipeline '{pipeline}' declares parameter kinds: {sorted(filter(None, params_kinds))}")
     return tuple(guard_type for guard_type in CHATQNA_GUARD_TYPES if guard_type.value in params_kinds)
 
 
