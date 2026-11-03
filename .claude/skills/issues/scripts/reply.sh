@@ -11,6 +11,8 @@ fi
 body=$(cat)
 [[ ${#body} -le 4000 ]] || { echo "comment over 4000 characters, shorten it" >&2; exit 2; }
 [[ -n $body ]] || { echo "usage: reply.sh [label ...] <<'EOF' comment EOF" >&2; exit 2; }
+! grep -qE 'gh[pousr]_[A-Za-z0-9]{30,}|github_pat_|ABSK[A-Za-z0-9+/=]{20,}|bedrock-api-key-|AKIA[0-9A-Z]{16}|PRIVATE KEY-----' <<< "$body" \
+  || { echo "comment contains a credential-like string, remove it" >&2; exit 2; }
 valid=$(gh label list --limit 200 --json name --jq '.[].name')
 args=()
 for label in "$@"; do
