@@ -125,15 +125,15 @@ def _disabled_defaults(guard_type, scanner):
     return _fully_specified(guard_type, scanner, {"enabled": False})
 
 
-def deployed_guard_types(k8s_helper, pipeline=CHATQNA_PIPELINE):
+def deployed_guard_types(k8s_helper):
     """Returns the chatqa guard types the deployed pipeline graph declares, none when it is absent."""
-    graph = k8s_helper.get_gmconnector(pipeline)
+    graph = k8s_helper.get_gmconnector(CHATQNA_PIPELINE)
     if graph is None:
-        logger.warning(f"No '{pipeline}' pipeline is deployed; treating all guards as not deployed")
+        logger.warning(f"No '{CHATQNA_PIPELINE}' pipeline is deployed; treating all guards as not deployed")
         return ()
     params_kinds = {step.get("internalService", {}).get("config", {}).get("paramsKind")
                     for node in graph.raw["spec"]["nodes"].values() for step in node["steps"]}
-    logger.info(f"Pipeline '{pipeline}' declares parameter kinds: {sorted(filter(None, params_kinds))}")
+    logger.info(f"Pipeline '{CHATQNA_PIPELINE}' declares parameter kinds: {sorted(filter(None, params_kinds))}")
     return tuple(guard_type for guard_type in CHATQNA_GUARD_TYPES if guard_type.value in params_kinds)
 
 

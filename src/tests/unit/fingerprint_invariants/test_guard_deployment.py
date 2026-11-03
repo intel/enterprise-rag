@@ -15,7 +15,6 @@ from tests.e2e.helpers.k8s_helper import K8sHelper
 
 
 def _step(name, params_kind=None, node_name=None):
-    """Builds one GMConnector step: an internal service, or a reference to another node."""
     if node_name:
         return {"name": name, "nodeName": node_name, "dependency": "Hard"}
     config = {"endpoint": f"/v1/{name.lower()}"}
@@ -26,7 +25,6 @@ def _step(name, params_kind=None, node_name=None):
 
 
 def _k8s_helper_serving(nodes):
-    """Builds a K8sHelper stub whose GMConnector holds the given nodes."""
     k8s_helper = MagicMock()
     k8s_helper.get_gmconnector.return_value = MagicMock(raw={"spec": {"nodes": nodes}})
     return k8s_helper
