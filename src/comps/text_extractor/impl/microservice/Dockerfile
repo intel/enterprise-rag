@@ -42,11 +42,6 @@ ENV PATH="/home/user/.venv/bin:$PATH"
 RUN NLTK_ALLOW_PROXIED_URLOPEN=1 python -m nltk.downloader -d /home/user/.venv/nltk_data \
     punkt_tab averaged_perceptron_tagger averaged_perceptron_tagger_eng
 
-# Bake the spaCy model unstructured tokenizes with (unstructured/nlp/tokenize.py pins
-# this wheel and hash). Otherwise unstructured downloads it into the venv on first use,
-# which fails in offline or proxied clusters and for a UID that cannot write the venv.
-RUN uv pip install --no-cache "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl#sha256=1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85"
-
 COPY --chown=user:user ./comps/cores ./comps/cores
 COPY --chown=user:user ./comps/text_extractor/utils ./comps/text_extractor/utils
 COPY --chown=user:user ./comps/text_extractor/impl/microservice/.env ./comps/text_extractor/impl/microservice/.env
