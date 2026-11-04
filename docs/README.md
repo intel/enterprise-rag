@@ -77,6 +77,6 @@ Feature and usage walkthroughs for each app, with screenshots.
 
 | Guide | App |
 |-------|-----|
-| [AudioQnA User Guide](Intel_AI_for_Enterprise_RAG_AudioQnA_User_Guide.pdf) | Voice question answering |
-| [ChatQnA User Guide](Intel_AI_for_Enterprise_RAG_ChatQnA_User_Guide.pdf) | Conversational retrieval |
-| [DocSum User Guide](Intel_AI_for_Enterprise_RAG_DocSum_User_Guide.pdf) | Document summarization |
+| [AudioQnA User Guide](Intel_Chatbot_Toolkit_AudioQnA_User_Guide.pdf) | Voice question answering |
+| [ChatQnA User Guide](Intel_Chatbot_Toolkit_ChatQnA_User_Guide.pdf) | Conversational retrieval |
+| [DocSum User Guide](Intel_Chatbot_Toolkit_DocSum_User_Guide.pdf) | Document summarization |
