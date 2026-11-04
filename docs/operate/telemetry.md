@@ -81,7 +81,7 @@ Horizontal Pod Autoscaler activity: replica count, scaling actions over time, an
 
 The top panel shows current replica count for each HPA-managed service. Below, each service has a section with replica changes over time and the scaling metric.
 
-See [HPA configuration](../../deployment/components/hpa/README.md).
+See [Horizontal Pod Autoscaling](performance.md#horizontal-pod-autoscaling).
 
 ### Enterprise AI Inference Dashboards (tag `modelserving`)
 
