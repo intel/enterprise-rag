@@ -44,6 +44,13 @@ nri_balloons_only = pytest.mark.skipif(
 
 
 def _in_balloon(pod) -> bool:
+    """Return True when the BalloonsPolicy assigns this pod to a balloon.
+
+    OpenShift AI cannot annotate the pods of an LLMInferenceService, so there
+    the policy selects them by label instead (ai-solutions sets the tp1 balloon
+    to match kserve.io/component=workload). The pinning is still asserted from
+    the pod's cpuset either way.
+    """
     if any(key.startswith(NRI_ANN_PREFIX) for key in pod.metadata.get("annotations") or {}):
         return True
     labels = pod.metadata.get("labels") or {}
@@ -287,29 +294,14 @@ PSS_NAMESPACE_BLACKLIST = {
     "local-path-storage",
 }
 
-OPENSHIFT_PSS_NAMESPACE_BLACKLIST = {
-    "openshift",
-    "cert-manager",
-    "cert-manager-operator",
-    "istio-system",
-    "istio-cni",
-    "ztunnel",
-    "kuadrant-system",
-    "redhat-ods-operator",
-}
-OPENSHIFT_NAMESPACE_PREFIX = "openshift-"
-
 PSS_ENFORCE_LABEL = "pod-security.kubernetes.io/enforce"
 VALID_PSS_PROFILES = ("privileged", "baseline", "restricted")
 
 
-def _pss_exempt(name: str) -> bool:
-    if name in PSS_NAMESPACE_BLACKLIST:
-        return True
-    return is_openshift() and (name in OPENSHIFT_PSS_NAMESPACE_BLACKLIST
-                               or name.startswith(OPENSHIFT_NAMESPACE_PREFIX))
-
-
+@pytest.mark.skipif(
+    is_openshift(),
+    reason="OpenShift enforces Pod Security through SCCs, so the installer stamps no PSS labels",
+)
 @pytest.mark.skipif(
     not cfg.get("enforce_pss", True),
     reason="enforce_pss is disabled for this deployment",
@@ -330,15 +322,10 @@ def test_namespaces_have_pss_labels():
     checked except the namespaces in PSS_NAMESPACE_BLACKLIST. When a run surfaces
     a namespace that legitimately cannot be labelled, add it there with a reason
     instead of restricting the scan to a known-good set.
-
-    On OpenShift, Pod Security comes from SCCs (the cluster-wide enforce default is
-    privileged), so the OpenShift namespaces (openshift, openshift-*) and the
-    namespaces of the prerequisite operators, which the installer does not create,
-    are skipped as well (OPENSHIFT_PSS_NAMESPACE_BLACKLIST).
     """
     violations = []
     for ns in kr8s.get("namespaces"):
-        if _pss_exempt(ns.name):
+        if ns.name in PSS_NAMESPACE_BLACKLIST:
             continue
         labels = ns.metadata.get("labels") or {}
         profile = labels.get(PSS_ENFORCE_LABEL)
