@@ -104,7 +104,6 @@ class EragReranker:
 
         # Check if retrieved_docs is not empty and all documents have non-empty 'text' fields
         if input.retrieved_docs and all(doc.text for doc in input.retrieved_docs):
-            # Proceed with processing the retrieved documents
             try:
                 retrieved_texts = [doc.text for doc in input.retrieved_docs]
                 response_data = await self._async_call_reranker(

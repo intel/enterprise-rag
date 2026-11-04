@@ -3,7 +3,7 @@
 
 import asyncio
 import json
-from typing import Any, List, Optional
+from typing import List, Optional
 
 import numpy as np
 from langchain_core.embeddings import Embeddings
@@ -76,13 +76,12 @@ class OVMSConnector(EmbeddingConnector):
 
         return OVMSEndpointEmbeddings(**kwargs)
     
-    async def embed_documents(self, texts: List[str], **kwargs: Any) -> List[List[float]]:
+    async def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """
         Embeds a list of documents.
 
         Args:
             texts (List[str]): The list of documents to embed.
-            **kwargs: Additional keyword arguments.
         Returns:
             List[List[float]]: The embedded documents.
         """

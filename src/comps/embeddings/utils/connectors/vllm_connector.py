@@ -3,7 +3,7 @@
 
 
 import asyncio
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import aiohttp
 
@@ -71,7 +71,7 @@ class VLLMConnector(EmbeddingConnector):
         asyncio.run(self._validate())
 
 
-    async def embed_documents(self, texts: List[str], **kwargs: Any) -> List[List[float]]:
+    async def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """
         Embed multiple documents asynchronously.
         

@@ -64,7 +64,7 @@ async def test_batches_respect_request_batch_size(teardown):
     with mock.patch.object(VLLMConnector, '__new__', return_value=mock.MagicMock()):
         embedding = EragEmbedding("test_model", "vllm", "http://test-endpoint")
 
-    def mock_embed_side_effect(texts, **kwargs):
+    def mock_embed_side_effect(texts):
         return [[0.1, 0.2, 0.3] for _ in texts]
 
     mock_embed_docs = mock.AsyncMock(side_effect=mock_embed_side_effect)
