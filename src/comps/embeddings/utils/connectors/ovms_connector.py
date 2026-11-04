@@ -89,12 +89,6 @@ class OVMSConnector(EmbeddingConnector):
         endpoint = f"v2/models/{self._embedder.model_name}"
         url = f"{self._endpoint}/{endpoint}"
 
-        if kwargs.get("return_pooling"):
-            raise ValueError(
-                "return_pooling is not supported by the ovms model server. "
-                "Token-level pooling requires a model server that returns per-token embeddings."
-            )
-
         try:
             from huggingface_hub import (
                     AsyncInferenceClient,

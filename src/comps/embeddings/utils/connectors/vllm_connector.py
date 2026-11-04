@@ -88,12 +88,6 @@ class VLLMConnector(EmbeddingConnector):
             "model": self._model_name  # vLLM needs full model name
         }
 
-        if kwargs.get("return_pooling"):
-            raise ValueError(
-                "return_pooling is not supported by the vllm model server. "
-                "Token-level pooling requires a model server that returns per-token embeddings."
-            )
-
         try:
             logger.debug(f"vLLM embedding request to {self._endpoint}: {len(texts)} texts")
 
