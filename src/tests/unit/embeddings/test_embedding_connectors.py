@@ -11,11 +11,9 @@ import pytest
 from docarray import BaseDoc
 
 from comps.embeddings.utils.connectors.connector import EmbeddingConnector
-from comps.embeddings.utils.connectors.ovms_connector import OVMSConnector, OVMSEndpointEmbeddings
 from comps.embeddings.utils.connectors.vllm_connector import VLLMConnector
 
 def clean_singleton():
-    OVMSConnector._instance = None
     VLLMConnector._instance = None
 
 class MockEmbeddingConnector(EmbeddingConnector):
@@ -52,29 +50,10 @@ def vllm_connector():
     clean_singleton()
 
 
-@pytest.fixture
-def ovms_connector():
-    # OVMSEndpointEmbeddings refuses a URL as `model`, so the embedder is stubbed out.
-    with mock.patch.object(OVMSConnector, '_validate', new=mock.AsyncMock(return_value=None)), \
-         mock.patch.object(OVMSConnector, '_select_embedder',
-                           return_value=MagicMock(model_name="test_model")):
-        yield OVMSConnector("test_model", "http://test-endpoint")
-    clean_singleton()
-
-
 @pytest.mark.asyncio
 async def test_vllm_connector_rejects_return_pooling(vllm_connector):
     """vLLM returns a single vector per input, so pooling must raise instead of degrading silently."""
     with pytest.raises(ValueError) as exc_info:
         await vllm_connector.embed_documents(["document1"], return_pooling=True)
-
-    assert "return_pooling is not supported" in str(exc_info.value)
-
-
-@pytest.mark.asyncio
-async def test_ovms_connector_rejects_return_pooling(ovms_connector):
-    """OVMS mean-pools its token embeddings, so pooling must raise instead of degrading silently."""
-    with pytest.raises(ValueError) as exc_info:
-        await ovms_connector.embed_documents(["document1"], return_pooling=True)
 
     assert "return_pooling is not supported" in str(exc_info.value)

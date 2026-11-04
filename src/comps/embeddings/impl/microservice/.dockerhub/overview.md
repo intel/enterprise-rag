@@ -11,7 +11,6 @@ The Intel® AI for Enterprise RAG Embedding Microservice is designed to efficien
 | Model server  | Status    |
 | ------------- | --------- |
 | vLLM          | &#x2713;  |
-| OVMS          | &#x2713;  |
 
 ## 🔗 Related Components
 

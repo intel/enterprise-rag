@@ -8,7 +8,6 @@ from unittest import mock
 import pytest
 
 from comps.embeddings.utils.erag_embedding import EragEmbedding
-from comps.embeddings.utils.connectors.ovms_connector import OVMSConnector
 from comps.embeddings.utils.connectors.vllm_connector import VLLMConnector
 
 
@@ -17,7 +16,6 @@ def teardown():
     yield
     EragEmbedding._instance = None
     VLLMConnector._instance = None
-    OVMSConnector._instance = None
 
 
 def test_singleton_behavior(teardown):
@@ -32,7 +30,7 @@ def test_singleton_reuse_on_different_params(teardown):
     with mock.patch.object(VLLMConnector, '__new__', return_value=mock.MagicMock()):
         instance1 = EragEmbedding("model1", "vllm", "http://test-endpoint")
         # Second call with different params reuses existing instance with a warning
-        instance2 = EragEmbedding("model2", "ovms", "http://test-endpoint")
+        instance2 = EragEmbedding("model2", "vllm", "http://other-endpoint")
 
         assert instance1 is instance2
 

@@ -39,7 +39,6 @@ Model servers the embedding connectors can talk to.
 | Model server name                  |  Status   |
 | ---------------------------------- | --------- |
 | [VLLM](./impl/model_server/vllm/)  | &#x2713;  |
-| [OVMS](https://github.com/openvinotoolkit/model_server)  | &#x2713;  |
 
 
 ## Configuration Options
@@ -50,7 +49,7 @@ The configuration for the Embedding Microservice is specified in the [impl/micro
 |-------------------------------------|--------------------------------------------------------------------|
 | `EMBEDDING_USVC_PORT`               | The port of the microservice, by default 6000.                     |
 | `EMBEDDING_MODEL_NAME`              | The name of language model to be used (e.g., "nomic-ai/nomic-embed-text-v1")   |
-| `EMBEDDING_MODEL_SERVER`            | Connector used to reach the model server: "vllm" or "ovms"         |
+| `EMBEDDING_MODEL_SERVER`            | Connector used to reach the model server: "vllm"                   |
 | `EMBEDDING_MODEL_SERVER_ENDPOINT`   | URL of the model server endpoint, e.g., "http://localhost:8090"    |
 
 Set below environment variables only for VLLM if remote model server is enabled with token based authentication (OAuth).
@@ -87,8 +86,6 @@ Depending on the model server you want to use, follow the approppriate instructi
 One model server can be started locally:
 
 - [**_VLLM_**](./impl/model_server/vllm/) - a high-performance inference engine that, while primarily used for text generation, can also serve embedding models with very high throughput and low latency.
-
-The `ovms` connector talks to an existing [OpenVINO™ Model Server](https://github.com/openvinotoolkit/model_server) endpoint. This repository does not ship a local OVMS embedding harness.
 
 Refer to `README.md` of a particular library to get more information on starting a model server.
 
@@ -237,7 +234,7 @@ For multiple documents:
 The embedding service returns a single vector per text. Setting `return_pooling=true` asks for one vector per token instead of an aggregated vector, which is what the late chunking technique needs (the input is embedded as a whole and chunked afterwards, based on token-level vectors).
 
 > [!IMPORTANT]
-> `return_pooling` is **not supported**. Neither the vLLM nor the OVMS connector exposes
+> `return_pooling` is **not supported**. The vLLM connector does not expose
 > token-level pooling output, so a request with `return_pooling: true` is rejected with a
 > `ValueError` (HTTP 400) instead of silently returning aggregated vectors. The field
 > remains part of the request schema, so the API contract is unchanged. Late chunking is
