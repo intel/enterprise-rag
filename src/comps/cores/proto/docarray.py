@@ -342,12 +342,6 @@ class TextDocList(BaseDoc):
     stream: Optional[bool] = True
     max_new_tokens: PositiveInt = 1024
 
-class LateChunkingInput(BaseDoc):
-    docs: List[TextDoc]
-    chunk_size: Optional[PositiveInt] = None
-    chunk_overlap: Optional[NonNegativeInt] = None
-
-
 class LLMPromptTemplate(BaseDoc):
     role: Literal["system", "user", "assistant"]
     content: str
