@@ -213,9 +213,9 @@ Adjust microservice parameters (e.g., `top_k` for reranker, `k` for retriever, `
    - Navigate to the **Admin Panel** section in the UI and open the **Control Plane** tab.
    - From the pipeline graph, select a service (e.g., LLM, reranker, retriever) to view and edit its parameters in the right-hand pane.
    - For detailed, step-by-step instructions with screenshots, see the **Control Plane** section of the user guide for your app:
-     - [AudioQnA User Guide](../Intel_AI_for_Enterprise_RAG_AudioQnA_User_Guide.pdf)
-     - [ChatQnA User Guide](../Intel_AI_for_Enterprise_RAG_ChatQnA_User_Guide.pdf)
-     - [DocSum User Guide](../Intel_AI_for_Enterprise_RAG_DocSum_User_Guide.pdf)
+     - [AudioQnA User Guide](../Intel_Chatbot_Toolkit_AudioQnA_User_Guide.pdf)
+     - [ChatQnA User Guide](../Intel_Chatbot_Toolkit_ChatQnA_User_Guide.pdf)
+     - [DocSum User Guide](../Intel_Chatbot_Toolkit_DocSum_User_Guide.pdf)
 
 2. **Using Configuration Scripts:**
    - See [benchmark helpers](../../src/tests/e2e/benchmarks/chatqna/README.md) for test and configuration scripts.
