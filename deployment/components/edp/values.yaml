@@ -776,10 +776,6 @@ textSplitter:
     embedding_service_endpoint: "http://embedding-svc.chatqna.svc:6000/v1/embeddings"
     # For semantic chunking
     use_semantic_chunking: "False"
-    # For late chunking
-    use_late_chunking: "False"
-    late_chunk_size: "8192"
-    late_chunk_overlap: "1024"
   resources:
     requests:
       cpu: "100m"
