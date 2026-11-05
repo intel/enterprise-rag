@@ -31,10 +31,11 @@ from tests.e2e.helpers.k8s_helper import K8sHelper
 from tests.e2e.helpers.keycloak_helper import KeycloakHelper
 from tests.e2e.helpers.mcp_helper import McpHelper
 from tests.e2e.helpers.sharepoint_helper import SharepointHelper
+from tests.e2e.helpers.translation_helper import TranslationHelper
 
 # List of namespaces to fetch logs from
 NAMESPACES = ["auth", "auth-apisix", "chat-history", "chatqna", "docsum", "edp", "erag-gateway", "fingerprint",
-              "istio-system", "mcp-gateway", "rag-ui", "seaweedfs", "system", "vdb"]
+              "istio-system", "mcp-gateway", "rag-ui", "seaweedfs", "system", "translation", "vdb"]
 TEST_LOGS_DIR = "test_logs"
 
 logger = logging.getLogger(__name__)
@@ -513,6 +514,11 @@ def chat_history_helper(keycloak_helper, validation_user_persistent):
 @pytest.fixture(scope="session")
 def docsum_helper(keycloak_helper, validation_user_persistent):
     return DocSumHelper(keycloak_helper)
+
+
+@pytest.fixture(scope="session")
+def translation_helper():
+    return TranslationHelper()
 
 
 @pytest.fixture(scope="session")
