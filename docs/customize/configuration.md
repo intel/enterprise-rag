@@ -55,7 +55,7 @@ Variants: **base** (full), **retrieve-rerank** (no LLM, retrieval-only), **uploa
 
 | Setting | Default | Purpose |
 |---------|---------|---------|
-| `backup_enabled` | `false` | Arms this layer's backup profile. Also needs the platform's `velero_enabled: true` and `storage_backend: nfs` or `ceph` — both switches are independent, and either off makes a run a no-op |
+| `backup_enabled` | `false` | Arms this toolkit's backup profile. Also needs the platform's `velero_enabled: true` and `storage_backend: nfs` or `ceph` — both switches are independent, and either off makes a run a no-op |
 | `upgrade_backup_max_age_hours` | `6` | How fresh a backup the pre-upgrade gate demands, once `backup_enabled` is `true` |
 | `allow_upgrade_without_backup` | `false` | Bypass the gate for one upgrade |
 
