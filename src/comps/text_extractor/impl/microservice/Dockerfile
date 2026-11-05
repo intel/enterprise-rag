@@ -39,9 +39,11 @@ RUN uv sync --locked --no-cache
 ENV PATH="/home/user/.venv/bin:$PATH"
 
 # Bake the NLTK corpora into the image: nltk >= 3.10.3 refuses proxied downloads
-# (SSRF hardening), so a runtime fetch fails in proxied clusters.
+# (SSRF hardening), so a runtime fetch fails in proxied clusters. Group-readable
+# (not writable), so the entrypoint can copy it for another UID in group 0.
 RUN NLTK_ALLOW_PROXIED_URLOPEN=1 python -m nltk.downloader -d /home/user/.venv/nltk_data \
-    punkt_tab averaged_perceptron_tagger averaged_perceptron_tagger_eng
+    punkt_tab averaged_perceptron_tagger averaged_perceptron_tagger_eng && \
+    chmod -R g+r /home/user/.venv/nltk_data
 
 COPY --chown=user:0 ./comps/cores ./comps/cores
 COPY --chown=user:0 ./comps/text_extractor/utils ./comps/text_extractor/utils
@@ -54,4 +56,7 @@ WORKDIR /home/user/comps/text_extractor
 USER root
 RUN find /home/user -name .venv -prune -o -type d -exec chmod g=u {} +
 USER 1000
+# NLTK refuses its baked data under a UID other than 1000 (OpenShift):
+# the entrypoint copies it to /tmp for that UID.
+ENTRYPOINT ["/bin/sh", "/home/user/comps/cores/utils/nltk_data_entrypoint.sh"]
 CMD ["python", "erag_text_extractor_microservice.py"]
