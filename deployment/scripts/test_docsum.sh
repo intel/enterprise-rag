@@ -50,17 +50,16 @@ PARAMETERS='{
     "chunk_size": 2048
 }'
 
-kubectl exec -i "$CLIENT_POD" -n $NAMESPACE -- \
-    curl --no-buffer -s "$accessUrl" -X POST \
+response=$(kubectl exec -i "$CLIENT_POD" -n $NAMESPACE -- \
+    curl --no-buffer -sf "$accessUrl" -X POST \
         -F 'files=@-;filename=ai_overview.txt' \
         -F "parameters=${PARAMETERS}" \
-    < ./scripts/ai_overview.txt
+    < ./scripts/ai_overview.txt) || response=""
+echo "$response"
 
-test_return_code=$?
-
-# !TODO returns 0 if curl succeed, but answer was not proper
-if [ $test_return_code -eq 0 ]; then
+if [ -n "$response" ]; then
     echo "Test finished successfully"
 else
-    echo "Test failed with return code:$test_return_code"
+    echo "Test failed: empty or failed response" >&2
+    exit 1
 fi

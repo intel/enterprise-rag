@@ -39,14 +39,13 @@ JSON_PAYLOAD='{
 
 echo "Connecting to the server through the pod $CLIENT_POD using URL $accessUrl..."
 
-kubectl exec "$CLIENT_POD" -n $NAMESPACE -- \
-    curl --no-buffer -s $accessUrl -X POST -d "$JSON_PAYLOAD" -H 'Content-Type: application/json'
+response=$(kubectl exec "$CLIENT_POD" -n $NAMESPACE -- \
+    curl --no-buffer -sf $accessUrl -X POST -d "$JSON_PAYLOAD" -H 'Content-Type: application/json') || response=""
+echo "$response"
 
-test_return_code=$?
-
-# !TODO returns 0 if curl succeed, but anwer was not proper
-if [ $test_return_code -eq 0 ]; then
+if [ -n "$response" ]; then
     echo "Test finished successfully"
 else
-    echo "Test failed with return code:$test_return_code"
+    echo "Test failed: empty or failed response" >&2
+    exit 1
 fi
