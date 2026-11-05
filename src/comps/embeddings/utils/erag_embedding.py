@@ -55,6 +55,13 @@ class EragEmbedding:
             "vllm": self._import_vllm,
         }
 
+        if self._model_server not in self.SUPPORTED_INTEGRATIONS:
+            available_servers = ", ".join(sorted(self.SUPPORTED_INTEGRATIONS.keys()))
+            raise ValueError(
+                f"Unsupported model_server: '{self._model_server}'. "
+                f"Available servers: [{available_servers}]"
+            )
+
         self.REQUEST_BATCH_SIZE = 16 # how many texts are in one request
 
         self.ASYNCIO_MAX_TASKS_NUMBER = 128
