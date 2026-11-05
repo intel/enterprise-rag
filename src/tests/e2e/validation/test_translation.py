@@ -53,12 +53,30 @@ def test_translation_streams_response(translation_helper):
 
 
 # IMPORTANT: the Allure testcase id for this test must come from the validation team.
+def test_translation_honours_stream_false(translation_helper):
+    response = translation_helper.call("Good morning, how are you?", "German", stream=False)
+    assert response.status_code == 200, f"Unexpected status code: {response.status_code}, {response.text}"
+    assert response.headers.get("Content-Type") == "application/json", (
+        f"Expected a single JSON document for stream=false, got {response.headers.get('Content-Type')}")
+    assert translation_helper.get_text(response).strip(), f"Empty translation: {response.text}"
+
+
+# IMPORTANT: the Allure testcase id for this test must come from the validation team.
+def test_translation_requires_authentication(translation_helper):
+    response = translation_helper.call_with_payload(
+        {"text": "Hello", "target_language": "German"}, headers={"Content-Type": "application/json"})
+    assert response.status_code in [401, 403], (
+        f"Expected 401/403 without a token, got {response.status_code}: {response.text}")
+
+
+# IMPORTANT: the Allure testcase id for this test must come from the validation team.
 @pytest.mark.parametrize("payload", [
     {"text": "Hello"},
     {"target_language": "German"},
     {"text": "", "target_language": "German"},
     {"text": 123, "target_language": "German"},
-], ids=["no_target_language", "no_text", "empty_text", "non_string_text"])
+    '{"text": "Hello", "target_language":',
+], ids=["no_target_language", "no_text", "empty_text", "non_string_text", "malformed_json"])
 def test_translation_rejects_bad_request(translation_helper, payload):
     response = translation_helper.call_with_payload(payload)
     assert response.status_code in BAD_REQUEST_STATUS_CODES, (

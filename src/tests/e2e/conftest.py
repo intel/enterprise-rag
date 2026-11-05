@@ -517,8 +517,8 @@ def docsum_helper(keycloak_helper, validation_user_persistent):
 
 
 @pytest.fixture(scope="session")
-def translation_helper():
-    return TranslationHelper()
+def translation_helper(keycloak_helper, validation_user_persistent):
+    return TranslationHelper(keycloak_helper)
 
 
 @pytest.fixture(scope="session")
