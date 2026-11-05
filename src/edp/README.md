@@ -30,7 +30,7 @@ The Intel AI for Enterprise RAG Enhanced Data Preparation (EDP) service provides
 
 - Python >=3.11 is required to run EDP.
 - A stand alone `redis` server for task management is required.
-- A stand alone vector database deployed is required. List of supported databases can be found in [deployment/components/vector_databases/README.md](../../deployment/components/vector_databases/README.md)
+- A stand alone vector database deployed is required. List of supported databases can be found in [Configuration Reference › Vector database](../../docs/customize/configuration.md#vector-database)
 - A stand alone `postgresql` server for storing file and link entries is required.
 - A S3 compatible storage (one of the following)
     - A stand alone `SeaweedFS` server for storing files. This is included and optional.
@@ -105,7 +105,7 @@ Optionally, the environment variables (using the same names as in the legacy bas
 > [!NOTE]
 > If your S3-compatible backend does not support bucket event notifications, you must enable scheduled or manual synchronization. See the [Storage Synchronization section](#storage-synchronization) for instructions.
 
-Then deploy the application by following the instructions in [deployment/README.md](../../deployment/README.md). Deploy from the core installer root:
+Then deploy the application by following the instructions in [Deploy Intel® Chatbot Toolkit](../../docs/deploy/install_rag.md). Deploy from the core installer root:
 ```bash
 ./es_auto_installer.sh install erag --env <name>
 ```

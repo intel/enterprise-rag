@@ -33,7 +33,6 @@ Install the layer, pick a pipeline, and take it onto a partner platform.
 | [Deploy the RAG Layer](deploy/install_rag.md) | Step-by-step install, endpoints, credentials, and teardown |
 | [Pipelines](deploy/pipelines.md) | The five flavours, ChatQnA variants, and how to switch between them |
 | [Deploy on VMware](deploy/vmware.md) | Running the chatbot on VMware vSphere |
-| [Deployment Layer Reference](../deployment/README.md) | What the `deployment/` plug-in contributes and how the installer consumes it |
 
 ## Customize
 

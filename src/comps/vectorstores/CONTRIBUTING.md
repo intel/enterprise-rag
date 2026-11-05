@@ -96,7 +96,7 @@ You would have to:
         - define the deployment in a separate folder under `deployment/components/vector_databases/templates/<your-db>`
         - it is recommended to define and mount a PersistentVolumeClaim for data storage
 - ensure that the initialization data (for example - root password) is referenced from a secret
-- update the [vector_databases/README.md](../../../deployment/components/vector_databases/README.md) file with the newly added database in the support table
+- add the newly added database to [Configuration Reference › Vector database](../../../docs/customize/configuration.md#vector-database)
 - implement the `vector_database` ansible task in `deployment/roles/app_vector_databases/`:
     - create an additional block, similar to `name: Configure Redis-like vector store`, so that:
         - password(s) are generated and stored
