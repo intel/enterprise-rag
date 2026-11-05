@@ -262,8 +262,10 @@ Two shared steps are parameterized from `pipeline.yaml` rather than hardcoded:
     uses it must define `endpoints.llm.resources` with `replicas`, `requests`, and
     `limits`. If the block is missing, the composer fails closed with an actionable
     message (via the `required` Jinja filter) rather than a cryptic attribute error.
-- `prompt-template.yaml.j2` - format context and query for the LLM (identical across
-  ChatQnA and translation).
+- `prompt-template.yaml.j2` - format context and query for the LLM. Translation
+  overrides it with a local `steps/prompt-template.yaml.j2` without `paramsKind`, so the
+  router keeps the template that language detection sends instead of injecting the
+  stored ChatQnA one.
 
 ## Variants (`variants/<name>/`)
 
