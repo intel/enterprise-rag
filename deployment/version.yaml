@@ -1,7 +1,8 @@
 schema: 1
 layer: erag
 solution_version: 3.0.0
-# Bounded to the immediately preceding release line.
+# Versions an existing deployment may be upgraded from, checked by
+# app_deployment_manifest. This first release accepts only its own line.
 upgrade_base_version: ">=3.0.0,<3.1.0"
 
 # Versions of the layers below and of the core installer this release runs on.

@@ -11,7 +11,7 @@
 - name: "erag probe | Resolve the image tag"
   ansible.builtin.set_fact:
     _erag_probe_tag: >-
-      {{ tag | default('', true) or (lookup('ansible.builtin.file', '../version.yaml') | from_yaml).default_image_tag }}
+      {{ tag | default('', true) or (lookup('ansible.builtin.file', _layer_dirs[upgrade_record_layer] ~ '/version.yaml') | from_yaml).default_image_tag }}
 
 - name: "erag probe | Count the data stores"
   ansible.builtin.include_role:
@@ -19,7 +19,6 @@
     tasks_from: snapshot.yaml
   vars:
     rag_tmp_dir: "{{ data_consistency_tmp_dir }}"
-    data_consistency_snapshot_label: ""
     tag: "{{ _erag_probe_tag }}"
 
 # A store the snapshot did not count carries its reason, never a count of 0.
@@ -27,8 +26,8 @@
   ansible.builtin.set_fact:
     data_consistency_counts: >-
       {{ data_consistency_counts | default({}) | combine({item.key:
-           (item.value.count | int) if item.value.status == 'ok'
-           else {'skipped': item.value.reason | default('not counted', true)}}) }}
+           item.value.count if item.value.status == 'ok'
+           else {'skipped': item.value.reason}}) }}
   loop: "{{ _data_snapshot | dict2items }}"
   loop_control:
     label: "{{ item.key }}"

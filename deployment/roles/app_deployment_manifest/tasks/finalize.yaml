@@ -2,8 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 - name: "deployment_manifest | Load version metadata"
-  ansible.builtin.include_vars:
-    file: "{{ deployment_dir }}/version.yaml"
+  ansible.builtin.set_fact:
+    solution_version: "{{ _erag_version.solution_version }}"
+    upgrade_base_version: "{{ _erag_version.upgrade_base_version | default('') }}"
+    default_image_tag: "{{ _erag_version.default_image_tag }}"
+  vars:
+    _erag_version: "{{ lookup('ansible.builtin.file', deployment_dir ~ '/version.yaml') | from_yaml }}"
   when: solution_version is not defined
 
 # Asked once, here, rather than read from a variable: the cluster version belongs

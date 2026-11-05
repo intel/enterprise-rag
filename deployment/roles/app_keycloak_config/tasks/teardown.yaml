@@ -43,8 +43,10 @@
     # The configuration may leave the image tag to the default in version.yaml.
     # Teardown does not load the solution settings, so the default is read here.
     - name: "app_keycloak_config | Load version metadata"
-      ansible.builtin.include_vars:
-        file: "{{ deployment_dir }}/version.yaml"
+      ansible.builtin.set_fact:
+        default_image_tag: "{{ _erag_version.default_image_tag }}"
+      vars:
+        _erag_version: "{{ lookup('ansible.builtin.file', deployment_dir ~ '/version.yaml') | from_yaml }}"
       when: default_image_tag is not defined
 
     - name: "app_keycloak_config | Set teardown variables"

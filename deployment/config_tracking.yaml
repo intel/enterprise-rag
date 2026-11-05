@@ -6,6 +6,7 @@
 # successful install or upgrade and evaluates the rules below.
 files:
   - config.erag.yaml
+  # The model catalog. Edits no rule below covers are listed in the check's verdict.
   - models-rag.yaml
 
 rules:
@@ -15,10 +16,12 @@ rules:
     key: config.erag.yaml:inference_models[role=embedding].name
     verdict: advisory
     message: >-
-      Embedding model changed from '{old}' to '{new}'. Documents already ingested
-      were embedded with '{old}' and stay searchable only by queries embedded the
-      same way. Re-ingest everything from the admin panel's data ingestion page;
-      the UI shows a banner until that is done.
+      Embedding model changed from '{old}' to '{new}'. Existing documents may
+      still use a different embedding model and must be re-ingested from the
+      admin panel's data ingestion page. If the new model has different vector
+      dimensions, the vector index must also be recreated. Do not rely on the
+      UI banner remaining visible after a subsequent installer run; its absence
+      does not confirm that re-ingestion is complete.
     sets:
       embedding_migration_required: "true"
       embedding_migration_old_model: "{old}"
