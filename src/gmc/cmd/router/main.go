@@ -1143,7 +1143,7 @@ func handleEnsemblePipeline(
 	initReqData, err := entryRequestFor(ctx, initInput, headers)
 	if err != nil {
 		otlpr.WithContext(log, ctx).Error(err, "Error unmarshaling initReqData:")
-		return nil, 500, err
+		return nil, http.StatusBadRequest, err
 	}
 
 	// Cancel siblings as soon as a hard-dependency step fails, and wait for every
@@ -1350,10 +1350,7 @@ func handleSequencePipeline(
 	initReqData, err := entryRequestFor(ctx, initInput, headers)
 	if err != nil {
 		otlpr.WithContext(log, ctx).Error(err, "Error reading entry request:")
-		if multipartEntry {
-			return nil, http.StatusBadRequest, err
-		}
-		return nil, 500, err
+		return nil, http.StatusBadRequest, err
 	}
 	// Steps after the entry step are called with the previous step's JSON response,
 	// so the entry request's multipart content type must not travel with them.
