@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
 ---
 - name: "app_apisix | Check Helm release"
   kubernetes.core.helm_info:
@@ -49,3 +52,30 @@
   loop: "{{ _apisix_routes.resources }}"
   loop_control:
     label: "{{ item.metadata.name }}"
+
+- name: "app_apisix | Check the API HTTPRoute"
+  kubernetes.core.k8s_info:
+    api_version: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    name: "{{ apisix_api_route_name }}"
+    namespace: "{{ apisix_namespace }}"
+  register: _apisix_api_route
+  when: not (ui_enabled | default(false) | bool)
+
+- name: "app_apisix | Assert the API HTTPRoute is accepted by the gateway"
+  ansible.builtin.assert:
+    that:
+      - _apisix_api_route.resources | default([]) | length > 0
+      - >-
+        _apisix_api_route.resources[0].status.parents | default([])
+        | map(attribute='conditions')
+        | map('selectattr', 'type', 'eq', 'Accepted')
+        | map('selectattr', 'status', 'eq', 'True')
+        | map('list') | map('length')
+        | select('gt', 0) | list | length > 0
+    fail_msg: >-
+      HTTPRoute '{{ apisix_api_route_name }}' in {{ apisix_namespace }} is missing or not
+      Accepted, so {{ apisix_api_paths | join(', ') }} are unreachable without the UI.
+    success_msg: "app_apisix API route: Accepted"
+    quiet: true
+  when: not (ui_enabled | default(false) | bool)

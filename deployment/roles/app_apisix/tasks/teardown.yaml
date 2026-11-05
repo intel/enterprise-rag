@@ -1,4 +1,12 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
 ---
+- name: "app_apisix | Remove the API route"
+  ansible.builtin.include_tasks: api_route.yaml
+  vars:
+    _apisix_api_route_present: false
+
 - name: "app_apisix | Uninstall Helm chart"
   kubernetes.core.helm:
     name: "{{ apisix_helm_release_name }}"
