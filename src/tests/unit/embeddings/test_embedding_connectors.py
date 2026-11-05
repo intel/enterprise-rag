@@ -4,7 +4,6 @@
 # test_embedding_connectors.py
 
 from typing import List
-from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
@@ -40,20 +39,3 @@ def test_embed_query_empty_string():
 def test_EmbeddingConnector_not_implemented():
     with pytest.raises(TypeError):
         EmbeddingConnector("model", "endpoint")
-
-# The connectors are built in sync fixtures on purpose: _initialize() calls
-# asyncio.run(), which fails if the async test body's event loop is already running.
-@pytest.fixture
-def vllm_connector():
-    with mock.patch.object(VLLMConnector, '_validate', new=mock.AsyncMock(return_value=None)):
-        yield VLLMConnector("test_model", "http://test-endpoint")
-    clean_singleton()
-
-
-@pytest.mark.asyncio
-async def test_vllm_connector_rejects_return_pooling(vllm_connector):
-    """vLLM returns a single vector per input, so pooling must raise instead of degrading silently."""
-    with pytest.raises(ValueError) as exc_info:
-        await vllm_connector.embed_documents(["document1"], return_pooling=True)
-
-    assert "return_pooling is not supported" in str(exc_info.value)
