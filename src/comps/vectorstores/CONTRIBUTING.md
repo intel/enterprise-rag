@@ -125,7 +125,7 @@ If your database supports Prometheus monitoring:
 - Add appropriate service monitor configurations in your Helm templates to enable automatic metrics discovery
 - Document any database-specific metrics that may be useful for monitoring vector store performance
 
-This native monitoring can complement the observability system (deployed by the Enterprise AI Solutions installer) to provide comprehensive observability of your vector database operations.
+This native monitoring can complement the observability system (deployed by Toolkit Manager) to provide comprehensive observability of your vector database operations.
 
 ##  2.3 (Optional) Implement backup
 Some vector databases provide built-in backup capabilities or support external backup tools. When implementing new database suppport, consider implementing backup support to ensure data persistence and disaster recovery.

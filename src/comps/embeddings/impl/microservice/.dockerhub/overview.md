@@ -17,7 +17,7 @@ The Intel® Chatbot Toolkit Embedding Microservice is designed to efficiently co
 
 This service integrates with other Intel® Chatbot Toolkit components:
 - Dataprep Service supplies cleaned and preprocessed input data for embedding generation
-- Embedding model server, deployed by Intel® AI for Enterprise Solutions through Enterprise Inference, performs the actual embedding computation
+- Embedding model server, deployed by Toolkit Manager through Intel® Inference Toolkit, performs the actual embedding computation
 - Vector Database stores embeddings for fast similarity search and retrieval
 - Retriever Microservice uses embeddings to find relevant documents based on query similarity
 
