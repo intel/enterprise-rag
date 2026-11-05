@@ -1,0 +1,54 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Configuration changes an operator must know about before they take effect.
+# The core installer compares these files with the copy saved by the last
+# successful install or upgrade and evaluates the rules below.
+files:
+  - config.erag.yaml
+  - models-rag.yaml
+
+rules:
+  # Stored vectors are comparable only with queries embedded by the same model.
+  # The facts it sets are rendered by app_ui as the re-ingestion banner.
+  - id: EMBEDDING_MODEL_CHANGED
+    key: config.erag.yaml:inference_models[role=embedding].name
+    verdict: advisory
+    message: >-
+      Embedding model changed from '{old}' to '{new}'. Documents already ingested
+      were embedded with '{old}' and stay searchable only by queries embedded the
+      same way. Re-ingest everything from the admin panel's data ingestion page;
+      the UI shows a banner until that is done.
+    sets:
+      embedding_migration_required: "true"
+      embedding_migration_old_model: "{old}"
+      embedding_migration_new_model: "{new}"
+
+  # Compared only when config.erag.yaml sets it; a dimension derived from the
+  # embedding model is resolved later in the run.
+  - id: VECTOR_DIMS_CHANGED
+    key: config.erag.yaml:vector_databases_vector_dims
+    verdict: blocking
+    message: >-
+      Vector dimension changed from {old} to {new}. The vector store index was
+      created for {old} dimensions and cannot hold the new vectors.
+
+  # A first pin replaces a dimension derived from the embedding model, which
+  # the saved state does not hold, so whether it differs cannot be told here.
+  - id: VECTOR_DIMS_PINNED
+    key: config.erag.yaml:vector_databases_vector_dims
+    when: set
+    message: >-
+      vector_databases_vector_dims is now set to {new}. Make sure it equals the
+      dimension the vector store index was created with; the index cannot hold
+      vectors of another dimension.
+
+  # Clearing the pin lets the run derive the dimension from the embedding model
+  # again, which may differ from the pinned one.
+  - id: VECTOR_DIMS_UNPINNED
+    key: config.erag.yaml:vector_databases_vector_dims
+    when: cleared
+    message: >-
+      vector_databases_vector_dims {old} is no longer set; the dimension is now
+      derived from the embedding model. Make sure it equals {old}, the dimension
+      the vector store index was created with.

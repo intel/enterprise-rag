@@ -1,0 +1,7 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Run by the core installer before the erag components change anything and
+# after the last one, on upgrade; a store whose count decreased is reported.
+probes:
+  - probes/count_stores.yaml

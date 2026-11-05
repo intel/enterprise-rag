@@ -1,0 +1,34 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Counts the vector store, chat history, data platform and identity stores
+# through app_data_consistency's snapshot, without writing a snapshot file.
+# shortcut: a failed count Job skips all four stores, not just its own; split
+# into one probe per store once the snapshot is no longer used elsewhere.
+
+# The identity count Job runs the init container image; before app_pre_install
+# has run, the tag may still be unset.
+- name: "erag probe | Resolve the image tag"
+  ansible.builtin.set_fact:
+    _erag_probe_tag: >-
+      {{ tag | default('', true) or (lookup('ansible.builtin.file', '../version.yaml') | from_yaml).default_image_tag }}
+
+- name: "erag probe | Count the data stores"
+  ansible.builtin.include_role:
+    name: app_data_consistency
+    tasks_from: snapshot.yaml
+  vars:
+    rag_tmp_dir: "{{ data_consistency_tmp_dir }}"
+    data_consistency_snapshot_label: ""
+    tag: "{{ _erag_probe_tag }}"
+
+# A store the snapshot did not count carries its reason, never a count of 0.
+- name: "erag probe | Report the counts"
+  ansible.builtin.set_fact:
+    data_consistency_counts: >-
+      {{ data_consistency_counts | default({}) | combine({item.key:
+           (item.value.count | int) if item.value.status == 'ok'
+           else {'skipped': item.value.reason | default('not counted', true)}}) }}
+  loop: "{{ _data_snapshot | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
