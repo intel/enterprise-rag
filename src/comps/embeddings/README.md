@@ -82,7 +82,7 @@ The Embedding Microservice interacts with an Embedding model endpoint, which mus
 Depending on the model server you want to use, follow the approppriate instructions in the [./impl/model_server](./impl/model_server/) directory to set up and start the service.
 
 
-One model server can be started locally:
+Currently, one model server can be started locally:
 
 - [**_VLLM_**](./impl/model_server/vllm/) - a high-performance inference engine that, while primarily used for text generation, can also serve embedding models with very high throughput and low latency.
 
