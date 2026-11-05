@@ -10,11 +10,9 @@ import pytest
 from docarray import BaseDoc
 
 from comps.embeddings.utils.connectors.connector import EmbeddingConnector
-from comps.embeddings.utils.connectors.ovms_connector import OVMSConnector, OVMSEndpointEmbeddings
 from comps.embeddings.utils.connectors.vllm_connector import VLLMConnector
 
 def clean_singleton():
-    OVMSConnector._instance = None
     VLLMConnector._instance = None
 
 class MockEmbeddingConnector(EmbeddingConnector):

@@ -53,8 +53,14 @@ class EragEmbedding:
         
         self.SUPPORTED_INTEGRATIONS = {
             "vllm": self._import_vllm,
-            "ovms": self._import_ovms,
         }
+
+        if self._model_server not in self.SUPPORTED_INTEGRATIONS:
+            available_servers = ", ".join(sorted(self.SUPPORTED_INTEGRATIONS.keys()))
+            raise ValueError(
+                f"Unsupported model_server: '{self._model_server}'. "
+                f"Available servers: [{available_servers}]"
+            )
 
         self.REQUEST_BATCH_SIZE = 16 # how many texts are in one request
 
@@ -96,20 +102,6 @@ class EragEmbedding:
         except ModuleNotFoundError:
             logger.exception("Exception when loading VLLMConnector")
             raise
-
-    def _import_ovms(self):
-        """Lazy import OVMS connector."""
-        try:
-            from comps.embeddings.utils.connectors.ovms_connector import OVMSConnector
-            return OVMSConnector(
-                model_name=self._model_name,
-                endpoint=self._endpoint,
-                api_config=self._api_config
-            )
-        except ModuleNotFoundError:
-            logger.exception("Exception when loading OVMSConnector")
-            raise
-
 
     async def run(self, input: Union[TextDoc, TextDocList]) -> Union[EmbedDoc, EmbedDocList]:
         """

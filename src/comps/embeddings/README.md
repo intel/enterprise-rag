@@ -38,7 +38,6 @@ Model servers the embedding connectors can talk to.
 | Model server name                  |  Status   |
 | ---------------------------------- | --------- |
 | [VLLM](./impl/model_server/vllm/)  | &#x2713;  |
-| [OVMS](./impl/model_server/ovms/)  | &#x2713;  |
 
 
 ## Configuration Options
@@ -49,7 +48,7 @@ The configuration for the Embedding Microservice is specified in the [impl/micro
 |-------------------------------------|--------------------------------------------------------------------|
 | `EMBEDDING_USVC_PORT`               | The port of the microservice, by default 6000.                     |
 | `EMBEDDING_MODEL_NAME`              | The name of language model to be used (e.g., "nomic-ai/nomic-embed-text-v1")   |
-| `EMBEDDING_MODEL_SERVER`            | Connector used to reach the model server: "vllm" or "ovms"         |
+| `EMBEDDING_MODEL_SERVER`            | Connector used to reach the model server: "vllm"                   |
 | `EMBEDDING_MODEL_SERVER_ENDPOINT`   | URL of the model server endpoint, e.g., "http://localhost:8090"    |
 
 Set below environment variables only for VLLM if remote model server is enabled with token based authentication (OAuth).
@@ -83,10 +82,9 @@ The Embedding Microservice interacts with an Embedding model endpoint, which mus
 Depending on the model server you want to use, follow the approppriate instructions in the [./impl/model_server](./impl/model_server/) directory to set up and start the service.
 
 
-Two model servers can be started locally:
+Currently, one model server can be started locally:
 
-1. [**_OVMS_**](./impl/model_server/ovms/) - an open source model server built on top of the [OpenVINO™ toolkit](https://github.com/openvinotoolkit/openvino), which enables optimized inference across a wide range of hardware platforms. The harness image is built locally, it is not a published Intel AI for Enterprise RAG image.
-2. [**_VLLM_**](./impl/model_server/vllm/) - a high-performance inference engine that, while primarily used for text generation, can also serve embedding models with very high throughput and low latency.
+- [**_VLLM_**](./impl/model_server/vllm/) - a high-performance inference engine that, while primarily used for text generation, can also serve embedding models with very high throughput and low latency.
 
 Refer to `README.md` of a particular library to get more information on starting a model server.
 
@@ -233,7 +231,7 @@ For multiple documents:
 ### Project Structure
 
 The project is organized into several directories:
-- `impl/`: This directory contains the implementation. It includes the microservice folder with the Dockerfile for the microservice, and the `model_server` directory, which provides local-testing setups for the vLLM and OVMS embedding servers. Both are built and run locally, they are not part of a cluster deployment.
+- `impl/`: This directory contains the implementation. It includes the microservice folder with the Dockerfile for the microservice, and the `model_server` directory, which provides local-testing setups for embedding servers. They are built and run locally, they are not part of a cluster deployment.
 - `utils/`: This directory contains utility scripts and modules that are used by the Embedding Microservice.
 
 #### Tests
