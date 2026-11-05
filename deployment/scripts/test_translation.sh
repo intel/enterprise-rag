@@ -18,7 +18,6 @@ error_handler() {
 trap 'error_handler' ERR
 
 NAMESPACE=${1:-translation}
-NAMESPACE=${1:-chatqna}
 CLIENT_POD=""
 accessUrl=""
 
