@@ -58,7 +58,7 @@ Common symptoms, causes, and fixes for Intel® Chatbot Toolkit deployments.
 | Symptom | Likely cause / fix |
 |---------|--------------------|
 | Redis cluster pods crash-looping | Insufficient memory. Increase resource limits in `config.erag.yaml` under `vector_databases_stores.redis-cluster.resources`. |
-| MSSQL pod fails to start | EULA not accepted. Set `vector_databases_mssql_accept_eula: true` in `config.erag.yaml`. |
+| MSSQL pod fails to start | EULA not accepted. Re-run `install erag` and answer `Y`, or set `MSSQL_ACCEPT_EULA=Y` in the installer's environment. See [Configuration › Microsoft SQL Server 2025](../customize/configuration.md#microsoft-sql-server-2025). |
 | Queries return no results after algorithm change | Old index still exists. Re-upload all files to trigger re-indexing with the new algorithm. Verify only one index exists: `kubectl exec -it <redis-pod> -c redis -- redis-cli FT._LIST`. |
 
 ## Istio Mesh Issues

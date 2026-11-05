@@ -33,7 +33,6 @@ Install the toolkit, pick a pipeline, and take it onto a partner platform.
 | [Deploy Intel® Chatbot Toolkit](deploy/install_rag.md) | Step-by-step install, endpoints, credentials, and teardown |
 | [Pipelines](deploy/pipelines.md) | The five flavours, ChatQnA variants, and how to switch between them |
 | [Deploy on VMware](deploy/vmware.md) | Running the chatbot on VMware vSphere |
-| [Deployment reference](../deployment/README.md) | What the `deployment/` plug-in contributes and how the installer consumes it |
 
 ## Customize
 
@@ -77,6 +76,6 @@ Feature and usage walkthroughs for each app, with screenshots.
 
 | Guide | App |
 |-------|-----|
-| [AudioQnA User Guide](Intel_AI_for_Enterprise_RAG_AudioQnA_User_Guide.pdf) | Voice question answering |
-| [ChatQnA User Guide](Intel_AI_for_Enterprise_RAG_ChatQnA_User_Guide.pdf) | Conversational retrieval |
-| [DocSum User Guide](Intel_AI_for_Enterprise_RAG_DocSum_User_Guide.pdf) | Document summarization |
+| [AudioQnA User Guide](Intel_Chatbot_Toolkit_AudioQnA_User_Guide.pdf) | Voice question answering |
+| [ChatQnA User Guide](Intel_Chatbot_Toolkit_ChatQnA_User_Guide.pdf) | Conversational retrieval |
+| [DocSum User Guide](Intel_Chatbot_Toolkit_DocSum_User_Guide.pdf) | Document summarization |

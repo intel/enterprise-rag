@@ -213,9 +213,9 @@ Adjust microservice parameters (e.g., `top_k` for reranker, `k` for retriever, `
    - Navigate to the **Admin Panel** section in the UI and open the **Control Plane** tab.
    - From the pipeline graph, select a service (e.g., LLM, reranker, retriever) to view and edit its parameters in the right-hand pane.
    - For detailed, step-by-step instructions with screenshots, see the **Control Plane** section of the user guide for your app:
-     - [AudioQnA User Guide](../Intel_AI_for_Enterprise_RAG_AudioQnA_User_Guide.pdf)
-     - [ChatQnA User Guide](../Intel_AI_for_Enterprise_RAG_ChatQnA_User_Guide.pdf)
-     - [DocSum User Guide](../Intel_AI_for_Enterprise_RAG_DocSum_User_Guide.pdf)
+     - [AudioQnA User Guide](../Intel_Chatbot_Toolkit_AudioQnA_User_Guide.pdf)
+     - [ChatQnA User Guide](../Intel_Chatbot_Toolkit_ChatQnA_User_Guide.pdf)
+     - [DocSum User Guide](../Intel_Chatbot_Toolkit_DocSum_User_Guide.pdf)
 
 2. **Using Configuration Scripts:**
    - See [benchmark helpers](../../src/tests/e2e/benchmarks/chatqna/README.md) for test and configuration scripts.
@@ -230,7 +230,54 @@ Enable HPA to allow the system to dynamically scale required resources in the cl
 hpa_enabled: true
 ```
 
-See [HPA component](../../deployment/components/hpa/README.md).
+The HPAs scale on Prometheus metrics, so telemetry must be installed. The `app_hpa` component adds this toolkit's custom-metric rules (`deployment/components/hpa/prometheus_adapter.yaml`) to the platform's `prometheus-adapter`, which serves them on the custom metrics API:
+
+```bash
+kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1 | jq
+```
+
+| HPA | Scales | Metric |
+|-----|--------|--------|
+| `in-guard` | `input-scan-svc-deployment` | `http_request_duration_seconds_avg_input_scan` |
+| `out-guard` | `output-scan-svc-deployment` | `http_request_duration_seconds_avg_output_scan` |
+| EDP text extractor | text extractor deployment | `edp_backend_files_to_upload`, `edp_backend_files_active` |
+| Pipeline router (off by default, `router.hpa.enabled` in the GMC chart) | router deployment | CPU utilization, target 80% |
+
+Each HPA has a `metrics` section (the metric and the target above which it scales up) and a `behavior` section (how fast it scales up and down). For example, the text extractor:
+
+```yaml
+metrics:
+- type: Object
+  object:
+    metric:
+      name: edp_backend_files_to_upload
+    describedObject:
+      apiVersion: v1
+      kind: Service
+      name: edp-backend
+    target:
+      type: Value
+      value: 2      # scale up when the measured value is above this
+behavior:
+  scaleDown:
+    stabilizationWindowSeconds: 60
+    policies:
+    - type: Percent
+      value: 25
+      periodSeconds: 15
+    - type: Pods
+      value: 1
+      periodSeconds: 15
+  scaleUp:
+    selectPolicy: Max
+    stabilizationWindowSeconds: 0
+    policies:
+    - type: Pods
+      value: 1
+      periodSeconds: 15
+```
+
+Watch all HPAs: `kubectl get hpa -A -w`. The **HPA** dashboard shows replica counts and scaling metrics ([Telemetry](telemetry.md)). How HPA works: [Kubernetes autoscaling](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/).
 
 ## CPU Pinning (NRI Balloons)
 
