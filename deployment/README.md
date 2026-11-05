@@ -206,9 +206,9 @@ The deployment scripts detect changes and update only affected components, minim
 
 For adding data to the knowledge base, use the **Data Ingestion** tab in the **Admin Panel** (available to admin users only). This tab is available in the **ChatQnA** and **AudioQnA** apps only. See the **Data Ingestion** section of the user guide for your app:
 
-- [AudioQnA User Guide](../docs/Intel_AI_for_Enterprise_RAG_AudioQnA_User_Guide.pdf)
-- [ChatQnA User Guide](../docs/Intel_AI_for_Enterprise_RAG_ChatQnA_User_Guide.pdf)
-- [DocSum User Guide](../docs/Intel_AI_for_Enterprise_RAG_DocSum_User_Guide.pdf)
+- [AudioQnA User Guide](../docs/Intel_Chatbot_Toolkit_AudioQnA_User_Guide.pdf)
+- [ChatQnA User Guide](../docs/Intel_Chatbot_Toolkit_ChatQnA_User_Guide.pdf)
+- [DocSum User Guide](../docs/Intel_Chatbot_Toolkit_DocSum_User_Guide.pdf)
 
 For Grafana dashboards, visit the [Telemetry Guide](../docs/operate/telemetry.md).
 
