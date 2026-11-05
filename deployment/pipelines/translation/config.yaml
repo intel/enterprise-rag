@@ -21,7 +21,7 @@ mcp_enabled: false
 # The role deploys them, waits for readiness, and computes endpoints dynamically.
 inference_namespace: "llm-inference"
 inference_models:
-  - name: "haoranxu/ALMA-7B-R"
+  - name: alma-7b-r
     role: llm
 
 # --- Ansible settings ---
