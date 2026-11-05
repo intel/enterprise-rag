@@ -45,15 +45,15 @@ for lang in "${target_languages[@]}"; do
     echo kubectl exec "$CLIENT_POD" -n $NAMESPACE -- \
         curl --no-buffer -s $accessUrl -X POST -d "$JSON_PAYLOAD" -H 'Content-Type: application/json' | awk '{ gsub(/^data: /, ""); gsub(/'\''/, ""); printf     "%s", $0 }'
 
-    kubectl exec "$CLIENT_POD" -n $NAMESPACE -- \
-        curl --no-buffer -s $accessUrl -X POST -d "$JSON_PAYLOAD" -H 'Content-Type: application/json' | awk '{ gsub(/^data: /, ""); gsub(/'\''/, ""); printf     "%s", $0 }'
-    echo ""
-    test_return_code=$?
+    response=$(kubectl exec "$CLIENT_POD" -n $NAMESPACE -- \
+        curl --no-buffer -sf $accessUrl -X POST -d "$JSON_PAYLOAD" -H 'Content-Type: application/json' | awk '{ gsub(/^data: /, ""); gsub(/'\''/, ""); printf     "%s", $0 }') || response=""
+    echo "$response"
 
-    if [ $test_return_code -eq 0 ]; then
+    if [ -n "$response" ]; then
         echo "Test finished successfully"
     else
-        echo "Test failed with return code:$test_return_code"
+        echo "Test failed: empty or failed response" >&2
+        exit 1
     fi
 done
 exit
