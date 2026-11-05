@@ -1,0 +1,39 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# With the UI, its nginx proxies the API to APISIX. Without it the gateway sends
+# the API paths straight to APISIX, which enforces Keycloak per route, so the
+# gateway's own JWT policy (another realm) is lifted from this route.
+#   _apisix_api_route_present  true publishes the route, false removes it
+- name: "app_apisix | {{ 'Publish' if _apisix_api_route_present | bool else 'Unpublish' }} the API paths on the apex host"
+  ansible.builtin.include_role:
+    name: gateway
+    tasks_from: "{{ 'publish.yaml' if _apisix_api_route_present | bool else 'unpublish.yaml' }}"
+  vars:
+    gateway_publish_name: "{{ apisix_api_route_name }}"
+    gateway_publish_namespace: "{{ apisix_namespace }}"
+    gateway_publish_host: "{{ ui_domain_name }}"
+    gateway_publish_path: "{{ _apisix_api_path }}"
+    gateway_publish_mode: path
+  loop: "{{ apisix_api_paths }}"
+  loop_control:
+    loop_var: _apisix_api_path
+
+- name: "app_apisix | API HTTPRoute to APISIX"
+  kubernetes.core.k8s:
+    state: "{{ 'present' if _apisix_api_route_present | bool else 'absent' }}"
+    api_version: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    name: "{{ apisix_api_route_name }}"
+    namespace: "{{ apisix_namespace }}"
+    definition: "{{ lookup('template', 'api-httproute.yaml.j2') | from_yaml if _apisix_api_route_present | bool else omit }}"
+
+- name: "app_apisix | Leave the API route's auth to APISIX"
+  ansible.builtin.include_role:
+    name: gateway
+    tasks_from: route_auth_exempt.yaml
+  vars:
+    gateway_route_name: "{{ apisix_api_route_name }}"
+    gateway_route_namespace: "{{ apisix_namespace }}"
+    gateway_route_state: "{{ 'present' if _apisix_api_route_present | bool else 'absent' }}"
