@@ -86,7 +86,7 @@ After `terraform apply` completes, it outputs the access key and SQS queue URL. 
 terraform output secret_key
 ```
 
-### Passing Terraform Outputs to Intel® AI for Enterprise RAG Deployment
+### Passing Terraform Outputs to Intel® Chatbot Toolkit Deployment
 To use them in [deployment](../../../deployment/README.md), retrieve their values using the `terraform output -raw <output_name>` commands. Then, copy these output values and paste them into your config.yaml file under the appropriate fields before running the deployment.
 
 For example, get the outputs with:
