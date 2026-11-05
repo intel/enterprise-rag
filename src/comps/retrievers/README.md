@@ -153,7 +153,7 @@ The retriever supports metadata-aware query filtering, which extracts structured
 
 > [!IMPORTANT]
 > The OVMS NER server under `impl/model_server/ovms/` is **not** a local-testing harness:
-> it is a deployed Intel AI for Enterprise RAG component that serves a token-classification
+> it is a deployed Intel® Chatbot Toolkit component that serves a token-classification
 > model alongside the retriever. Chat, embedding and reranking models come from Intel AI for
 > Enterprise Solutions through Enterprise Inference (Model Manager), but the NER model has no
 > Model Manager equivalent, so this repository owns its image and its deployment. The
