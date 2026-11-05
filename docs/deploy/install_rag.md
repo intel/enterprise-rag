@@ -112,7 +112,7 @@ Edit `env/<name>/config.erag.yaml` and re-run `./es_auto_installer.sh install er
 
 ## Data ingestion, UI and telemetry
 
-Use **Data Ingestion** tab in **Admin Panel** (admin only; ChatQnA and AudioQnA only). User guides: [AudioQnA](../Intel_AI_for_Enterprise_RAG_AudioQnA_User_Guide.pdf), [ChatQnA](../Intel_AI_for_Enterprise_RAG_ChatQnA_User_Guide.pdf), [DocSum](../Intel_AI_for_Enterprise_RAG_DocSum_User_Guide.pdf). Telemetry: [Telemetry Guide](../operate/telemetry.md).
+Use **Data Ingestion** tab in **Admin Panel** (admin only; ChatQnA and AudioQnA only). User guides: [AudioQnA](../Intel_Chatbot_Toolkit_AudioQnA_User_Guide.pdf), [ChatQnA](../Intel_Chatbot_Toolkit_ChatQnA_User_Guide.pdf), [DocSum](../Intel_Chatbot_Toolkit_DocSum_User_Guide.pdf). Telemetry: [Telemetry Guide](../operate/telemetry.md).
 
 ## Single sign-on and SharePoint integration
 
