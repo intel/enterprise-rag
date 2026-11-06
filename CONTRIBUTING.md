@@ -8,7 +8,7 @@
 
 ### License
 
-Intel(R) AI for Enterprise RAG is licensed under the terms in [LICENSE](LICENSE). 
+Intel® Chatbot Toolkit is licensed under the terms in [LICENSE](LICENSE). 
 By contributing to the project, you agree to the license and copyright terms therein
 and release your contribution under these terms.
 
