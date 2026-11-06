@@ -2,7 +2,7 @@
 
 [← Customize](../README.md#customize)
 
-The MCP gateway exposes Intel® AI for Enterprise RAG capabilities as tools that AI agents can discover and invoke over a persistent SSE connection.
+The MCP gateway exposes Intel® Chatbot Toolkit capabilities as tools that AI agents can discover and invoke over a persistent SSE connection.
 
 Enable it when the consumer of your corpus is an agent rather than a person: the agent can search your documents and add new ones as part of a larger workflow, using your existing identity and access rules instead of a second copy of the data.
 
@@ -285,7 +285,7 @@ Known limitations of this variant in the current release:
 
 ## Creating a production agent client in Keycloak
 
-`mcp-client` is for development and testing. For production integrations, create a dedicated client per agent so credentials can be rotated or revoked independently. Each production client needs three things: an Intel AI for Enterprise RAG role for backend access, `erag-admin-group` on `EnterpriseRAG-oidc-minio` for S3 file operations, and a `minio_roles` claim mapper.
+`mcp-client` is for development and testing. For production integrations, create a dedicated client per agent so credentials can be rotated or revoked independently. Each production client needs three things: an Intel® Chatbot Toolkit role for backend access, `erag-admin-group` on `EnterpriseRAG-oidc-minio` for S3 file operations, and a `minio_roles` claim mapper.
 
 The Keycloak admin console is at `https://keycloak.<base_domain_name>` in `subdomain` routing mode, or `https://<base_domain_name>/auth` in `path` routing mode.
 
