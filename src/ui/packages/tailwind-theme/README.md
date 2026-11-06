@@ -1,6 +1,6 @@
 # @intel-enterprise-rag-ui/tailwind-theme
 
-This package provides a custom Tailwind CSS theme for the Intel® AI for Enterprise RAG UI, including a shared Tailwind CSS configuration (tailwind.config.js) with a custom color palette, dark/light mode, and design tokens, as well as index.scss with base styles, font, scrollbar, and theme variables.
+This package provides a custom Tailwind CSS theme for the Intel® Chatbot Toolkit UI, including a shared Tailwind CSS configuration (tailwind.config.js) with a custom color palette, dark/light mode, and design tokens, as well as index.scss with base styles, font, scrollbar, and theme variables.
 
 ## Table of Contents
 

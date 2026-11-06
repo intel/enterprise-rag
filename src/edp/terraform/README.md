@@ -86,8 +86,8 @@ After `terraform apply` completes, it outputs the access key and SQS queue URL. 
 terraform output secret_key
 ```
 
-### Passing Terraform Outputs to Intel® AI for Enterprise RAG Deployment
-To use them in [deployment](../../../deployment/README.md), retrieve their values using the `terraform output -raw <output_name>` commands. Then, copy these output values and paste them into your config.yaml file under the appropriate fields before running the deployment.
+### Passing Terraform Outputs to Intel® Chatbot Toolkit Deployment
+To use them in [deployment](../../../docs/deploy/install_rag.md), retrieve their values using the `terraform output -raw <output_name>` commands. Then, copy these output values and paste them into your config.yaml file under the appropriate fields before running the deployment.
 
 For example, get the outputs with:
 
@@ -112,7 +112,7 @@ edp:
     bucketNameRegexFilter: ".*"
 ```
 
-Then run deployment as usual, an example for installation from the Enterprise AI Solution installer root:
+Then run deployment as usual, an example for installation from the Toolkit Manager repo root:
 ```bash
 ./es_auto_installer.sh install erag --env <name>
 ```

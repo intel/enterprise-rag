@@ -6,7 +6,7 @@ This README provides instructions on how to run a model server using [TEI](https
 > TEI is kept **only** as the embedding service for the RAG evaluation benchmarks in
 > [src/tests/e2e/evals](../../../../../tests/e2e/evals), where RAGAS metrics need a standalone
 > embedding endpoint. It is **not** a supported model server for the Embedding Microservice
-> or for an Intel AI for Enterprise RAG deployment - the `EMBEDDING_MODEL_SERVER=tei`
+> or for an Intel® Chatbot Toolkit deployment - the `EMBEDDING_MODEL_SERVER=tei`
 > connector no longer exists. For local microservice testing use
 > [vLLM](../vllm/) or [OVMS](../ovms/) instead.
 

@@ -7,9 +7,9 @@ This implementation is based on the Late Chunking technique developed by Jina AI
 > [!IMPORTANT]
 > This microservice is currently **not supported**. Late chunking needs token-level
 > embeddings (`return_pooling`), which was only available from the TorchServe embedding
-> model server. That model server is no longer part of Intel® AI for Enterprise RAG:
-> embedding models are served by Intel® AI for Enterprise Solutions through Enterprise
-> Inference (Model Manager), and the supported embedding model servers reject
+> model server. That model server is no longer part of Intel® Chatbot Toolkit:
+> embedding models are served by Toolkit Manager through Intel® Inference
+> Toolkit (Model Manager), and the supported embedding model servers reject
 > `return_pooling` with an error. The microservice remains in the repository, but it
 > cannot be enabled until token-level pooling is available from the serving layer.
 
