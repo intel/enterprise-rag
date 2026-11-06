@@ -25,6 +25,16 @@ annotations:
 
 This gets set as soon as Istio configures ztunnel correctly for the pod.
 
+### OpenShift: sidecars
+
+On OpenShift the mesh is the cluster's Service Mesh 3, and RAG namespaces join it with sidecars, not ambient mode. The installer labels them `istio-injection: enabled` (or `istio.io/rev: <revision>` when the cluster's mesh has no default revision), and each pod gets an `istio-proxy` native sidecar. Jobs carry `sidecar.istio.io/nativeSidecar: "true"` so they finish. APISIX sends to Services (`resolveGranularity: service`), so its sidecar can wrap each call in mTLS. The reboot watcher (`app_watcher`) repairs ambient capture only and is not installed there.
+
+Verify a pod joined the mesh:
+
+```bash
+kubectl get pod <pod> -n <namespace> -o jsonpath='{.spec.initContainers[*].name}'   # lists istio-proxy
+```
+
 ## Current mTLS Posture
 
 The deployment enforces `STRICT` mTLS via `PeerAuthentication` resources applied to each RAG namespace. All inter-service traffic is encrypted; only mTLS connections are allowed.

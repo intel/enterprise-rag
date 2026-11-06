@@ -35,6 +35,10 @@ spec:
   activeDeadlineSeconds: {{ data_consistency_job_deadline_seconds }}
   template:
     metadata:
+{% if istio_pod_annotations | default({}) | length > 0 %}
+      # The Job ends only when its sidecar does: native sidecars do.
+      annotations: {{ istio_pod_annotations | to_json }}
+{% endif %}
       labels:
         app.kubernetes.io/name: {{ data_consistency_job_label }}
         app.kubernetes.io/component: {{ dcj_label }}
@@ -42,7 +46,9 @@ spec:
       restartPolicy: Never
       securityContext:
         runAsNonRoot: true
+{% if cluster_distribution | default('kubernetes') != 'openshift' %}
         runAsUser: {{ data_consistency_job_run_as_user }}
+{% endif %}
         seccompProfile:
           type: RuntimeDefault
       containers:

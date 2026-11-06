@@ -38,6 +38,7 @@ spec:
       backends:
         - serviceName: {{ .backend_service }}
           servicePort: {{ .service_port }}
+          resolveGranularity: {{ $apisix.resolveGranularity | default "endpoint" }}
       plugins:
         - name: proxy-rewrite
           enable: true

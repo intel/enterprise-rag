@@ -21,9 +21,7 @@
       kind: Namespace
       metadata:
         name: "{{ nats_namespace }}"
-        labels:
-          istio.io/dataplane-mode: "ambient"
-          erag-istio-protected: "true"
+        labels: "{{ istio_namespace_labels | default({'istio.io/dataplane-mode': 'ambient'}) | combine({'erag-istio-protected': 'true'}) }}"
   when: istio_enabled | default(false) | bool
 
 - name: "app_nats | Label namespace — PSS"
@@ -137,6 +135,8 @@
   kubernetes.core.helm:
     name: "{{ nats_helm_release_name }}"
     chart_ref: "{{ nats_helm_chart_directory }}"
+    # OpenShift assigns the UIDs: drop the charts' fixed runAsUser/runAsGroup/fsGroup.
+    post_renderer: "{{ (role_path ~ '/../../scripts/openshift_post_renderer.py') if cluster_distribution | default('kubernetes') == 'openshift' else omit }}"
     namespace: "{{ nats_namespace }}"
     values_files: "{{ values_files }}"
     state: present
