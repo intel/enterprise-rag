@@ -42,11 +42,12 @@ RUN uv sync --locked --no-cache \
 ENV PATH="/home/user/.venv/bin:$PATH"
 
 # Bake the NLTK corpora into the image: nltk >= 3.10.3 refuses proxied downloads
-# (SSRF hardening), so a runtime fetch fails in proxied clusters. Group-readable
-# (not writable), so the entrypoint can copy it for another UID in group 0.
+# (SSRF hardening), so a runtime fetch fails in proxied clusters. The downloader
+# writes its zips 0600 whatever the umask: make the data group-readable (not
+# writable) so the entrypoint can copy it for another UID in group 0.
 RUN NLTK_ALLOW_PROXIED_URLOPEN=1 python -m nltk.downloader -d /home/user/.venv/nltk_data \
     punkt_tab vader_lexicon && \
-    chmod -R g+r /home/user/.venv/nltk_data
+    chmod -R g+rX /home/user/.venv/nltk_data
 
 COPY --chown=user:0 ./comps/cores ./comps/cores
 COPY --chown=user:0 ./comps/guardrails/__init__.py ./comps/guardrails/__init__.py
