@@ -85,7 +85,7 @@ See [Horizontal Pod Autoscaling](performance.md#horizontal-pod-autoscaling).
 
 ### Intel® Inference Toolkit Dashboards (tag `modelserving`)
 
-Intel® Chatbot Toolkit relies on the **Intel® Inference Toolkit** component for LLM model serving. Models are served on vLLM or OpenVINO backends; Grafana provides dashboards for the backend in use. All AI Inference dashboards are tagged with `modelserving`, making them easy to find by filtering dashboards using that tag.
+Intel® Chatbot Toolkit relies on the **Intel® Inference Toolkit** component for LLM model serving. Models are served on vLLM or OpenVINO backends; Grafana provides dashboards for the backend in use. All Intel® Inference Toolkit dashboards are tagged with `modelserving`, making them easy to find by filtering dashboards using that tag.
 
 ![EnterpriseAIInference / ModelServing / vLLM](../images/telemetry/dashboard_04_llm_inference.png)
 

@@ -78,7 +78,7 @@ For example, if you set `VECTOR_STORE=your-db` in your microservice environment,
 
 ## 2. Implementing database configuration and deployment
 
-The database server needs to be deployed within EnterpriseRAG, which requires implementing an additional Helm deployment configuration option; refer to the [deployment/components/vector_databases](../../../deployment/components/vector_databases/) folder for guidance.
+The database server needs to be deployed within Intel® Chatbot Toolkit, which requires implementing an additional Helm deployment configuration option; refer to the [deployment/components/vector_databases](../../../deployment/components/vector_databases/) folder for guidance.
 
 ## 2.1 Kubernetes deployment requirements
 

@@ -44,7 +44,7 @@ infrastructure  →  platform  →  inference  →  erag
                     Envoy GW)    Gateway)      EDP, UI)
 ```
 
-At install time Toolkit Manager resolves these dependencies and deploys layers in order.
+At install time Toolkit Manager resolves these dependencies and deploys the installer targets in order.
 
 ## Component Registry
 
