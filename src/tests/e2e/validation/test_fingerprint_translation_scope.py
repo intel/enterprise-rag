@@ -28,7 +28,6 @@ PIPELINE = "translation"
 TENANT = "_global"
 PARAMS_KEY = "llm"
 REQUIRED_FIELDS = {"max_new_tokens", "stream"}
-_DEFAULT_MAX_NEW_TOKENS = 1024
 
 
 # IMPORTANT: the Allure testcase id for this test must come from the validation team.
@@ -50,7 +49,7 @@ def test_translation_scope_write_is_read_back(fingerprint_api_helper):
     before = fingerprint_api_helper.read_config(PARAMS_KEY, pipeline=PIPELINE, tenant=TENANT)
     assert before.status_code == 200, (
         f"Cannot read translation's '{PARAMS_KEY}' baseline (HTTP {before.status_code})")
-    baseline = before.json()["values"].get("max_new_tokens", _DEFAULT_MAX_NEW_TOKENS)
+    baseline = before.json()["values"]["max_new_tokens"]
     target = baseline + 7
 
     try:
@@ -69,8 +68,12 @@ def test_translation_scope_write_is_read_back(fingerprint_api_helper):
         # The store is insert/update-only, so the row is reset rather than removed.
         restore = fingerprint_api_helper.set_component_parameters(
             PARAMS_KEY, pipeline=PIPELINE, tenant=TENANT, max_new_tokens=baseline)
-        assert restore.status_code == 200, (
+        restore_error = (
             f"Failed to restore translation '{PARAMS_KEY}' max_new_tokens to {baseline} "
             f"(HTTP {restore.status_code}); later runs will see the test's value. "
             f"{restore.text[:200]}")
-        logger.info(f"Restored translation '{PARAMS_KEY}' max_new_tokens to {baseline}")
+        if restore.status_code == 200:
+            logger.info(f"Restored translation '{PARAMS_KEY}' max_new_tokens to {baseline}")
+        else:
+            logger.error(restore_error)
+    assert restore.status_code == 200, restore_error
