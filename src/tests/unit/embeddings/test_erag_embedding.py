@@ -30,7 +30,7 @@ def test_singleton_reuse_on_different_params(teardown):
     with mock.patch.object(VLLMConnector, '__new__', return_value=mock.MagicMock()):
         instance1 = EragEmbedding("model1", "vllm", "http://test-endpoint")
         # Second call with different params reuses existing instance with a warning
-        instance2 = EragEmbedding("model2", "vllm", "http://other-endpoint")
+        instance2 = EragEmbedding("model2", "vllm", "http://test-endpoint")
 
         assert instance1 is instance2
 
@@ -48,10 +48,12 @@ def test_initialization(teardown):
         assert embedding._connector is not None
 
 
-def test_unsupported_model_server(teardown):
+@pytest.mark.parametrize("model_server", ["unsupported_server", "ovms"])
+def test_unsupported_model_server(teardown, model_server):
     with pytest.raises(ValueError) as exc_info:
-        EragEmbedding("test_model", "unsupported_server", "http://test-endpoint")
+        EragEmbedding("test_model", model_server, "http://test-endpoint")
     assert "Invalid model server" in exc_info.value.args[0]
+    assert "vllm" in exc_info.value.args[0]
 
 
 @pytest.mark.asyncio
