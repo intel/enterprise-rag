@@ -23,7 +23,7 @@ apisix_crds_field_manager: "erag-app-apisix"
 # --- OIDC integration ---
 apisix_oidc_client_id: "EnterpriseRAG-oidc-backend"
 
-# --- API route without the UI (tasks/api_route.yaml) ---
+# --- API route without the UI ---
 apisix_api_route_name: "apisix-api"
 apisix_api_paths:
   - "/api/v1/{{ pipeline_type }}"

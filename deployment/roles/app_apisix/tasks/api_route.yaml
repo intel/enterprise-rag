@@ -5,7 +5,6 @@
 # With the UI, its nginx proxies the API to APISIX. Without it the gateway sends
 # the API paths straight to APISIX, which enforces Keycloak per route, so the
 # gateway's own JWT policy (another realm) is lifted from this route.
-#   _apisix_api_route_present  true publishes the route, false removes it
 - name: "app_apisix | {{ 'Publish' if _apisix_api_route_present | bool else 'Unpublish' }} the API paths on the apex host"
   ansible.builtin.include_role:
     name: gateway
