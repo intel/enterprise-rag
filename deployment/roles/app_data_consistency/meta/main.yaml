@@ -11,4 +11,4 @@ galaxy_info:
     component.
   license: Apache-2.0
   min_ansible_version: "2.14"
-dependencies: []
+dependencies: [erag_common]

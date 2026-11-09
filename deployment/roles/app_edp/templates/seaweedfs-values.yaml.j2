@@ -1,6 +1,6 @@
 {# OpenShift assigns the UID and fsGroup (restricted-v2); the Helm post-renderer
    does not see the chart's hooks (bucket Job), so drop them from the values. #}
-{% set _sc_drop = ['runAsUser', 'runAsGroup', 'fsGroup'] if cluster_distribution | default('kubernetes') == 'openshift' else [] %}
+{% set _sc_drop = ['runAsUser', 'runAsGroup', 'fsGroup'] if erag_openshift | bool else [] %}
 {% set _pod_sc = edp_helm_values.seaweedfs.podSecurityContext | default({}) | dict2items | rejectattr('key', 'in', _sc_drop) | items2dict %}
 {% set _container_sc = edp_helm_values.seaweedfs.containerSecurityContext | default({}) | dict2items | rejectattr('key', 'in', _sc_drop) | items2dict %}
 s3:

@@ -573,7 +573,7 @@
              'model_name': item.name,
              'model_id': _mm_model_ids[item.name] | default(''),
              'endpoint': ('https://' + item.name + '-kserve-workload-svc.' + inference_namespace + '.svc:8000')
-               if cluster_distribution | default('kubernetes') == 'openshift'
+               if erag_openshift | bool
                else inference_aigw_endpoint if item.role == 'llm'
                else 'http://' + item.name + '-kserve-workload-svc.' + inference_namespace + '.svc:8000'
            }

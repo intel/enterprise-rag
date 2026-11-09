@@ -70,7 +70,7 @@ inference_owner_label: "erag.intel.com/managed-by=app_inference_models"
 # OpenShift AI serves LLMInferenceService only as v1alpha1, and model-manager
 # deploys it so there; a v1alpha2 query would find nothing.
 inference_serving_kinds:
-  - api_version: "serving.kserve.io/{{ 'v1alpha1' if cluster_distribution | default('kubernetes') == 'openshift' else 'v1alpha2' }}"
+  - api_version: "serving.kserve.io/{{ 'v1alpha1' if erag_openshift | bool else 'v1alpha2' }}"
     kind: "LLMInferenceService"
   - api_version: "serving.kserve.io/v1beta1"
     kind: "InferenceService"

@@ -1,0 +1,13 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+galaxy_info:
+  author: Intel Corporation
+  role_name: erag_common
+  description: >-
+    Variables shared by the eRAG roles (platform checks, the Helm
+    post-renderer). Defaults only: list it under dependencies, not as a
+    component.
+  license: Apache-2.0
+  min_ansible_version: "2.14"
+dependencies: []
