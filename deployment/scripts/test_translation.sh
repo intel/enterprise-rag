@@ -5,6 +5,7 @@
 set -e
 set -o pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/require_response.sh"
 
 # Function to handle errors
 error_handler() {
@@ -45,15 +46,7 @@ for lang in "${target_languages[@]}"; do
     echo kubectl exec "$CLIENT_POD" -n $NAMESPACE -- \
         curl --no-buffer -s $accessUrl -X POST -d "$JSON_PAYLOAD" -H 'Content-Type: application/json' | awk '{ gsub(/^data: /, ""); gsub(/'\''/, ""); printf     "%s", $0 }'
 
-    response=$(kubectl exec "$CLIENT_POD" -n $NAMESPACE -- \
-        curl --no-buffer -sf $accessUrl -X POST -d "$JSON_PAYLOAD" -H 'Content-Type: application/json' | awk '{ gsub(/^data: /, ""); gsub(/'\''/, ""); printf     "%s", $0 }') || response=""
-    echo "$response"
-
-    if [ -n "$response" ]; then
-        echo "Test finished successfully"
-    else
-        echo "Test failed: empty or failed response" >&2
-        exit 1
-    fi
+    kubectl exec "$CLIENT_POD" -n $NAMESPACE -- \
+        curl --no-buffer -sf $accessUrl -X POST -d "$JSON_PAYLOAD" -H 'Content-Type: application/json' | awk '{ gsub(/^data: /, ""); gsub(/'\''/, ""); printf     "%s", $0 }' | require_response
 done
 exit

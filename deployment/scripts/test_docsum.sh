@@ -5,6 +5,7 @@
 set -e
 set -o pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/require_response.sh"
 
 # Function to handle errors
 error_handler() {
@@ -50,16 +51,8 @@ PARAMETERS='{
     "chunk_size": 2048
 }'
 
-response=$(kubectl exec -i "$CLIENT_POD" -n $NAMESPACE -- \
+kubectl exec -i "$CLIENT_POD" -n $NAMESPACE -- \
     curl --no-buffer -sf "$accessUrl" -X POST \
         -F 'files=@-;filename=ai_overview.txt' \
         -F "parameters=${PARAMETERS}" \
-    < ./scripts/ai_overview.txt) || response=""
-echo "$response"
-
-if [ -n "$response" ]; then
-    echo "Test finished successfully"
-else
-    echo "Test failed: empty or failed response" >&2
-    exit 1
-fi
+    < ./scripts/ai_overview.txt | require_response
