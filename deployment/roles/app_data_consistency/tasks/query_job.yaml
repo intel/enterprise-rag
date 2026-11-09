@@ -16,6 +16,10 @@
 #          from sharing a name
 # Sets: _dcj_count
 
+# Reached with tasks_from from app_post_install and app_pre_install, past the dispatcher in main.yaml.
+- name: "app_data_consistency | Load {{ cluster_distribution }} values"
+  ansible.builtin.include_vars: "{{ role_path }}/vars/{{ cluster_distribution }}.yaml"
+
 - name: "app_data_consistency | Query — name the {{ dcj_store }} Job"
   ansible.builtin.set_fact:
     _dcj_job_name: "{{ data_consistency_job_label }}-{{ dcj_label }}-{{ _snapshot_file_timestamp | lower }}"

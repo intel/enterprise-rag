@@ -1,0 +1,5 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+_keycloak_config_fixed_uids: true
+_keycloak_config_grafana_operator: false

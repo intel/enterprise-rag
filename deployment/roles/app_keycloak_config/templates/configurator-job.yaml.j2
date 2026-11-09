@@ -83,7 +83,7 @@ spec:
       restartPolicy: OnFailure
       securityContext:
         runAsNonRoot: true
-{% if cluster_distribution | default('kubernetes') != 'openshift' %}
+{% if _keycloak_config_fixed_uids | bool %}
         runAsUser: 1000
 {% endif %}
         seccompProfile:

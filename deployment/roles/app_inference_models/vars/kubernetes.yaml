@@ -1,0 +1,5 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+_inference_models_https_endpoints: false
+_inference_models_llmisvc_api_version: "v1alpha2"

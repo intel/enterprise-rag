@@ -1,0 +1,6 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# OpenShift assigns the UIDs: the post-renderer drops the charts' fixed
+# runAsUser/runAsGroup/fsGroup.
+_ui_post_renderer: "{{ role_path }}/../../scripts/openshift_post_renderer.py"

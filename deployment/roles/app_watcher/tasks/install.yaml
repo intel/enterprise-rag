@@ -26,7 +26,7 @@
     name: "{{ watcher_helm_release_name }}"
     chart_ref: "{{ watcher_helm_chart_directory }}"
     # OpenShift assigns the UIDs: drop the charts' fixed runAsUser/runAsGroup/fsGroup.
-    post_renderer: "{{ (role_path ~ '/../../scripts/openshift_post_renderer.py') if cluster_distribution | default('kubernetes') == 'openshift' else omit }}"
+    post_renderer: "{{ _watcher_post_renderer or omit }}"
     namespace: "{{ watcher_namespace }}"
     values_files: "{{ values_files }}"
     state: present

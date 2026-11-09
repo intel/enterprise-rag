@@ -1,0 +1,8 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# The model workload svcs serve https with the OpenShift service CA.
+_inference_models_https_endpoints: true
+# OpenShift AI serves LLMInferenceService only as v1alpha1, and model-manager
+# deploys it so there; a v1alpha2 query would find nothing.
+_inference_models_llmisvc_api_version: "v1alpha1"

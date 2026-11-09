@@ -1,0 +1,14 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# OpenShift assigns the UIDs: the post-renderer drops the charts' fixed
+# runAsUser/runAsGroup/fsGroup.
+_pipeline_post_renderer: "{{ role_path }}/../../scripts/openshift_post_renderer.py"
+# OpenShift assigns the UID and fsGroup (restricted-v2): leave them unset where
+# the post-renderer cannot reach (hooks, Jobs, pods rendered by an operator).
+_pipeline_fixed_uids: false
+# HPA is not supported on OpenShift yet (components.yaml gates app_hpa off).
+_pipeline_hpa_supported: false
+# The model workload svcs serve https with the OpenShift service CA, mounted in
+# every pod; the model-facing usvcs point Python and curl at it. Empty: plain http.
+_pipeline_service_ca: "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"

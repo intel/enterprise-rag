@@ -15,14 +15,14 @@ tokens:
 {% endif %}
 common_tag: &tag "{{ tag }}"
 common_registry: &repo "{{ registry }}"
-{% if cluster_distribution | default('kubernetes') == 'openshift' %}
+{% if _pipeline_service_ca %}
 {# The model workload svcs serve https with the OpenShift service CA, mounted in #}
 {# every pod: the model-facing usvcs point Python (httpx, aiohttp, requests) and #}
 {# their curl init containers at it.                                             #}
-openshift_service_ca: &service_ca "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
+openshift_service_ca: &service_ca "{{ _pipeline_service_ca }}"
 {% endif %}
 {% macro service_ca_envs() %}
-{% if cluster_distribution | default('kubernetes') == 'openshift' %}
+{% if _pipeline_service_ca %}
       SSL_CERT_FILE: *service_ca
       REQUESTS_CA_BUNDLE: *service_ca
       CURL_CA_BUNDLE: *service_ca
@@ -62,7 +62,7 @@ fingerprint:
     secretKey: "{{ fingerprint_postgres_secret_key }}"
 
 {# No HPAs on OpenShift yet: their custom metrics come from prometheus-adapter (app_hpa). #}
-{% if cluster_distribution | default('kubernetes') == 'openshift' %}
+{% if not _pipeline_hpa_supported | bool %}
 hpa_enabled: false
 {% elif hpa_enabled is defined %}
 hpa_enabled: {{ hpa_enabled }}
@@ -203,7 +203,7 @@ images:
     image: "enterprise-rag-query-rewrite"
     repository: *repo
     tag: *tag
-{% if cluster_distribution | default('kubernetes') == 'openshift' %}
+{% if _pipeline_service_ca %}
 {# Calls the LLM's https endpoint itself (QUERY_REWRITE_LLM_ENDPOINT). #}
     envs:
 {{ service_ca_envs() }}
@@ -229,7 +229,7 @@ images:
 
 monitoring:
   enabled: {{ observability_enabled | default(true) | bool | string | lower }}
-{% if cluster_distribution | default('kubernetes') == 'openshift' %}
+{% if not _pipeline_fixed_uids | bool %}
 
 # OpenShift assigns the UID and fsGroup (restricted-v2). The GMC manager renders the
 # microservices from these values, past the Helm post-renderer, so unset them here.
