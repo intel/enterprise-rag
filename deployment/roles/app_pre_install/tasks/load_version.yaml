@@ -1,0 +1,12 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# The one loader of version.yaml. The installer does not pass it as extra-vars,
+# so every role that needs these keys includes this file behind its own guard.
+- name: "app_pre_install | Load version metadata"
+  ansible.builtin.set_fact:
+    solution_version: "{{ _erag_version.solution_version }}"
+    upgrade_base_version: "{{ _erag_version.upgrade_base_version }}"
+    default_image_tag: "{{ _erag_version.default_image_tag }}"
+  vars:
+    _erag_version: "{{ lookup('ansible.builtin.file', deployment_dir ~ '/version.yaml') | from_yaml }}"
