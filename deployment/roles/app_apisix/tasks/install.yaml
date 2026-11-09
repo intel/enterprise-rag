@@ -122,12 +122,12 @@
     name: "{{ apisix_helm_release_name }}"
     chart_ref: "{{ apisix_helm_chart_directory }}"
     # OpenShift assigns the UIDs: drop the charts' fixed runAsUser/runAsGroup/fsGroup.
-    post_renderer: "{{ erag_helm_post_renderer or omit }}"
+    post_renderer: "{{ (role_path ~ '/../../scripts/openshift_post_renderer.py') if cluster_distribution | default('kubernetes') == 'openshift' else omit }}"
     namespace: "{{ apisix_namespace }}"
     values_files: >-
       {{ [apisix_helm_default_values_file]
          + ([apisix_helm_chart_directory ~ '/values-openshift.yaml']
-            if erag_openshift | bool else []) }}
+            if cluster_distribution | default('kubernetes') == 'openshift' else []) }}
     state: present
     # CRDs come from the task above (APISIX) and the platform (Gateway API).
     skip_crds: true

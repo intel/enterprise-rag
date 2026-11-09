@@ -46,7 +46,7 @@ spec:
       restartPolicy: Never
       securityContext:
         runAsNonRoot: true
-{% if not erag_openshift | bool %}
+{% if cluster_distribution | default('kubernetes') != 'openshift' %}
         runAsUser: {{ data_consistency_job_run_as_user }}
 {% endif %}
         seccompProfile:

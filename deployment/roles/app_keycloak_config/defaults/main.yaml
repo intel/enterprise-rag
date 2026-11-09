@@ -83,7 +83,7 @@ grafana_oauth_client_secret: ""  # generated/reused at runtime
 grafana_oauth_namespace: "{{ observability_namespace | default('monitoring') }}"
 # On OpenShift the Grafana Operator's instance (core roles/observability); its
 # grafana container already reads grafana_oauth_secret_name.
-grafana_oauth_openshift: "{{ erag_openshift | bool }}"
+grafana_oauth_openshift: "{{ cluster_distribution | default('kubernetes') == 'openshift' }}"
 grafana_oauth_grafana_cr: "{{ observability_openshift_grafana_name | default('grafana-platform') }}"
 grafana_oauth_deployment: >-
   {{ grafana_oauth_grafana_cr ~ '-deployment' if grafana_oauth_openshift | bool else 'kube-prometheus-stack-grafana' }}
