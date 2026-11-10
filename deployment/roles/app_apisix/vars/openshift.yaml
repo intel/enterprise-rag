@@ -1,8 +1,6 @@
 # Copyright (C) 2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 ---
-# OpenShift assigns the UIDs: the post-renderer drops the charts' fixed
-# runAsUser/runAsGroup/fsGroup.
 _apisix_post_renderer: "{{ role_path }}/../../scripts/openshift_post_renderer.py"
 # Extra values files on top of apisix_helm_default_values_file.
 _apisix_values_files: ["{{ apisix_helm_chart_directory }}/values-openshift.yaml"]

@@ -1,7 +1,6 @@
 ---
 - name: "app_vector_databases | dispatch | Load {{ cluster_distribution }} values"
   ansible.builtin.include_vars: "{{ role_path }}/vars/{{ cluster_distribution }}.yaml"
-  when: (role_path ~ '/vars/' ~ cluster_distribution ~ '.yaml') is file
 
 - name: "app_vector_databases | Dispatch action: {{ component_action }}"
   ansible.builtin.include_tasks: "{{ component_action }}.yaml"

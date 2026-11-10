@@ -21,8 +21,7 @@ monitoring:
   enabled: {{ observability_enabled | default(true) | bool | string | lower }}
 {% if not _nats_fixed_uids | bool %}
 
-# OpenShift assigns the UID and fsGroup (restricted-v2). The Helm post-renderer
-# does not see hooks (the kv-init Job), so unset them here too.
+# The Helm post-renderer does not see hooks (the kv-init Job): unset the UIDs here too.
 securityContext:
   runAsUser: null
   runAsGroup: null

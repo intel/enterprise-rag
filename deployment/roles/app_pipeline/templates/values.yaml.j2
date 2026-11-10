@@ -231,8 +231,8 @@ monitoring:
   enabled: {{ observability_enabled | default(true) | bool | string | lower }}
 {% if not _pipeline_fixed_uids | bool %}
 
-# OpenShift assigns the UID and fsGroup (restricted-v2). The GMC manager renders the
-# microservices from these values, past the Helm post-renderer, so unset them here.
+# The GMC manager renders the microservices from these values, past the Helm
+# post-renderer: unset the UIDs here.
 podSecurityContext:
   runAsUser: null
   runAsGroup: null

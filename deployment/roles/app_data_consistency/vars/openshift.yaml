@@ -1,6 +1,5 @@
 # Copyright (C) 2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 ---
-# OpenShift assigns the UID and fsGroup (restricted-v2): leave them unset where
-# the post-renderer cannot reach (hooks, Jobs, pods rendered by an operator).
+# Its Jobs are applied without Helm, so the post-renderer never sees them.
 _data_consistency_fixed_uids: false

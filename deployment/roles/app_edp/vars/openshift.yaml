@@ -1,11 +1,7 @@
 # Copyright (C) 2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 ---
-# OpenShift assigns the UIDs: the post-renderer drops the charts' fixed
-# runAsUser/runAsGroup/fsGroup.
 _edp_post_renderer: "{{ role_path }}/../../scripts/openshift_post_renderer.py"
-# OpenShift assigns the UID and fsGroup (restricted-v2): leave them unset where
-# the post-renderer cannot reach (hooks, Jobs, pods rendered by an operator).
 _edp_fixed_uids: false
 # HPA is not supported on OpenShift yet (components.yaml gates app_hpa off).
 _edp_hpa_supported: false

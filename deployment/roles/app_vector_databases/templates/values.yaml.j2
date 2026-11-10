@@ -59,8 +59,7 @@ monitoring:
   enabled: {{ observability_enabled | default(true) | bool | string | lower }}
 {% if not _vector_databases_fixed_uids | bool %}
 
-# OpenShift assigns the UID and fsGroup (restricted-v2). The Helm post-renderer
-# does not see hooks (the cluster-init Job), so unset them here too.
+# The Helm post-renderer does not see hooks (the cluster-init Job): unset the UIDs here too.
 podSecurityContext:
   runAsUser: null
   runAsGroup: null
