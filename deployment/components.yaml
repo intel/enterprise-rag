@@ -71,7 +71,7 @@ components:
   # API (prometheus-adapter); there that belongs to the Custom Metrics Autoscaler.
   - name: app_hpa
     layer: erag
-    enabled: "{{ hpa_enabled | default(true) | bool and cluster_distribution | default('kubernetes') != 'openshift' }}"
+    enabled: "{{ hpa_enabled | default(true) | bool and cluster_distribution != 'openshift' }}"
     depends_on: [app_pre_install]
 
   - name: app_pipeline

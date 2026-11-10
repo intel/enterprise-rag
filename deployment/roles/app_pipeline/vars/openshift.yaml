@@ -3,6 +3,5 @@
 ---
 _pipeline_post_renderer: "{{ role_path }}/../../scripts/openshift_post_renderer.py"
 _pipeline_fixed_uids: false
-# HPA is not supported on OpenShift yet (components.yaml gates app_hpa off).
 _pipeline_hpa_supported: false
 _pipeline_service_ca: "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"

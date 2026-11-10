@@ -61,7 +61,6 @@ fingerprint:
     existingSecret: "{{ fingerprint_postgres_secret_name }}"
     secretKey: "{{ fingerprint_postgres_secret_key }}"
 
-{# No HPAs on OpenShift yet: their custom metrics come from prometheus-adapter (app_hpa). #}
 {% if not _pipeline_hpa_supported | bool %}
 hpa_enabled: false
 {% elif hpa_enabled is defined %}

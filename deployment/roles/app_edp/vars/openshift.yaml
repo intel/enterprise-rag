@@ -3,5 +3,4 @@
 ---
 _edp_post_renderer: "{{ role_path }}/../../scripts/openshift_post_renderer.py"
 _edp_fixed_uids: false
-# HPA is not supported on OpenShift yet (components.yaml gates app_hpa off).
 _edp_hpa_supported: false
