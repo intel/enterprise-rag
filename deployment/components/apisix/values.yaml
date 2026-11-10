@@ -2,6 +2,11 @@
 
 # APISIX Helm chart configs
 apisix:
+  # The chart 2.14.1 default, pinned: values-openshift.yaml's seed-conf init
+  # container copies conf/ from the same image, keep its tag in step.
+  image:
+    repository: apache/apisix
+    tag: 3.16.0-ubuntu
   serviceAccount:
     create: true
   podSecurityContext:

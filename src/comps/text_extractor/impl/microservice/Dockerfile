@@ -22,9 +22,10 @@ RUN rm -f /usr/bin/dmesg /usr/bin/base64 /usr/bin/perl
 RUN rm -rf /home/user/.local/lib/python${python_version}/site-packages/*
 RUN rm -rf /usr/local/lib/python${python_version}/site-packages/*
 
-RUN useradd -m -s /bin/bash user
+RUN useradd -m -s /bin/bash -u 1000 -g 0 user
 
-USER user
+USER 1000
+ENV HOME=/home/user
 ENV PATH="$PATH:/home/user/.local/bin"
 ENV PYTHONPATH="/home/user"
 
@@ -38,14 +39,25 @@ RUN uv sync --locked --no-cache
 ENV PATH="/home/user/.venv/bin:$PATH"
 
 # Bake the NLTK corpora into the image: nltk >= 3.10.3 refuses proxied downloads
-# (SSRF hardening), so a runtime fetch fails in proxied clusters.
+# (SSRF hardening), so a runtime fetch fails in proxied clusters. The downloader
+# writes its zips 0600 whatever the umask: make the data group-readable (not
+# writable) so the entrypoint can copy it for another UID in group 0.
 RUN NLTK_ALLOW_PROXIED_URLOPEN=1 python -m nltk.downloader -d /home/user/.venv/nltk_data \
-    punkt_tab averaged_perceptron_tagger averaged_perceptron_tagger_eng
+    punkt_tab averaged_perceptron_tagger averaged_perceptron_tagger_eng && \
+    chmod -R g+rX /home/user/.venv/nltk_data
 
-COPY --chown=user:user ./comps/cores ./comps/cores
-COPY --chown=user:user ./comps/text_extractor/utils ./comps/text_extractor/utils
-COPY --chown=user:user ./comps/text_extractor/impl/microservice/.env ./comps/text_extractor/impl/microservice/.env
-COPY --chown=user:user ./comps/text_extractor/erag_text_extractor_microservice.py ./comps/text_extractor/erag_text_extractor_microservice.py
+COPY --chown=user:0 ./comps/cores ./comps/cores
+COPY --chown=user:0 ./comps/text_extractor/utils ./comps/text_extractor/utils
+COPY --chown=user:0 ./comps/text_extractor/impl/microservice/.env ./comps/text_extractor/impl/microservice/.env
+COPY --chown=user:0 ./comps/text_extractor/erag_text_extractor_microservice.py ./comps/text_extractor/erag_text_extractor_microservice.py
 
 WORKDIR /home/user/comps/text_extractor
+# OpenShift (restricted-v2) runs the container as an arbitrary UID in group 0:
+# let group 0 create files wherever the owner can.
+USER root
+RUN find /home/user -name .venv -prune -o -type d -exec chmod g=u {} +
+USER 1000
+# NLTK refuses its baked data under a UID other than 1000 (OpenShift):
+# the entrypoint copies it to /tmp for that UID.
+ENTRYPOINT ["/bin/sh", "/home/user/comps/cores/utils/nltk_data_entrypoint.sh"]
 CMD ["python", "erag_text_extractor_microservice.py"]

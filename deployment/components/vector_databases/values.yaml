@@ -47,6 +47,9 @@ mssql:
       cpu: 16
       memory: 16Gi
 
+# Pod annotations of the redis-cluster init Job (the installer sets native sidecars in sidecar mode).
+jobPodAnnotations: {}
+
 redis-cluster:
   enabled: true
   image:

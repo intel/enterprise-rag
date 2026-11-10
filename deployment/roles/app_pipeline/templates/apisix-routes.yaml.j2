@@ -38,6 +38,8 @@ spec:
       backends:
         - serviceName: router-service
           servicePort: 8080
+          # Sidecars: send to the Service, so the gateway's sidecar can pick the endpoint (mTLS).
+          resolveGranularity: {{ 'service' if istio_enabled | default(false) | bool and istio_dataplane_mode | default('ambient') == 'sidecar' else 'endpoint' }}
       plugins:
         - name: proxy-rewrite
           enable: true

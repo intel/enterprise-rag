@@ -67,8 +67,9 @@ inference_owner_label: "erag.intel.com/managed-by=app_inference_models"
 
 # Serving kinds model-manager may create — the runtime decides which
 # (vllm → LLMInferenceService, openvino → InferenceService), so both are queried.
+# _inference_models_llmisvc_api_version: v1alpha1 on OpenShift (vars/openshift.yaml).
 inference_serving_kinds:
-  - api_version: "serving.kserve.io/v1alpha2"
+  - api_version: "serving.kserve.io/{{ _inference_models_llmisvc_api_version }}"
     kind: "LLMInferenceService"
   - api_version: "serving.kserve.io/v1beta1"
     kind: "InferenceService"

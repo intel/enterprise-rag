@@ -20,9 +20,7 @@
       kind: Namespace
       metadata:
         name: "{{ vector_databases_namespace }}"
-        labels:
-          istio.io/dataplane-mode: "ambient"
-          erag-istio-protected: "true"
+        labels: "{{ istio_namespace_labels | default({'istio.io/dataplane-mode': 'ambient'}) | combine({'erag-istio-protected': 'true'}) }}"
   when: istio_enabled | default(false) | bool
 
 - name: "app_vector_databases | Label namespace — PSS"
@@ -264,6 +262,7 @@
   kubernetes.core.helm:
     name: "{{ vector_databases_helm_release_name }}"
     chart_ref: "{{ vector_databases_helm_chart_directory }}"
+    post_renderer: "{{ _vector_databases_post_renderer or omit }}"
     namespace: "{{ vector_databases_namespace }}"
     values_files: "{{ values_files }}"
     state: present

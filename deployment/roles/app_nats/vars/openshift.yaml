@@ -1,0 +1,5 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+_nats_post_renderer: "{{ role_path }}/../../scripts/openshift_post_renderer.py"
+_nats_fixed_uids: false

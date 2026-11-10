@@ -52,6 +52,7 @@
   kubernetes.core.helm:
     name: "{{ app_hpa_adapter_release_name }}"
     chart_ref: "{{ app_hpa_helm_repo_name }}/prometheus-adapter"
+    post_renderer: "{{ _hpa_post_renderer or omit }}"
     release_namespace: "{{ app_hpa_adapter_namespace }}"
     state: present
     values_files:

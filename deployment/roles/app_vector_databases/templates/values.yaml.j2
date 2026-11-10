@@ -54,3 +54,20 @@ redis-cluster:
     size: "{{ redis.persistence.size | default('8Gi') }}"
 
 {% endif %}
+
+monitoring:
+  enabled: {{ observability_enabled | default(true) | bool | string | lower }}
+{% if not _vector_databases_fixed_uids | bool %}
+
+# The Helm post-renderer does not see hooks (the cluster-init Job): unset the UIDs here too.
+podSecurityContext:
+  runAsUser: null
+  runAsGroup: null
+  fsGroup: null
+securityContext:
+  runAsUser: null
+securityContextWithTemp:
+  runAsUser: null
+{% endif %}
+
+jobPodAnnotations: {{ istio_pod_annotations | default({}) | to_json }}

@@ -21,6 +21,11 @@ spec:
   backoffLimit: 10
   template:
     metadata:
+      {{- with .Values.jobPodAnnotations }}
+      # The Job ends only when its sidecar does: native sidecars do.
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
         app.kubernetes.io/name: redis-cluster
         app.kubernetes.io/instance: {{ .Release.Name }}

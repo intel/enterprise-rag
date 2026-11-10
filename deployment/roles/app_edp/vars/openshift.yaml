@@ -1,0 +1,6 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+_edp_post_renderer: "{{ role_path }}/../../scripts/openshift_post_renderer.py"
+_edp_fixed_uids: false
+_edp_hpa_supported: false

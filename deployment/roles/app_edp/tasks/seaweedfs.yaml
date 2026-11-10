@@ -98,9 +98,7 @@
       kind: Namespace
       metadata:
         name: "{{ edp_seaweedfs_namespace }}"
-        labels:
-          istio.io/dataplane-mode: "ambient"
-          erag-istio-protected: "true"
+        labels: "{{ istio_namespace_labels | default({'istio.io/dataplane-mode': 'ambient'}) | combine({'erag-istio-protected': 'true'}) }}"
   when: istio_enabled | default(false) | bool
 
 - name: "app_edp | Label SeaweedFS namespace — PSS"
@@ -184,6 +182,7 @@
   kubernetes.core.helm:
     name: seaweedfs
     chart_ref: seaweedfs/seaweedfs
+    post_renderer: "{{ _edp_post_renderer or omit }}"
     chart_version: "{{ edp_helm_values.seaweedfs.version }}"
     namespace: "{{ edp_seaweedfs_namespace }}"
     create_namespace: true

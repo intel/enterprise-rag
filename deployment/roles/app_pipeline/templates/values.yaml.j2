@@ -15,6 +15,19 @@ tokens:
 {% endif %}
 common_tag: &tag "{{ tag }}"
 common_registry: &repo "{{ registry }}"
+{% if _pipeline_service_ca %}
+{# The model workload svcs serve https with the OpenShift service CA, mounted in #}
+{# every pod: the model-facing usvcs point Python (httpx, aiohttp, requests) and #}
+{# their curl init containers at it.                                             #}
+openshift_service_ca: &service_ca "{{ _pipeline_service_ca }}"
+{% endif %}
+{% macro service_ca_envs() %}
+{% if _pipeline_service_ca %}
+      SSL_CERT_FILE: *service_ca
+      REQUESTS_CA_BUNDLE: *service_ca
+      CURL_CA_BUNDLE: *service_ca
+{% endif %}
+{% endmacro %}
 
 {# Resolve solution language: explicit value or auto-detect from LLM model name #}
 {% if solution_language is defined and solution_language != "auto" %}
@@ -48,7 +61,9 @@ fingerprint:
     existingSecret: "{{ fingerprint_postgres_secret_name }}"
     secretKey: "{{ fingerprint_postgres_secret_key }}"
 
-{% if hpa_enabled is defined %}
+{% if not _pipeline_hpa_supported | bool %}
+hpa_enabled: false
+{% elif hpa_enabled is defined %}
 hpa_enabled: {{ hpa_enabled }}
 {% endif %}
 
@@ -97,6 +112,7 @@ images:
       EMBEDDING_MODEL_SERVER_ENDPOINT: "{{ embedding_endpoint }}"
       EMBEDDING_MODEL_SERVER: "vllm"
 {% endif %}
+{{ service_ca_envs() }}
   reranking-usvc:
     image: "enterprise-rag-reranking"
     repository: *repo
@@ -107,6 +123,7 @@ images:
       RERANKING_SERVICE_ENDPOINT: "{{ reranking_endpoint }}"
       RERANKING_MODEL_SERVER: "vllm"
 {% endif %}
+{{ service_ca_envs() }}
   prompt-template-usvc:
     image: "enterprise-rag-prompt_template"
     repository: *repo
@@ -147,6 +164,7 @@ images:
       LLM_MODEL_SERVER_ENDPOINT: "{{ llm_endpoint }}"
       LLM_MODEL_NAME: "{{ llm_model_name }}"
       LLM_MODEL_SERVER: "vllm"
+{{ service_ca_envs() }}
 {% if pipeline_variant == 'output_guard' %}
       LLM_OUTPUT_GUARD_EXISTS: "True"
 {% endif %}
@@ -184,6 +202,11 @@ images:
     image: "enterprise-rag-query-rewrite"
     repository: *repo
     tag: *tag
+{% if _pipeline_service_ca %}
+{# Calls the LLM's https endpoint itself (QUERY_REWRITE_LLM_ENDPOINT). #}
+    envs:
+{{ service_ca_envs() }}
+{% endif %}
   init-container:
     image: "enterprise-rag-init-container"
     repository: *repo
@@ -205,3 +228,12 @@ images:
 
 monitoring:
   enabled: {{ observability_enabled | default(true) | bool | string | lower }}
+{% if not _pipeline_fixed_uids | bool %}
+
+# The GMC manager renders the microservices from these values, past the Helm
+# post-renderer: unset the UIDs here.
+podSecurityContext:
+  runAsUser: null
+  runAsGroup: null
+  fsGroup: null
+{% endif %}

@@ -42,9 +42,7 @@
       kind: Namespace
       metadata:
         name: "{{ chat_history_namespace }}"
-        labels:
-          istio.io/dataplane-mode: "ambient"
-          erag-istio-protected: "true"
+        labels: "{{ istio_namespace_labels | default({'istio.io/dataplane-mode': 'ambient'}) | combine({'erag-istio-protected': 'true'}) }}"
   when: istio_enabled | default(false) | bool
 
 - name: "app_chat_history | Label namespace — PSS"
@@ -95,6 +93,7 @@
   kubernetes.core.helm:
     name: "{{ chat_history_helm_release_name }}"
     chart_ref: "{{ chat_history_helm_chart_directory }}"
+    post_renderer: "{{ _chat_history_post_renderer or omit }}"
     namespace: "{{ chat_history_namespace }}"
     values_files: "{{ values_files }}"
     state: present

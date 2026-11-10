@@ -21,9 +21,7 @@
       kind: Namespace
       metadata:
         name: "{{ audio_namespace }}"
-        labels:
-          istio.io/dataplane-mode: "ambient"
-          erag-istio-protected: "true"
+        labels: "{{ istio_namespace_labels | default({'istio.io/dataplane-mode': 'ambient'}) | combine({'erag-istio-protected': 'true'}) }}"
   when: istio_enabled | default(false) | bool
 
 - name: "app_audio | Label namespace — PSS"
@@ -58,6 +56,7 @@
   kubernetes.core.helm:
     name: "{{ audio_helm_release_name }}"
     chart_ref: "{{ audio_helm_chart_directory }}"
+    post_renderer: "{{ _audio_post_renderer or omit }}"
     release_namespace: "{{ audio_namespace }}"
     create_namespace: true
     wait: true

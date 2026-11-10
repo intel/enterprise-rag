@@ -2,5 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: "app_mcp_gateway | dispatch | Load {{ cluster_distribution }} values"
+  ansible.builtin.include_vars: "{{ role_path }}/vars/{{ cluster_distribution }}.yaml"
+
 - name: "app_mcp_gateway | Dispatch action: {{ component_action }}"
   ansible.builtin.include_tasks: "{{ component_action }}.yaml"

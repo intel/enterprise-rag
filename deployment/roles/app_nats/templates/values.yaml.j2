@@ -16,3 +16,16 @@ kv:
 {% if nats_additional_values is defined and nats_additional_values %}
 {{ nats_additional_values | to_nice_yaml }}
 {% endif %}
+
+monitoring:
+  enabled: {{ observability_enabled | default(true) | bool | string | lower }}
+{% if not _nats_fixed_uids | bool %}
+
+# The Helm post-renderer does not see hooks (the kv-init Job): unset the UIDs here too.
+securityContext:
+  runAsUser: null
+  runAsGroup: null
+  fsGroup: null
+{% endif %}
+
+jobPodAnnotations: {{ istio_pod_annotations | default({}) | to_json }}

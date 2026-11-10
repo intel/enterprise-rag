@@ -25,6 +25,7 @@
   kubernetes.core.helm:
     name: "{{ watcher_helm_release_name }}"
     chart_ref: "{{ watcher_helm_chart_directory }}"
+    post_renderer: "{{ _watcher_post_renderer or omit }}"
     namespace: "{{ watcher_namespace }}"
     values_files: "{{ values_files }}"
     state: present
