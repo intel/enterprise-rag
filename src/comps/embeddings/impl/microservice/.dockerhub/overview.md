@@ -11,7 +11,6 @@ The Intel® Chatbot Toolkit Embedding Microservice is designed to efficiently co
 | Model server  | Status    |
 | ------------- | --------- |
 | vLLM          | &#x2713;  |
-| OVMS          | &#x2713;  |
 
 ## 🔗 Related Components
 
