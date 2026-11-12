@@ -21,7 +21,6 @@ class BanTopics(Scanner):
         *,
         threshold: float = 0.75,
         model: Model | None = None,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes BanTopics with a list of topics and a probability threshold.
@@ -31,7 +30,6 @@ class BanTopics(Scanner):
             threshold: The minimum probability required for a topic to be considered present in the text.
                                Default is 0.75.
             model: The name of the zero-shot-classification model to be used. Default is MODEL_BASE.
-            use_onnx: Whether to use ONNX for inference. Default is False.
 
         Raises:
             ValueError: If no topics are provided.
@@ -40,7 +38,6 @@ class BanTopics(Scanner):
             topics,
             threshold=threshold,
             model=model,
-            use_onnx=use_onnx,
         )
 
     def scan(self, prompt: str, output: str) -> tuple[str, bool, float]:

@@ -88,13 +88,10 @@ class TransformersRecognizer(EntityRecognizer):
 
     def load_transformer(
         self,
-        use_onnx: bool = False,
         **kwargs,
     ) -> None:
         """Load external configuration parameters and set default values.
 
-        :param use_onnx: flag to use ONNX optimized model
-        :type use_onnx: bool, optional
         :param kwargs: define default values for class attributes and modify pipeline behavior
         **MODEL_TO_PRESIDIO_MAPPING (dict) -  defines mapping entity strings from chosen model format to Presidio format
         **CHUNK_OVERLAP_SIZE (int) - number of overlapping characters in each text chunk
@@ -104,7 +101,6 @@ class TransformersRecognizer(EntityRecognizer):
         **DEFAULT_EXPLANATION (str) - string format to use for prediction explanations
         **ID_ENTITY_NAME (str) - name of the ID entity
         **ID_SCORE_REDUCTION (float) - score multiplier for ID entities
-        **use_onnx (bool) - flag to use ONNX optimized model
         """
 
         self.model_to_presidio_mapping = kwargs.get("MODEL_TO_PRESIDIO_MAPPING", {})
@@ -119,24 +115,17 @@ class TransformersRecognizer(EntityRecognizer):
             if not self.model:
                 self.model = Model(
                     path="dslim/bert-base-NER",
-                    onnx_path="dslim/bert-base-NER",
-                    onnx_subfolder="onnx",
                 )
                 LOGGER.warning(
                     "'model' argument is None. Using default",
                     model=self.model,
                 )
 
-            self._load_pipeline(
-                use_onnx=use_onnx,
-            )
+            self._load_pipeline()
 
-    def _load_pipeline(
-        self,
-        use_onnx: bool = False,
-    ) -> None:
+    def _load_pipeline(self) -> None:
         """Initialize NER transformers_rec pipeline using the model_path provided"""
-        tf_tokenizer, tf_model = get_tokenizer_and_model_for_ner(self.model, use_onnx=use_onnx)
+        tf_tokenizer, tf_model = get_tokenizer_and_model_for_ner(self.model)
 
         self.model.pipeline_kwargs["ignore_labels"] = self.ignore_labels
 

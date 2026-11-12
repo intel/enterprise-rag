@@ -15,8 +15,6 @@ LOGGER = get_logger()
 DEFAULT_MODEL = Model(
     path="unitary/unbiased-toxic-roberta",
     revision="36295dd80b422dc49f40052021430dae76241adc",
-    onnx_path="ProtectAI/unbiased-toxic-roberta-onnx",
-    onnx_revision="34480fa958f6657ad835c345808475755b6974a7",
     pipeline_kwargs={
         "padding": "max_length",
         "top_k": None,
@@ -63,7 +61,6 @@ class Toxicity(Scanner):
         model: Model | None = None,
         threshold: float = 0.5,
         match_type: MatchType | str = MatchType.FULL,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes Toxicity with a threshold for toxicity.
@@ -72,7 +69,6 @@ class Toxicity(Scanner):
            model (Model, optional): Path to the model. Default is None.
            threshold (float): Threshold for toxicity. Default is 0.5.
            match_type (MatchType): Whether to match the full text or individual sentences. Default is MatchType.FULL.
-           use_onnx (bool): Whether to use ONNX for inference. Default is False.
         """
         if isinstance(match_type, str):
             match_type = MatchType(match_type)
@@ -85,7 +81,6 @@ class Toxicity(Scanner):
 
         tf_tokenizer, tf_model = get_tokenizer_and_model_for_classification(
             model=model,
-            use_onnx=use_onnx,
         )
 
         self._pipeline = pipeline(

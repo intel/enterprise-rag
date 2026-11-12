@@ -64,7 +64,6 @@ class Anonymize(Scanner):
         use_faker: bool = False,
         recognizer_conf: NERConfig | None = None,
         threshold: float = 0.5,
-        use_onnx: bool = False,
         language: str = "en",
     ) -> None:
         """
@@ -80,7 +79,6 @@ class Anonymize(Scanner):
             use_faker: Whether to use faker instead of placeholders in applicable cases. If not provided, defaults to False, replaces with placeholders [REDACTED_PERSON_1].
             recognizer_conf: Configuration to recognize PII data. Default is Ai4Privacy DeBERTa model.
             threshold: Acceptance threshold. Default is 0.
-            use_onnx: Whether to use ONNX runtime for inference. Default is False.
             language: Language of the anonymize detect. Default is "en".
         """
 
@@ -115,7 +113,6 @@ class Anonymize(Scanner):
 
         transformers_recognizer = get_transformers_recognizer(
             recognizer_conf=recognizer_conf,
-            use_onnx=use_onnx,
             supported_language=language,
         )
 

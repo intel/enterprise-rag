@@ -101,7 +101,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                  | Type   | Default in LLM Guard  | Required / Optional | Available in Chatqna's UI |
 |----------------------------|--------------------------------------------------------------|--------|-----------------------|---------------------|---------------------|
 | `BAN_TOPICS_ENABLED`       | Enables BanTopics scanner.                                   | bool   | false               | Required            | No |
-| `BAN_TOPICS_USE_ONNX`      | Enables usage of ONNX optimized model for BanTopics scanner. | bool   | false                | Required            | No |
 | `BAN_TOPICS_TOPICS`        | List of topics to be banned.                                 | string(list can be also in one string with elements separated with commas)/List[string] | "violence,attack,war" | Required            | No |
 | `BAN_TOPICS_THRESHOLD`     | Threshold for BanTopics scanner.                             | float  | 0.6                   | Optional            | No |
 | `BAN_TOPICS_MODEL`         | Model to be used for BanTopics scanner.                      | string | none            | Optional            | No |
@@ -112,7 +111,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                                   | Type   | Default in LLM Guard  | Required / Optional | Available in Chatqna's UI |
 |----------------------------|-------------------------------------------------------------------------------|--------|-----------------------|---------------------|---------------------|
 | `BIAS_ENABLED`             | Enables Bias scanner.                                                         | bool   | false               | Required            | Yes |
-| `BIAS_USE_ONNX`            | Enables usage of ONNX optimized model for Bias scanner.                       | bool   | false                | Required            | No |
 | `BIAS_MODEL`               | Model to be used for Bias scanner.                                            | string | none       | Optional            | No |
 | `BIAS_THRESHOLD`           | Threshold for Bias scanner.                                                   | float  | none                   | Optional            | Yes |
 | `BIAS_MATCH_TYPE`          | Match type for Bias scanner.                                                  | string | none                | Optional            | Yes |
@@ -123,7 +121,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                 | Type   | Default in LLM Guard  | Required / Optional | Available in Chatqna's UI |
 |----------------------------|-------------------------------------------------------------|--------|-----------------------|---------------------|---------------------|
 | `CODE_ENABLED`             | Enables Code scanner.                                       | bool   | false               | Required            | Yes |
-| `CODE_USE_ONNX`            | Enables usage of ONNX optimized model for Code scanner.     | bool   | false                | Required            | No |
 | `CODE_LANGUAGES`           | List of programming languages to be detected.               | string(list can be also in one string with elements separated with commas)/List[string] | "Java,Python"         | Required            | Yes |
 | `CODE_MODEL`               | Model to be used for Code scanner.                          | string | none       | Optional            | No |
 | `CODE_IS_BLOCKED`          | Enables blocking of detected code.                          | bool   | false               | Optional            | No |
@@ -152,7 +149,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                                   | Type   | Default in LLM Guard  | Required / Optional | Available in Chatqna's UI |
 |--------------------------- |-------------------------------------------------------------------------------|--------|-----------------------|---------------------|---------------------|
 | `MALICIOUS_URLS_ENABLED`   | Enables MaliciousURLs scanner.                                                | bool   | false               | Required            | Yes |
-| `MALICIOUS_URLS_USE_ONNX`  | Enables usage of ONNX optimized model for MaliciousURLs scanner. Default: false.| bool   | false                | Required            | No |
 | `MALICIOUS_URLS_MODEL`     | Model to be used for MaliciousURLs scanner. Default: "DEFAULT_MODEL".         | string | none       | Optional            | No |
 | `MALICIOUS_THRESHOLD`      | Threshold for MaliciousURLs scanner.                                          | float  | none                   | Optional            | Yes |
 
@@ -162,7 +158,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                  | Type   | Default in LLM Guard  | Required / Optional | Available in Chatqna's UI |
 |--------------------------- |--------------------------------------------------------------|--------|-----------------------|---------------------|---------------------|
 | `NO_REFUSAL_ENABLED`       | Enables NoRefusal scanner.                                   | bool   | false               | Required            | No |
-| `NO_REFUSAL_USE_ONNX`      | Enables usage of ONNX optimized model for NoRefusal scanner. | bool   | false                | Required            | No |
 | `NO_REFUSAL_MODEL`         | Model to be used for NoRefusal scanner.                      | string | none       | Optional            | No |
 | `NO_REFUSAL_THRESHOLD`     | Threshold for NoRefusal scanner.                             | float  | none                  | Optional            | No |
 | `NO_REFUSAL_MATCH_TYPE`    | Match type for NoRefusal scanner.                            | string | none                | Optional            | No |
@@ -188,7 +183,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                                   | Type   | Default in LLM Guard   | Required / Optional | Available in Chatqna's UI |
 |--------------------------- |-------------------------------------------------------------------------------|--------|------------------------|---------------------|---------------------|
 | `FACTUAL_CONSISTENCY_ENABLED` | Enables FactualConsistency scanner.                                        | bool   | false                | Required            | No |
-| `FACTUAL_CONSISTENCY_USE_ONNX` | Enables usage of ONNX optimized model for FactualConsistency scanner.     | bool   | false                 | Required            | No |
 | `FACTUAL_CONSISTENCY_MODEL` | Model to be used for FactualConsistency scanner.                             | string | none | Optional            | No |
 | `FACTUAL_CONSISTENCY_MINIMUM_SCORE` | Minimum score for FactualConsistency scanner.                        | float  | none                   | Optional            | No |
 
@@ -209,7 +203,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                                   | Type   | Default in LLM Guard  | Required / Optional | Available in Chatqna's UI |
 |--------------------------- |-------------------------------------------------------------------------------|--------|-----------------------|---------------------|---------------------|
 | `RELEVANCE_ENABLED`        | Enables Relevance scanner.                                                    | bool   | false               | Required            | Yes |
-| `RELEVANCE_USE_ONNX`       | Enables usage of ONNX optimized model for Relevance scanner.                  | bool   | false                | Required            | No |
 | `RELEVANCE_MODEL`          | Model to be used for Relevance scanner.                                       | string | none    | Optional            | No |
 | `RELEVANCE_THRESHOLD`      | Threshold for Relevance scanner.                                              | float  | none                   | Optional            | Yes |
 
@@ -219,7 +212,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                                   | Type   | Default in LLM Guard  | Required / Optional | Available in Chatqna's UI |
 |----------------------------|-------------------------------------------------------------------------------|--------|-----------------------|---------------------|---------------------|
 | `SENSITIVE_ENABLED`        | Enables Sensitive scanner.                                                    | bool   | false               | Required            | No |
-| `SENSITIVE_USE_ONNX`       | Enables usage of ONNX optimized model for Sensitive scanner.                  | bool   | false                | Required            | No |
 | `SENSITIVE_ENTITY_TYPES`   | List of entity types to be recognized.                                        | string(list can be also in one string with elements separated with commas)/List[string] | none              | Optional            | No |
 | `SENSITIVE_REGEX_PATTERNS` | List of regex patterns to be used.                                            | string(list can be also in one string with elements separated with commas)/List[string] |  [LLMGuard documentation](https://github.com/protectai/llm-guard/blob/main/llm_guard/output_scanners/sensitive.py#L40)                            | Optional            | No |
 | `SENSITIVE_REDACT`         | Enables redaction of sensitive information.                                   | bool   | false               | Optional            | No |
@@ -241,7 +233,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                                   | Type   | Default in LLM Guard  | Required / Optional | Available in Chatqna's UI |
 |----------------------------|-------------------------------------------------------------------------------|--------|-----------------------|---------------------|---------------------|
 | `TOXICITY_ENABLED`         | Enables Toxicity scanner.                                                     | bool   | false               | Required            | No |
-| `TOXICITY_USE_ONNX`        | Enables usage of ONNX optimized model for Toxicity scanner.                   | bool   | false                | Required            | No |
 | `TOXICITY_MODEL`           | Model to be used for Toxicity scanner.                                        | string | none       | Optional            | No |
 | `TOXICITY_THRESHOLD`       | Threshold for Toxicity scanner.                                               | float  | 0.5                   | Optional            | No |
 | `TOXICITY_MATCH_TYPE`      | Match type for toxicity detection.                                            | string | "full"                | Optional            | No |

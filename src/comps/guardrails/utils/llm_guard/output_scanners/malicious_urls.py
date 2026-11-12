@@ -12,8 +12,6 @@ LOGGER = get_logger()
 DEFAULT_MODEL = Model(
     path="DunnBC22/codebert-base-Malicious_URLs",
     revision="1221284b2495a4182cdb521be9d755de56e66899",
-    onnx_path="ProtectAI/codebert-base-Malicious_URLs-onnx",
-    onnx_revision="7bc4fa926eeae5e752d0790cc42faa24eb32fa64",
     pipeline_kwargs={
         "top_k": None,
         "return_token_type_ids": False,
@@ -43,7 +41,6 @@ class MaliciousURLs(Scanner):
         *,
         model: Model | None = None,
         threshold=0.5,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes an instance of the MaliciousURLs class.
@@ -51,7 +48,6 @@ class MaliciousURLs(Scanner):
         Parameters:
             model (Model, optional): The model to use for malicious URL detection.
             threshold (float): The threshold used to determine if the website is malicious. Defaults to 0.5.
-            use_onnx (bool): Whether to use the ONNX version of the model. Defaults to False.
         """
 
         self._threshold = threshold
@@ -61,7 +57,6 @@ class MaliciousURLs(Scanner):
 
         tf_tokenizer, tf_model = get_tokenizer_and_model_for_classification(
             model=model,
-            use_onnx=use_onnx,
         )
 
         self._classifier = pipeline(

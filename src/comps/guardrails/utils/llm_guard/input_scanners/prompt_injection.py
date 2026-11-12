@@ -27,10 +27,6 @@ PROMPT_CHARACTERS_LIMIT = 256
 V1_MODEL = Model(
     path="protectai/deberta-v3-base-prompt-injection",
     revision="f51c3b2a5216ae1af467b511bc7e3b78dc4a99c9",
-    onnx_path="ProtectAI/deberta-v3-base-prompt-injection",
-    onnx_revision="f51c3b2a5216ae1af467b511bc7e3b78dc4a99c9",
-    onnx_subfolder="onnx",
-    onnx_filename="model.onnx",
     pipeline_kwargs={
         "return_token_type_ids": False,
         "max_length": 512,
@@ -41,10 +37,6 @@ V1_MODEL = Model(
 V2_MODEL = Model(
     path="protectai/deberta-v3-base-prompt-injection-v2",
     revision="89b085cd330414d3e7d9dd787870f315957e1e9f",
-    onnx_path="ProtectAI/deberta-v3-base-prompt-injection-v2",
-    onnx_revision="89b085cd330414d3e7d9dd787870f315957e1e9f",
-    onnx_subfolder="onnx",
-    onnx_filename="model.onnx",
     pipeline_kwargs={
         "return_token_type_ids": False,
         "max_length": 512,
@@ -56,10 +48,6 @@ V2_MODEL = Model(
 V2_SMALL_MODEL = Model(
     path="protectai/deberta-v3-small-prompt-injection-v2",
     revision="3897fe66d47d2e1649e669c3470bf2ba3ddecc22",
-    onnx_path="protectai/deberta-v3-small-prompt-injection-v2",
-    onnx_revision="3897fe66d47d2e1649e669c3470bf2ba3ddecc22",
-    onnx_subfolder="onnx",
-    onnx_filename="model.onnx",
     pipeline_kwargs={
         "return_token_type_ids": False,
         "max_length": 512,
@@ -130,7 +118,6 @@ class PromptInjection(Scanner):
         model: Model | None = None,
         threshold: float = 0.92,
         match_type: MatchType | str = MatchType.FULL,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes PromptInjection with a threshold.
@@ -139,7 +126,6 @@ class PromptInjection(Scanner):
             model (Model, optional): Chosen model to classify prompt. Default is Laiyer's one.
             threshold (float): Threshold for the injection score. Default is 0.9.
             match_type (MatchType): Whether to match the full text or individual sentences. Default is MatchType.FULL.
-            use_onnx (bool): Whether to use ONNX for inference. Defaults to False.
 
         Raises:
             ValueError: If non-existent models were provided.
@@ -155,7 +141,6 @@ class PromptInjection(Scanner):
 
         tf_tokenizer, tf_model = get_tokenizer_and_model_for_classification(
             model=model,
-            use_onnx=use_onnx,
         )
 
         self._pipeline = pipeline(

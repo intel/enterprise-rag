@@ -2,8 +2,6 @@
 # Upstream is archived; this copy is maintained in-tree. See ./LICENSE.
 from __future__ import annotations
 
-import importlib
-from functools import lru_cache
 from typing import Literal, get_args
 
 from .model import Model
@@ -27,42 +25,8 @@ def get_tokenizer(model: Model):
     return tokenizer
 
 
-@lru_cache(maxsize=None)  # Unbounded cache
-def is_onnx_supported() -> bool:
-    is_supported = importlib.util.find_spec("optimum.onnxruntime") is not None  # type: ignore
-    if not is_supported:
-        LOGGER.warning(
-            "ONNX Runtime is not available. "
-            "Please install optimum: "
-            "`pip install llm-guard[onnxruntime]` for CPU or "
-            "`pip install llm-guard[onnxruntime-gpu]` for GPU to enable ONNX Runtime optimizations."
-        )
-
-    return is_supported
-
-
-def _ort_model_for_sequence_classification(
-    model: Model,
-):
-    onnxruntime = lazy_load_dep("optimum.onnxruntime", "optimum[onnxruntime]")
-
-    tf_model = onnxruntime.ORTModelForSequenceClassification.from_pretrained(
-        model.onnx_path or model.path,
-        export=model.onnx_path is None,
-        file_name=model.onnx_filename,
-        subfolder=model.onnx_subfolder,
-        revision=model.onnx_revision,
-        provider="CPUExecutionProvider",
-        **model.kwargs,
-    )
-    LOGGER.debug("Initialized classification ONNX model", model=model)
-
-    return tf_model
-
-
 def get_tokenizer_and_model_for_classification(
     model: Model,
-    use_onnx: bool = False,
 ):
     """
     This function loads a tokenizer and model given a model identifier and caches them.
@@ -70,31 +34,23 @@ def get_tokenizer_and_model_for_classification(
 
     Args:
         model (str): The model identifier to load the tokenizer and model for.
-        use_onnx (bool): Whether to use the ONNX version of the model. Defaults to False.
     """
     tf_tokenizer = get_tokenizer(model)
     transformers = lazy_load_dep("transformers")
 
-    if use_onnx and is_onnx_supported() is False:
-        LOGGER.warning("ONNX is not supported on this machine. Using PyTorch instead of ONNX.")
-        use_onnx = False
-
-    if use_onnx is False:
-        tf_model = transformers.AutoModelForSequenceClassification.from_pretrained(
-            model.path, subfolder=model.subfolder, revision=model.revision, **model.kwargs
-        )
-        LOGGER.debug("Initialized classification model", model=model)
-
-        return tf_tokenizer, tf_model
-
-    tf_model = _ort_model_for_sequence_classification(model)
+    tf_model = transformers.AutoModelForSequenceClassification.from_pretrained(
+        model.path,
+        subfolder=model.subfolder,
+        revision=model.revision,
+        **model.kwargs,
+    )
+    LOGGER.debug("Initialized classification model", model=model)
 
     return tf_tokenizer, tf_model
 
 
 def get_tokenizer_and_model_for_ner(
     model: Model,
-    use_onnx: bool = False,
 ):
     """
     This function loads a tokenizer and model given a model identifier and caches them.
@@ -102,38 +58,17 @@ def get_tokenizer_and_model_for_ner(
 
     Args:
         model (str): The model identifier to load the tokenizer and model for.
-        use_onnx (bool): Whether to use the ONNX version of the model. Defaults to False.
     """
     tf_tokenizer = get_tokenizer(model)
     transformers = lazy_load_dep("transformers")
 
-    if use_onnx and is_onnx_supported() is False:
-        LOGGER.warning("ONNX is not supported on this machine. Using PyTorch instead of ONNX.")
-        use_onnx = False
-
-    if use_onnx is False:
-        tf_model = transformers.AutoModelForTokenClassification.from_pretrained(
-            model.path, subfolder=model.subfolder, revision=model.revision, **model.kwargs
-        )
-        LOGGER.debug("Initialized NER model", model=model)
-
-        return tf_tokenizer, tf_model
-
-    optimum_onnxruntime = lazy_load_dep(
-        "optimum.onnxruntime",
-        "optimum[onnxruntime]",
-    )
-
-    tf_model = optimum_onnxruntime.ORTModelForTokenClassification.from_pretrained(
-        model.onnx_path,
-        export=False,
-        subfolder=model.onnx_subfolder,
-        provider="CPUExecutionProvider",
-        revision=model.onnx_revision,
-        file_name=model.onnx_filename,
+    tf_model = transformers.AutoModelForTokenClassification.from_pretrained(
+        model.path,
+        subfolder=model.subfolder,
+        revision=model.revision,
         **model.kwargs,
     )
-    LOGGER.debug("Initialized NER ONNX model", model=model)
+    LOGGER.debug("Initialized NER model", model=model)
 
     return tf_tokenizer, tf_model
 

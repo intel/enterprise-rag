@@ -19,7 +19,6 @@ class Gibberish(Scanner):
         model: Model | None = None,
         threshold: float = 0.7,
         match_type: MatchType | str = MatchType.FULL,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes the Gibberish scanner with a probability threshold for gibberish detection.
@@ -28,14 +27,12 @@ class Gibberish(Scanner):
            model (Model, optional): The model used.
            threshold (float): The probability threshold for gibberish detection. Default is 0.7.
            match_type (MatchType): Whether to match the full text or individual sentences. Default is MatchType.FULL.
-           use_onnx (bool): Whether to use ONNX instead of PyTorch for inference.
         """
 
         self._scanner = InputGibberish(
             model=model,
             threshold=threshold,
             match_type=match_type,
-            use_onnx=use_onnx,
         )
 
     def scan(self, prompt: str, output: str) -> tuple[str, bool, float]:

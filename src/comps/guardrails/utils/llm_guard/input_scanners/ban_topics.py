@@ -15,9 +15,6 @@ LOGGER = get_logger()
 MODEL_DEBERTA_LARGE_V2 = Model(
     path="MoritzLaurer/deberta-v3-large-zeroshot-v2.0",
     revision="cf44676c28ba7312e5c5f8f8d2c22b3e0c9cdae2",
-    onnx_path="MoritzLaurer/deberta-v3-large-zeroshot-v2.0",
-    onnx_revision="cf44676c28ba7312e5c5f8f8d2c22b3e0c9cdae2",
-    onnx_subfolder="onnx",
     pipeline_kwargs={
         "return_token_type_ids": False,
         "max_length": 512,
@@ -34,9 +31,6 @@ MODEL_DEBERTA_LARGE_V2 = Model(
 MODEL_DEBERTA_BASE_V2 = Model(
     path="MoritzLaurer/deberta-v3-base-zeroshot-v2.0",
     revision="8e7e5af5983a0ddb1a5b45a38b129ab69e2258e8",
-    onnx_path="MoritzLaurer/deberta-v3-base-zeroshot-v2.0",
-    onnx_subfolder="onnx",
-    onnx_revision="8e7e5af5983a0ddb1a5b45a38b129ab69e2258e8",
     pipeline_kwargs={
         "return_token_type_ids": False,
         "max_length": 512,
@@ -52,9 +46,6 @@ MODEL_DEBERTA_BASE_V2 = Model(
 MODEL_BGE_M3_V2 = Model(
     path="MoritzLaurer/bge-m3-zeroshot-v2.0",
     revision="cd3f8598c7359a3b5cbce164d7fcdafb83a36484",
-    onnx_path="MoritzLaurer/bge-m3-zeroshot-v2.0",
-    onnx_subfolder="onnx",
-    onnx_revision="cd3f8598c7359a3b5cbce164d7fcdafb83a36484",
     pipeline_kwargs={
         "return_token_type_ids": False,
         "max_length": 512,
@@ -68,9 +59,6 @@ MODEL_BGE_M3_V2 = Model(
 MODEL_ROBERTA_LARGE_C_V2 = Model(
     path="MoritzLaurer/roberta-large-zeroshot-v2.0-c",
     revision="4c24ed4bba5af8d3162604abc2a141b9d2183ecc",
-    onnx_path="MoritzLaurer/roberta-large-zeroshot-v2.0-c",
-    onnx_subfolder="onnx",
-    onnx_revision="4c24ed4bba5af8d3162604abc2a141b9d2183ecc",
     pipeline_kwargs={
         "return_token_type_ids": False,
         "max_length": 512,
@@ -82,8 +70,6 @@ MODEL_ROBERTA_LARGE_C_V2 = Model(
 MODEL_ROBERTA_BASE_C_V2 = Model(
     path="MoritzLaurer/roberta-base-zeroshot-v2.0-c",
     revision="d825e740e0c59881cf0b0b1481ccf726b6d65341",
-    onnx_path="protectai/MoritzLaurer-roberta-base-zeroshot-v2.0-c-onnx",
-    onnx_revision="fde5343dbad32f1a5470890505c72ec656db6dbe",
     pipeline_kwargs={
         "return_token_type_ids": False,
         "max_length": 512,
@@ -105,7 +91,6 @@ class BanTopics(Scanner):
         *,
         threshold: float = 0.6,
         model: Model | None = None,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initialize BanTopics object.
@@ -114,7 +99,6 @@ class BanTopics(Scanner):
             topics (Sequence[str]): List of topics to ban.
             threshold (float, optional): Threshold to determine if a topic is present in the prompt. Default is 0.75.
             model (Model, optional): Model to use for zero-shot classification. Default is roberta-base-c-v2.
-            use_onnx (bool, optional): Whether to use ONNX for inference. Default is False.
 
         Raises:
             ValueError: If no topics are provided.
@@ -127,7 +111,6 @@ class BanTopics(Scanner):
 
         tf_tokenizer, tf_model = get_tokenizer_and_model_for_classification(
             model=model,
-            use_onnx=use_onnx,
         )
 
         self._classifier = pipeline(

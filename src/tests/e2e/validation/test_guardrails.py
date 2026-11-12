@@ -179,8 +179,7 @@ def test_in_guard_prompt_injection(guard_helper):
     providing incorrect or harmful outputs.
     """
     guard_params = {
-       "enabled": True,
-       "use_onnx": True
+       "enabled": True
     }
     guard_helper.setup(GuardType.INPUT, "prompt_injection", guard_params)
     guard_helper.assert_blocked(questions.DAN)

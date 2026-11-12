@@ -15,8 +15,6 @@ LOGGER = get_logger()
 DEFAULT_MODEL = Model(
     path="papluca/xlm-roberta-base-language-detection",
     revision="9865598389ca9d95637462f743f683b51d75b87b",
-    onnx_path="ProtectAI/xlm-roberta-base-language-detection-onnx",
-    onnx_revision="dce2fa14a0dc61b6f889537e9ad4fccf083b22bd",
     pipeline_kwargs={
         "top_k": None,
         "return_token_type_ids": False,
@@ -52,17 +50,15 @@ class Language(Scanner):
         model: Model | None = None,
         threshold: float = 0.6,
         match_type: MatchType | str = MatchType.FULL,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes the Language scanner with a list of valid languages.
 
         Parameters:
-            model (Model, optional): A Model object containing the path to the model and its ONNX equivalent.
+            model (Model, optional): A Model object containing the path to the model.
             valid_languages (Sequence[str]): A list of valid language codes in ISO 639-1.
             threshold (float): Minimum confidence score.
             match_type (MatchType): Whether to match the full text or individual sentences. Default is MatchType.FULL.
-            use_onnx (bool): Whether to use ONNX for inference. Default is False.
         """
         if isinstance(match_type, str):
             match_type = MatchType(match_type)
@@ -76,7 +72,6 @@ class Language(Scanner):
 
         tf_tokenizer, tf_model = get_tokenizer_and_model_for_classification(
             model=model,
-            use_onnx=use_onnx,
         )
 
         self._pipeline = pipeline(

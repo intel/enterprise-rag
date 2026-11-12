@@ -192,7 +192,7 @@ class OutputScannersConfig(ScannersConfigBase):
             'MODEL_ROBERTA_LARGE_C_V2': BANTOPICS_MODEL_ROBERTA_LARGE_C_V2,
             'MODEL_ROBERTA_BASE_C_V2': BANTOPICS_MODEL_ROBERTA_BASE_C_V2
         }
-        ban_topics_params = {'use_onnx': scanner_config.get('use_onnx', False)}
+        ban_topics_params = {}
 
         topics = scanner_config.get('topics', None)
         threshold = scanner_config.get('threshold', None)
@@ -232,7 +232,7 @@ class OutputScannersConfig(ScannersConfigBase):
     def _create_bias_scanner(self, scanner_config):
         available_match_types = ['str', 'word']
         enabled_models = {'DEFAULT_MODEL': BIAS_DEFAULT_MODEL}
-        bias_params = {'use_onnx': scanner_config.get('use_onnx', False)}
+        bias_params = {}
 
         threshold = scanner_config.get('threshold', None)
         match_type = scanner_config.get('match_type', None)
@@ -259,7 +259,7 @@ class OutputScannersConfig(ScannersConfigBase):
 
     def _create_code_scanner(self, scanner_config):
         enabled_models = {'DEFAULT_MODEL': CODE_DEFAULT_MODEL}
-        code_params = {'use_onnx': scanner_config.get('use_onnx', False)}
+        code_params = {}
 
         languages = scanner_config.get('languages', None)
         model_name = scanner_config.get('model', None)
@@ -330,7 +330,7 @@ class OutputScannersConfig(ScannersConfigBase):
 
     def _create_malicious_urls_scanner(self, scanner_config):
         enabled_models = {'DEFAULT_MODEL': MALICIOUS_URLS_DEFAULT_MODEL}
-        malicious_urls_params = {'use_onnx': scanner_config.get('use_onnx', False)}
+        malicious_urls_params = {}
 
         threshold = scanner_config.get('threshold', None)
         model_name = scanner_config.get('model', None)
@@ -355,7 +355,7 @@ class OutputScannersConfig(ScannersConfigBase):
     def _create_no_refusal_scanner(self, scanner_config):
         enabled_models = {'DEFAULT_MODEL': NO_REFUSAL_DEFAULT_MODEL}
         enabled_match_types = ['sentence', 'full']
-        no_refusal_params = {'use_onnx': scanner_config.get('use_onnx', False)}
+        no_refusal_params = {}
 
         threshold = scanner_config.get('threshold', None)
         model_name = scanner_config.get('model', None)
@@ -406,7 +406,7 @@ class OutputScannersConfig(ScannersConfigBase):
 
     def _create_factual_consistency_scanner(self, scanner_config):
         enabled_models = {"DEFAULT_MODEL": BANTOPICS_MODEL_DEBERTA_BASE_V2} # BanTopics model is used as deault in FactualConsistency
-        factual_consistency_params = {'use_onnx': scanner_config.get('use_onnx', False)}
+        factual_consistency_params = {}
 
         model_name = scanner_config.get('model', None)
         minimum_score = scanner_config.get('minimum_score', None)
@@ -466,7 +466,7 @@ class OutputScannersConfig(ScannersConfigBase):
         enabled_models = {'MODEL_EN_BGE_BASE': RELEVANCE_MODEL_EN_BGE_BASE,
                           'MODEL_EN_BGE_LARGE': RELEVANCE_MODEL_EN_BGE_LARGE,
                           'MODEL_EN_BGE_SMALL': RELEVANCE_MODEL_EN_BGE_SMALL}
-        relevance_params = {'use_onnx': scanner_config.get('use_onnx', False)} # TODO: onnx off, because of bug on LLM Guard side
+        relevance_params = {}
 
         model_name = scanner_config.get('model', None)
         threshold = scanner_config.get('threshold', None)
@@ -489,7 +489,7 @@ class OutputScannersConfig(ScannersConfigBase):
         return Relevance(**relevance_params)
 
     def _create_sensitive_scanner(self, scanner_config):
-        sensitive_params = {'use_onnx': scanner_config.get('use_onnx', False)}
+        sensitive_params = {}
 
         entity_types = scanner_config.get('entity_types', None)
         regex_patterns = scanner_config.get('regex_patterns', None)
@@ -547,7 +547,7 @@ class OutputScannersConfig(ScannersConfigBase):
     def _create_toxicity_scanner(self, scanner_config):
         enabled_models = {'DEFAULT_MODEL': TOXICITY_DEFAULT_MODEL}
         enabled_match_types = ['sentence', 'full']
-        toxicity_params = {'use_onnx': scanner_config.get('use_onnx', False)}
+        toxicity_params = {}
 
         model_name = scanner_config.get('model', None)
         threshold = scanner_config.get('threshold', None)

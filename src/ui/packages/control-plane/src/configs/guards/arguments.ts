@@ -7,10 +7,6 @@ export const enabled = {
   name: "enabled",
 };
 
-export const useOnnx = {
-  name: "use_onnx",
-};
-
 export const model = {
   name: "model",
   isNullable: true,

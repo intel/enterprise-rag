@@ -21,17 +21,15 @@ class Language(Scanner):
         model: Model | None = None,
         threshold: float = 0.7,
         match_type: MatchType | str = MatchType.FULL,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes the Language scanner with a list of valid languages.
 
         Parameters:
-            model (Model, optional): A Model object containing the path to the model and its ONNX equivalent.
+            model (Model, optional): A Model object containing the path to the model.
             valid_languages (Sequence[str]): A list of valid language codes.
             threshold (float): Minimum confidence score.
             match_type (MatchType): Whether to match the full text or individual sentences. Default is MatchType.FULL.
-            use_onnx (bool): Whether to use ONNX for inference. Default is False.
         """
 
         self._scanner = InputLanguage(
@@ -39,7 +37,6 @@ class Language(Scanner):
             model=model,
             threshold=threshold,
             match_type=match_type,
-            use_onnx=use_onnx,
         )
 
     def scan(self, prompt: str, output: str) -> tuple[str, bool, float]:

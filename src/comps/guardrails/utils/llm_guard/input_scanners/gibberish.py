@@ -15,9 +15,6 @@ LOGGER = get_logger()
 DEFAULT_MODEL = Model(
     path="madhurjindal/autonlp-Gibberish-Detector-492513457",
     revision="fddf42c3008ad61cc481f90d02dd0712ba1ee2d8",
-    onnx_path="madhurjindal/autonlp-Gibberish-Detector-492513457",
-    onnx_revision="fddf42c3008ad61cc481f90d02dd0712ba1ee2d8",
-    onnx_subfolder="onnx",
     pipeline_kwargs={
         "return_token_type_ids": False,
         "max_length": 512,
@@ -50,7 +47,6 @@ class Gibberish(Scanner):
         model: Model | None = None,
         threshold: float = 0.97,
         match_type: MatchType | str = MatchType.FULL,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes the Gibberish scanner with a probability threshold for gibberish detection.
@@ -59,7 +55,6 @@ class Gibberish(Scanner):
            model (Model, optional): The model object.
            threshold (float): The probability threshold for gibberish detection. Default is 0.7.
            match_type (MatchType): Whether to match the full text or individual sentences. Default is MatchType.FULL.
-           use_onnx (bool): Whether to use ONNX instead of PyTorch for inference.
         """
         if isinstance(match_type, str):
             match_type = MatchType(match_type)
@@ -72,7 +67,6 @@ class Gibberish(Scanner):
 
         tf_tokenizer, tf_model = get_tokenizer_and_model_for_classification(
             model=model,
-            use_onnx=use_onnx,
         )
 
         self._classifier = pipeline(

@@ -17,9 +17,6 @@ LOGGER = get_logger()
 MODEL_V1 = Model(
     path="guishe/nuner-v1_orgs",
     revision="2e95454e741e5bdcbfabd6eaed5fb03a266cf043",
-    onnx_path="protectai/guishe-nuner-v1_orgs-onnx",
-    onnx_revision="20c9739f45f6b4d10ba63c62e6fa92f214a12a52",
-    onnx_subfolder="",
     pipeline_kwargs={
         "aggregation_strategy": "simple",
     },
@@ -40,7 +37,6 @@ class BanCompetitors(Scanner):
         threshold: float = 0.5,
         redact: bool = True,
         model: Model | None = None,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initialize BanCompetitors object.
@@ -50,7 +46,6 @@ class BanCompetitors(Scanner):
             threshold (float, optional): Threshold to determine if a competitor is present in the prompt. Default is 0.5.
             redact (bool, optional): Whether to redact the competitor name. Default is True.
             model (Model, optional): Model to use for named-entity recognition. Default is V1 model.
-            use_onnx (bool, optional): Whether to use ONNX instead of PyTorch for inference. Default is False.
 
         Raises:
             ValueError: If no topics are provided.
@@ -64,7 +59,6 @@ class BanCompetitors(Scanner):
 
         tf_tokenizer, tf_model = get_tokenizer_and_model_for_ner(
             model=model,
-            use_onnx=use_onnx,
         )
 
         transformers = lazy_load_dep("transformers")

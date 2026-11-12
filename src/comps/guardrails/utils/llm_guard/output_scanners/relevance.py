@@ -2,13 +2,11 @@
 # Upstream is archived; this copy is maintained in-tree. See ./LICENSE.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
-
 import numpy as np
 import torch
 
 from ..model import Model
-from ..transformers_helpers import get_tokenizer, is_onnx_supported
+from ..transformers_helpers import get_tokenizer
 from ..util import calculate_risk_score, device, get_logger, lazy_load_dep
 
 from .base import Scanner
@@ -18,29 +16,15 @@ LOGGER = get_logger()
 MODEL_EN_BGE_BASE = Model(
     path="BAAI/bge-base-en-v1.5",
     revision="a5beb1e3e68b9ab74eb54cfd186867f64f240e1a",
-    onnx_path="BAAI/bge-base-en-v1.5",
-    onnx_subfolder="onnx",
-    onnx_filename="model.onnx",
-    onnx_revision="a5beb1e3e68b9ab74eb54cfd186867f64f240e1a",
 )
 MODEL_EN_BGE_LARGE = Model(
     path="BAAI/bge-large-en-v1.5",
     revision="d4aa6901d3a41ba39fb536a557fa166f842b0e09",
-    onnx_path="BAAI/bge-large-en-v1.5",
-    onnx_subfolder="onnx",
-    onnx_revision="d4aa6901d3a41ba39fb536a557fa166f842b0e09",
 )
 MODEL_EN_BGE_SMALL = Model(
     path="BAAI/bge-small-en-v1.5",
     revision="5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
-    onnx_path="BAAI/bge-small-en-v1.5",
-    onnx_revision="5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
-    onnx_subfolder="onnx",
 )
-
-
-if TYPE_CHECKING:
-    import optimum.onnxruntime
 
 
 class Relevance(Scanner):
@@ -57,7 +41,6 @@ class Relevance(Scanner):
         *,
         threshold: float = 0.5,
         model: Model | None = None,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes an instance of the Relevance class.
@@ -65,7 +48,6 @@ class Relevance(Scanner):
         Parameters:
             threshold: The minimum similarity score to compare prompt and output.
             model: Model for calculating embeddings. Default is `BAAI/bge-base-en-v1.5`.
-            use_onnx: Whether to use the ONNX version of the model. Defaults to False.
         """
 
         self._threshold = threshold
@@ -76,40 +58,15 @@ class Relevance(Scanner):
         self.pooling_method = "cls"
         self.normalize_embeddings = True
 
-        if use_onnx and is_onnx_supported() is False:
-            LOGGER.warning("ONNX is not supported on this machine. Using PyTorch instead of ONNX.")
-            use_onnx = False
-
-        if use_onnx:
-            optimum_onnxruntime = cast(
-                "optimum.onnxruntime",
-                lazy_load_dep(
-                    "optimum.onnxruntime",
-                    "optimum[onnxruntime-gpu]"
-                    if device().type == "cuda"
-                    else "optimum[onnxruntime]",
-                ),
-            )
-            assert model.onnx_path is not None
-            self._model = optimum_onnxruntime.ORTModelForFeatureExtraction.from_pretrained(
-                model.onnx_path,
-                export=False,
-                subfolder=model.onnx_subfolder,
-                file_name=model.onnx_filename,
-                revision=model.onnx_revision,
-                provider=(
-                    "CUDAExecutionProvider" if device().type == "cuda" else "CPUExecutionProvider"
-                ),
-                **model.kwargs,
-            )
-            LOGGER.debug("Initialized ONNX model", model=model, device=device())
-        else:
-            transformers = lazy_load_dep("transformers")
-            self._model = transformers.AutoModel.from_pretrained(
-                model.path, subfolder=model.subfolder, revision=model.revision, **model.kwargs
-            ).to(device())
-            LOGGER.debug("Initialized model", model=model, device=device())
-            self._model.eval()
+        transformers = lazy_load_dep("transformers")
+        self._model = transformers.AutoModel.from_pretrained(
+            model.path,
+            subfolder=model.subfolder,
+            revision=model.revision,
+            **model.kwargs,
+        ).to(device())
+        LOGGER.debug("Initialized model", model=model, device=device())
+        self._model.eval()
 
         self._tokenizer = get_tokenizer(model)
 

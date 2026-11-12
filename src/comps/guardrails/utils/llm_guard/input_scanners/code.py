@@ -15,9 +15,6 @@ LOGGER = get_logger()
 DEFAULT_MODEL = Model(
     path="philomath-1209/programming-language-identification",
     revision="9090d38e7333a2c6ff00f154ab981a549842c20f",
-    onnx_path="philomath-1209/programming-language-identification",
-    onnx_revision="9090d38e7333a2c6ff00f154ab981a549842c20f",
-    onnx_subfolder="onnx",
     pipeline_kwargs={
         "top_k": None,
         "return_token_type_ids": False,
@@ -71,7 +68,6 @@ class Code(Scanner):
         model: Model | None = None,
         is_blocked: bool = True,
         threshold: float = 0.5,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes Code with the allowed and denied languages.
@@ -81,7 +77,6 @@ class Code(Scanner):
             languages: The list of programming languages to allow or deny.
             is_blocked: Whether the languages are blocked or allowed. Default is True.
             threshold: The threshold for the risk score. Default is 0.5.
-            use_onnx: Whether to use ONNX for inference. Default is False.
 
         Raises:
             ValueError: If the languages are not a subset of SUPPORTED_LANGUAGES.
@@ -98,7 +93,6 @@ class Code(Scanner):
 
         tf_tokenizer, tf_model = get_tokenizer_and_model_for_classification(
             model=model,
-            use_onnx=use_onnx,
         )
 
         self._pipeline = pipeline(
