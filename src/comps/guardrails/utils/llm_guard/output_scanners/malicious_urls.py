@@ -10,8 +10,8 @@ from .base import Scanner
 
 LOGGER = get_logger()
 DEFAULT_MODEL = Model(
-    path="DunnBC22/codebert-base-Malicious_URLs",
-    revision="1221284b2495a4182cdb521be9d755de56e66899",
+    path="kmack/malicious-url-detection",
+    revision="258499831602e1aea6c1f00e8483b820dd14b391",
     pipeline_kwargs={
         "top_k": None,
         "return_token_type_ids": False,
@@ -21,9 +21,7 @@ DEFAULT_MODEL = Model(
 )
 
 _malicious_labels = [
-    "defacement",
-    "phishing",
-    "malware",
+    "MALWARE",
 ]
 
 
@@ -32,7 +30,7 @@ class MaliciousURLs(Scanner):
     This scanner is used to scan and detect malicious URLs in the text.
 
     Large Language Models can occasionally produce malicious URLs in their outputs.
-    Using the "DunnBC22/codebert-base-Malicious_URLs" model from HuggingFace, this class classifies
+    Using the "kmack/malicious-url-detection" model from HuggingFace, this class classifies
     URLs as either malicious or benign to safeguard users from potential threats.
     """
 
