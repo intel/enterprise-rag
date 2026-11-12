@@ -26,6 +26,7 @@ rouge_score==0.1.2
 nltk==3.10.3
 ragas==0.4.3
 datasets==4.8.4
+pyarrow==25.0.1
 
 # HuggingFace dependencies
 huggingface-hub==1.10.2
