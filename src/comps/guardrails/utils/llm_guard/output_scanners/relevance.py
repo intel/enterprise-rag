@@ -7,7 +7,7 @@ import torch
 
 from ..model import Model
 from ..transformers_helpers import get_tokenizer
-from ..util import calculate_risk_score, device, get_logger, lazy_load_dep
+from ..util import calculate_risk_score, device, get_logger, lazy_load_dep, model_dtype
 
 from .base import Scanner
 
@@ -63,6 +63,7 @@ class Relevance(Scanner):
             model.path,
             subfolder=model.subfolder,
             revision=model.revision,
+            dtype=model_dtype(),
             **model.kwargs,
         ).to(device())
         LOGGER.debug("Initialized model", model=model, device=device())
@@ -99,7 +100,7 @@ class Relevance(Scanner):
             if self.normalize_embeddings:
                 embeddings = torch.nn.functional.normalize(embeddings, dim=-1)
 
-            embeddings = embeddings.cpu().numpy()
+            embeddings = embeddings.float().cpu().numpy()
 
         return embeddings[0]
 

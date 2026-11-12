@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal, get_args
 
 from .model import Model
-from .util import get_logger, lazy_load_dep
+from .util import get_logger, lazy_load_dep, model_dtype
 
 LOGGER = get_logger()
 
@@ -42,6 +42,7 @@ def get_tokenizer_and_model_for_classification(
         model.path,
         subfolder=model.subfolder,
         revision=model.revision,
+        dtype=model_dtype(),
         **model.kwargs,
     )
     LOGGER.debug("Initialized classification model", model=model)
@@ -66,6 +67,7 @@ def get_tokenizer_and_model_for_ner(
         model.path,
         subfolder=model.subfolder,
         revision=model.revision,
+        dtype=model_dtype(),
         **model.kwargs,
     )
     LOGGER.debug("Initialized NER model", model=model)
