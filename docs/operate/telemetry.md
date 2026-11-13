@@ -8,11 +8,11 @@ Visit `https://grafana.<base_domain_name>` (default: `https://grafana.solutions.
 
 ![login screenshot](../images/telemetry/login.png)
 
-Two sign-in methods:
+Grafana opens on its login form, with two sign-in methods:
 
 ### Grafana admin credentials
 
-Retrieve the admin password from the `grafana-admin-credentials` secret in the `monitoring` namespace:
+Enter `admin` and its password on the login form. Retrieve the password from the `grafana-admin-credentials` secret in the `monitoring` namespace:
 
 ```bash
 kubectl get secret -n monitoring grafana-admin-credentials \
@@ -20,9 +20,9 @@ kubectl get secret -n monitoring grafana-admin-credentials \
 # Username: admin
 ```
 
-### Keycloak SSO
+### Platform Keycloak SSO
 
-On the Grafana login page, select **Sign in with Keycloak** and enter your username and password. Only users in the `erag-admins` or `erag-maintainers` Keycloak group can access Grafana.
+Click **Sign in with Keycloak** on the login form and sign in with your platform account (realm `platform`), for example `platform-admin`. Members of `platform-admins` are Grafana admins; other users are Viewers. The Chatbot Toolkit realm (`EnterpriseRAG`) accounts do not sign in to Grafana.
 
 ## Dashboards
 
