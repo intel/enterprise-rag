@@ -6,6 +6,7 @@ import io
 import os
 import time
 import uuid
+from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -117,16 +118,38 @@ def _recycle_pool_if_idle():
     logger.info("Recycled process pool to release worker memory")
 
 
+def _replace_broken_pool(broken):
+    """A worker that died (OOM kill, native crash) breaks the whole pool: every later task
+    fails until the pod restarts, and the health check does not notice. Start a new pool."""
+    global pool, _completed_since_recycle
+    if pool is not broken:
+        return
+    pool = new_process_pool(_max_workers)
+    _completed_since_recycle = 0
+    broken.shutdown(wait=False)
+    logger.warning("Process pool broken (a worker died); started a new one")
+
+
 def _submit(func, *args):
     """Submit a task to the pool, tracking in-flight/completed counts to drive recycling."""
     global _inflight
+    loop = asyncio.get_event_loop()
+    current = pool
+    try:
+        future = loop.run_in_executor(current, func, *args)
+    except BrokenProcessPool:
+        _replace_broken_pool(current)
+        current = pool
+        future = loop.run_in_executor(current, func, *args)
     _inflight += 1
-    task = asyncio.ensure_future(asyncio.get_event_loop().run_in_executor(pool, func, *args))
+    task = asyncio.ensure_future(future)
 
-    def _on_done(_):
+    def _on_done(done):
         global _inflight, _completed_since_recycle
         _inflight -= 1
         _completed_since_recycle += 1
+        if not done.cancelled() and isinstance(done.exception(), BrokenProcessPool):
+            _replace_broken_pool(current)
         _recycle_pool_if_idle()
 
     task.add_done_callback(_on_done)
@@ -236,10 +259,18 @@ async def process_multipart(
         raise HTTPException(status_code=400, detail="No files, links or texts provided.")
 
     loaded_docs: list[TextDoc] = []
-    if decoded_files:
-        loaded_docs.extend((await _process_files(decoded_files)).loaded_docs)
-    if links or texts:
-        loaded_docs.extend((await _process_links_and_texts(link_list=links, texts=texts)).loaded_docs)
+    try:
+        if decoded_files:
+            loaded_docs.extend((await _process_files(decoded_files)).loaded_docs)
+        if links or texts:
+            loaded_docs.extend((await _process_links_and_texts(link_list=links, texts=texts)).loaded_docs)
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Unhandled, uvicorn answers 500 and resets the connection, which a keep-alive
+        # client (a sidecar) sends its next request into.
+        logger.exception(e)
+        raise HTTPException(status_code=500, detail=f"An error occurred while processing: {str(e)}")
 
     result = TextSplitterInput(loaded_docs=loaded_docs)
     statistics_dict[USVC_NAME].append_latency(time.time() - start, None)
@@ -267,7 +298,13 @@ async def process(input: TextExtractorInput) -> TextSplitterInput:
     if not link_list and not texts:
         raise HTTPException(status_code=400, detail="No links or texts provided.")
 
-    result = await _process_links_and_texts(link_list=link_list, texts=texts)
+    try:
+        result = await _process_links_and_texts(link_list=link_list, texts=texts)
+    except HTTPException:
+        raise
+    except Exception as e:  # see process_multipart
+        logger.exception(e)
+        raise HTTPException(status_code=500, detail=f"An error occurred while processing: {str(e)}")
     statistics_dict[USVC_NAME].append_latency(time.time() - start, None)
     return result
 
@@ -277,6 +314,7 @@ async def _process_files(decoded_files: list[tuple[str, bytes]]) -> TextSplitter
 
     # Collect async tasks: one windowed coroutine per PDF, one future per non-PDF.
     all_tasks: list = []
+    pdf_paths: list[str] = []
 
     # Non-PDF files — one pool task each
     for filename, file_bytes in decoded_files:
@@ -295,10 +333,21 @@ async def _process_files(decoded_files: list[tuple[str, bytes]]) -> TextSplitter
         with open(pdf_path, 'wb') as fout:
             fout.write(file_bytes)
         os.chmod(pdf_path, 0o600)
+        pdf_paths.append(pdf_path)
 
-        doc = pymupdf.open(pdf_path)
-        page_count = doc.page_count
-        doc.close()
+        try:
+            with pymupdf.open(pdf_path) as doc:
+                page_count = doc.page_count
+        except pymupdf.FileDataError as e:
+            # Drop this request's queued work; a PDF task cancelled before it starts does
+            # not reach its finally, so remove the files here.
+            for task in all_tasks:
+                task.cancel()
+            for path in pdf_paths:
+                if os.path.exists(path):
+                    os.remove(path)
+            logger.error(f"{filename} is not a readable PDF: {e}")
+            raise HTTPException(status_code=400, detail=f"File {filename} is not a readable PDF.")
         logger.info(f"{filename}: {page_count} pages — starting windowed processing ({_max_workers} workers)")
 
         # Extract document metadata (title, author, dates) using LoadPdf
