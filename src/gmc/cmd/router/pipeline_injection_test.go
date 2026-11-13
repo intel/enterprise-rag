@@ -13,13 +13,13 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
 
 	mcv1alpha3 "erag.intel.com/gmc/api/v1alpha3"
 	"github.com/stretchr/testify/assert"
-	"net/url"
 )
 
 // echoService starts a server that captures the request body it receives and

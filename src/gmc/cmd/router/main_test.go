@@ -15,6 +15,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -24,7 +25,6 @@ import (
 
 	mcv1alpha3 "erag.intel.com/gmc/api/v1alpha3"
 	"github.com/stretchr/testify/assert"
-	"net/url"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
