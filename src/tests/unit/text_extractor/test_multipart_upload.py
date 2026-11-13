@@ -129,3 +129,60 @@ class TestProcessLinksEndpoint:
             with pytest.raises(HTTPException) as exc_info:
                 await te_mod.process(TextExtractorInput(links=[], texts=[]))
             assert exc_info.value.status_code == 400
+
+
+class TestErrors:
+    """Errors become HTTP errors: an unhandled one makes uvicorn reset the connection."""
+
+    @pytest.mark.asyncio
+    async def test_unexpected_error_is_a_500(self, sample_txt_bytes):
+        from fastapi import HTTPException, UploadFile
+
+        with patch.object(te_mod, "_process_files", new_callable=AsyncMock, side_effect=OSError("disk full")):
+            with pytest.raises(HTTPException) as exc_info:
+                await te_mod.process_multipart(
+                    files=[UploadFile(filename="test.txt", file=io.BytesIO(sample_txt_bytes))], links=[], texts=[])
+            assert exc_info.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_unexpected_error_in_process_is_a_500(self):
+        from fastapi import HTTPException
+
+        with patch.object(te_mod, "_process_links_and_texts", new_callable=AsyncMock, side_effect=OSError("x")):
+            with pytest.raises(HTTPException) as exc_info:
+                await te_mod.process(TextExtractorInput(texts=["t"]))
+            assert exc_info.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_unreadable_pdf_is_a_400_and_leaves_no_files(self, tmp_path, monkeypatch):
+        import pymupdf
+        from fastapi import HTTPException
+
+        monkeypatch.setenv("UPLOAD_PATH", str(tmp_path))
+        good = pymupdf.open()
+        good.new_page().insert_text((72, 300), "good")
+        with patch.object(te_mod, "_process_pdf_windowed", new_callable=AsyncMock) as windowed:
+            with pytest.raises(HTTPException) as exc_info:
+                await te_mod._process_files([("good.pdf", good.tobytes()), ("bad.pdf", b"%PDF-1.4 not really")])
+        assert exc_info.value.status_code == 400 and "bad.pdf" in exc_info.value.detail
+        assert list(tmp_path.iterdir()) == []
+
+
+def _die():
+    os._exit(1)
+
+
+class TestBrokenPool:
+    @pytest.mark.asyncio
+    async def test_a_dead_worker_gets_a_new_pool(self, monkeypatch):
+        from concurrent.futures.process import BrokenProcessPool
+        from comps.cores.utils.process_pool import new_process_pool
+
+        monkeypatch.setattr(te_mod, "pool", new_process_pool(1))
+        monkeypatch.setattr(te_mod, "_inflight", 0)
+        broken = te_mod.pool
+        with pytest.raises(BrokenProcessPool):
+            await te_mod._submit(_die)
+        assert te_mod.pool is not broken
+        assert await te_mod._submit(os.getpid) != os.getpid()
+        te_mod.pool.shutdown()
