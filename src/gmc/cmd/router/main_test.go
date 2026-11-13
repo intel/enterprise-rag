@@ -1038,6 +1038,33 @@ func TestSequenceMalformed422NoPanic(t *testing.T) {
 	}
 }
 
+func TestMcGraphHandlerRejectsMalformedJSON(t *testing.T) {
+	for _, routerType := range []mcv1alpha3.RouterType{mcv1alpha3.Sequence, mcv1alpha3.Ensemble} {
+		t.Run(string(routerType), func(t *testing.T) {
+			url, received, closeFn := echoService(t)
+			defer closeFn()
+
+			prevGraph := mcGraph
+			t.Cleanup(func() { mcGraph = prevGraph })
+			mcGraph = &mcv1alpha3.GMConnector{
+				Spec: mcv1alpha3.GMConnectorSpec{
+					Nodes: map[string]mcv1alpha3.Router{
+						"root": {RouterType: routerType, Steps: []mcv1alpha3.Step{leafStep("Llm", url, "")}},
+					},
+				},
+			}
+
+			req := httptest.NewRequest("POST", "/", strings.NewReader(`{"text": "Hello", "target_language":`))
+			req.Header.Set("Content-Type", JSONContentType)
+			rr := httptest.NewRecorder()
+			mcGraphHandler(rr, req)
+
+			assert.Equal(t, http.StatusBadRequest, rr.Code)
+			assert.Empty(t, received, "a malformed request must not reach any step")
+		})
+	}
+}
+
 // TestEnsembleCancelsSiblingsOnHardFailure verifies that when a hard-dependency
 // step fails fast, the sibling goroutines are cancelled and none is left leaked
 // on a blocked send. It runs under -race and asserts the goroutine count settles

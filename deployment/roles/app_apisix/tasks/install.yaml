@@ -1,3 +1,6 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
 ---
 - name: "app_apisix | Ensure Helm repository is added"
   kubernetes.core.helm_repository:
@@ -135,3 +138,8 @@
   until: helm_repo_install_result is succeeded
   retries: "{{ helm_retries }}"
   delay: 15
+
+- name: "app_apisix | API route without the UI"
+  ansible.builtin.include_tasks: api_route.yaml
+  vars:
+    _apisix_api_route_present: "{{ not (ui_enabled | default(false) | bool) }}"

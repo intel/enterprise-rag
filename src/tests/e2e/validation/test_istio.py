@@ -86,6 +86,15 @@ docsum_endpoints = [
 if cfg.get("pipeline_type") == "docsum":
     http_endpoints.extend(docsum_endpoints)
 
+translation_endpoints = [
+    "langdtct-svc.translation.svc.cluster.local:8001",
+    "llm-svc.translation.svc.cluster.local:9000",
+    "prompt-template-svc.translation.svc.cluster.local:7900",
+    "router-service.translation.svc.cluster.local:8080",
+]
+if cfg.get("pipeline_type") == "translation":
+    http_endpoints.extend(translation_endpoints)
+
 # Service names follow the Helm release names pinned in the core installer's
 # roles/observability/tasks/install.yaml (kube-prometheus-stack, loki, tempo,
 # opentelemetry-collector), all in the single `monitoring` namespace.

@@ -5,6 +5,7 @@
 set -e
 set -o pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/require_response.sh"
 
 # Function to handle errors
 error_handler() {
@@ -18,7 +19,6 @@ error_handler() {
 trap 'error_handler' ERR
 
 NAMESPACE=${1:-translation}
-NAMESPACE=${1:-chatqna}
 CLIENT_POD=""
 accessUrl=""
 
@@ -47,14 +47,6 @@ for lang in "${target_languages[@]}"; do
         curl --no-buffer -s $accessUrl -X POST -d "$JSON_PAYLOAD" -H 'Content-Type: application/json' | awk '{ gsub(/^data: /, ""); gsub(/'\''/, ""); printf     "%s", $0 }'
 
     kubectl exec "$CLIENT_POD" -n $NAMESPACE -- \
-        curl --no-buffer -s $accessUrl -X POST -d "$JSON_PAYLOAD" -H 'Content-Type: application/json' | awk '{ gsub(/^data: /, ""); gsub(/'\''/, ""); printf     "%s", $0 }'
-    echo ""
-    test_return_code=$?
-
-    if [ $test_return_code -eq 0 ]; then
-        echo "Test finished successfully"
-    else
-        echo "Test failed with return code:$test_return_code"
-    fi
+        curl --no-buffer -sf $accessUrl -X POST -d "$JSON_PAYLOAD" -H 'Content-Type: application/json' | awk '{ gsub(/^data: /, ""); gsub(/'\''/, ""); printf     "%s", $0 }' | require_response
 done
 exit

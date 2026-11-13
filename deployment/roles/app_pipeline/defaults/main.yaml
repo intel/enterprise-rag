@@ -13,6 +13,7 @@
 #   chatqna | docsum | translation
 pipeline_type: "chatqna"
 pipeline_variant: "base"
+pipeline_namespace: "{{ pipeline_type }}"
 
 # --- router-service readiness gate (before applying the APISIX route) ---
 pipeline_router_wait_retries: 30

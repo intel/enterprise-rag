@@ -5,6 +5,7 @@
 set -e
 set -o pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/require_response.sh"
 
 # Function to handle errors
 error_handler() {
@@ -51,16 +52,7 @@ PARAMETERS='{
 }'
 
 kubectl exec -i "$CLIENT_POD" -n $NAMESPACE -- \
-    curl --no-buffer -s "$accessUrl" -X POST \
+    curl --no-buffer -sf "$accessUrl" -X POST \
         -F 'files=@-;filename=ai_overview.txt' \
         -F "parameters=${PARAMETERS}" \
-    < ./scripts/ai_overview.txt
-
-test_return_code=$?
-
-# !TODO returns 0 if curl succeed, but answer was not proper
-if [ $test_return_code -eq 0 ]; then
-    echo "Test finished successfully"
-else
-    echo "Test failed with return code:$test_return_code"
-fi
+    < ./scripts/ai_overview.txt | require_response

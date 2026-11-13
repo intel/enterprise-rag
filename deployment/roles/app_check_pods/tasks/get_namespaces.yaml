@@ -15,7 +15,7 @@
       {{
         [
           apisix_namespace if (apisix_enabled | default(true) | bool) else None,
-          ui_namespace if (ui_enabled | default(true) | bool) else None,
+          ui_namespace if (ui_enabled | default(false) | bool) else None,
           edp_namespace if (edp_enabled | default(false) | bool) else None,
           fingerprint_namespace,
           chat_history_namespace if (chat_history_enabled | default(false) | bool) else None,

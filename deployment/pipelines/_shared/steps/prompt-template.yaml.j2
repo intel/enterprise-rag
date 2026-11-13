@@ -2,7 +2,6 @@
 {# SPDX-License-Identifier: Apache-2.0 #}
 
 {# Shared Prompt Template step - format context and query for the LLM. #}
-{# Identical across chatqna and translation.                           #}
 step:
   name: PromptTemplate
   dependency: Hard
@@ -11,8 +10,10 @@ step:
     serviceName: prompt-template-svc
     config:
       endpoint: /v1/prompt_template
+{% if (endpoints.prompt_template | default({})).inject_params | default(true) %}
       paramsKey: prompt_template
       paramsKind: prompt_template
+{% endif %}
 resources:
   prompt-template-usvc:
     replicas: 1
