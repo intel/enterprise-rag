@@ -6,7 +6,6 @@ import io
 import os
 import time
 import uuid
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -24,6 +23,7 @@ from comps.cores.mega.logger import change_erag_logger_level, get_erag_logger
 from comps.cores.mega.micro_service import erag_microservices, register_microservice
 from comps.cores.proto.docarray import TextDoc, TextExtractorInput, TextSplitterInput
 from comps.text_extractor.utils.file_loaders.load_pdf import LoadPdf, _process_single_page_from_file
+from comps.text_extractor.utils.process_pool import new_process_pool
 
 
 # Define the unique service name for the microservice
@@ -92,7 +92,7 @@ _max_workers = int(os.getenv('TEXT_EXTRACTOR_MAX_WORKERS', 4))
 # container with a SemLock rebuild error — recycling the fork pool when idle is the safe
 # equivalent. 0 disables.
 _recycle_after = int(os.getenv('TEXT_EXTRACTOR_MAX_TASKS_PER_CHILD', 100))
-pool = ProcessPoolExecutor(max_workers=_max_workers)
+pool = new_process_pool(_max_workers)
 logger.info(
     f"ProcessPoolExecutor initialized with max_workers={_max_workers}, "
     f"recycle_after={_recycle_after or 'disabled'} tasks "
@@ -111,7 +111,7 @@ def _recycle_pool_if_idle():
     if _recycle_after <= 0 or _inflight != 0 or _completed_since_recycle < _recycle_after:
         return
     old = pool
-    pool = ProcessPoolExecutor(max_workers=_max_workers)
+    pool = new_process_pool(_max_workers)
     _completed_since_recycle = 0
     old.shutdown(wait=False)
     logger.info("Recycled process pool to release worker memory")
