@@ -13,20 +13,20 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
 
 	mcv1alpha3 "erag.intel.com/gmc/api/v1alpha3"
 	"github.com/stretchr/testify/assert"
-	"knative.dev/pkg/apis"
 )
 
 // echoService starts a server that captures the request body it receives and
 // replies with a fixed JSON object. The captured body is delivered on the
 // returned channel so a test can assert what reached the service after
 // injection. It is used to check that a leaf step is sent its parameter group.
-func echoService(t *testing.T) (url string, received chan []byte, closeFn func()) {
+func echoService(t *testing.T) (serviceURL string, received chan []byte, closeFn func()) {
 	t.Helper()
 	received = make(chan []byte, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -40,7 +40,7 @@ func echoService(t *testing.T) (url string, received chan []byte, closeFn func()
 			t.Errorf("echoService failed to write response: %v", err)
 		}
 	}))
-	parsed, err := apis.ParseURL(srv.URL)
+	parsed, err := url.Parse(srv.URL)
 	if err != nil {
 		t.Fatalf("failed to parse echo service url: %v", err)
 	}
@@ -305,7 +305,7 @@ func TestMcGraphHandlerCallerParamsReachLeaf(t *testing.T) {
 				_, _ = io.WriteString(rw, `{"docs": [], "stream": true}`)
 			}))
 			defer upstream.Close()
-			upstreamURL, err := apis.ParseURL(upstream.URL)
+			upstreamURL, err := url.Parse(upstream.URL)
 			if err != nil {
 				t.Fatal(err)
 			}

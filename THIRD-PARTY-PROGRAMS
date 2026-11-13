@@ -2339,6 +2339,10 @@
     * Origin: gopkg
     * License: mit
 
+* Component: github.com/evanphx/json-patch
+    * Origin: gopkg
+    * License: bsd-3-clause
+
 * Component: github.com/evanphx/json-patch/v5
     * Origin: gopkg
     * License: bsd-3-clause
@@ -2622,10 +2626,6 @@
 * Component: go.uber.org/zap
     * Origin: gopkg
     * License: mit
-
-* Component: go.yaml.in/yaml/v2
-    * Origin: gopkg
-    * License: apache-2.0
 
 * Component: golang.org/x/crypto
     * Origin: gopkg
@@ -3338,10 +3338,6 @@
 * Component: kiwisolver
     * Origin: pypi
     * License: mit
-
-* Component: knative.dev/pkg
-    * Origin: gopkg
-    * License: apache-2.0
 
 * Component: kolorist
     * Origin: npm

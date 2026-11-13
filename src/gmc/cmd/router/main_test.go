@@ -15,6 +15,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -24,7 +25,6 @@ import (
 
 	mcv1alpha3 "erag.intel.com/gmc/api/v1alpha3"
 	"github.com/stretchr/testify/assert"
-	"knative.dev/pkg/apis"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -47,7 +47,7 @@ func TestSimpleModelChainer(t *testing.T) {
 			return
 		}
 	}))
-	service1Url, err := apis.ParseURL(service1.URL)
+	service1Url, err := url.Parse(service1.URL)
 	if err != nil {
 		t.Fatalf("Failed to parse model url")
 	}
@@ -64,7 +64,7 @@ func TestSimpleModelChainer(t *testing.T) {
 			return
 		}
 	}))
-	service2Url, err := apis.ParseURL(service2.URL)
+	service2Url, err := url.Parse(service2.URL)
 	if err != nil {
 		t.Fatalf("Failed to parse model url")
 	}
@@ -150,7 +150,7 @@ func TestSimpleServiceEnsemble(t *testing.T) {
 			return
 		}
 	}))
-	service1Url, err := apis.ParseURL(service1.URL)
+	service1Url, err := url.Parse(service1.URL)
 	if err != nil {
 		t.Fatalf("Failed to parse model url")
 	}
@@ -170,7 +170,7 @@ func TestSimpleServiceEnsemble(t *testing.T) {
 			return
 		}
 	}))
-	service2Url, err := apis.ParseURL(service2.URL)
+	service2Url, err := url.Parse(service2.URL)
 	if err != nil {
 		t.Fatalf("Failed to parse model url")
 	}
@@ -269,7 +269,7 @@ func TestMCWithCondition(t *testing.T) {
 			return
 		}
 	}))
-	service1Url, err := apis.ParseURL(service1.URL)
+	service1Url, err := url.Parse(service1.URL)
 	if err != nil {
 		t.Fatalf("Failed to parse model url")
 	}
@@ -298,7 +298,7 @@ func TestMCWithCondition(t *testing.T) {
 			return
 		}
 	}))
-	service2Url, err := apis.ParseURL(service2.URL)
+	service2Url, err := url.Parse(service2.URL)
 	if err != nil {
 		t.Fatalf("Failed to parse model url")
 	}
@@ -329,7 +329,7 @@ func TestMCWithCondition(t *testing.T) {
 			return
 		}
 	}))
-	service3Url, err := apis.ParseURL(service3.URL)
+	service3Url, err := url.Parse(service3.URL)
 	if err != nil {
 		t.Fatalf("Failed to parse model url")
 	}
@@ -358,7 +358,7 @@ func TestMCWithCondition(t *testing.T) {
 			return
 		}
 	}))
-	service4Url, err := apis.ParseURL(service4.URL)
+	service4Url, err := url.Parse(service4.URL)
 	if err != nil {
 		t.Fatalf("Failed to parse model url")
 	}
@@ -511,7 +511,7 @@ func TestCallServiceWhenNoneHeadersToPropagateIsEmpty(t *testing.T) {
 			return
 		}
 	}))
-	service1Url, err := apis.ParseURL(service1.URL)
+	service1Url, err := url.Parse(service1.URL)
 	if err != nil {
 		t.Fatalf("Failed to parse model url")
 	}
@@ -663,7 +663,7 @@ func TestMcGraphHandler(t *testing.T) {
 			return
 		}
 	}))
-	service1Url, err := apis.ParseURL(service1.URL)
+	service1Url, err := url.Parse(service1.URL)
 	if err != nil {
 		t.Fatalf("Failed to parse model url")
 	}
@@ -692,7 +692,7 @@ func TestMcGraphHandler(t *testing.T) {
 			return
 		}
 	}))
-	service2Url, err := apis.ParseURL(service2.URL)
+	service2Url, err := url.Parse(service2.URL)
 	if err != nil {
 		t.Fatalf("Failed to parse model url")
 	}
@@ -953,7 +953,7 @@ func TestSwitchSelectsFirstMatchOnly(t *testing.T) {
 		_, _ = rw.Write([]byte(`{"predictions": "first"}`))
 	}))
 	defer first.Close()
-	firstURL, err := apis.ParseURL(first.URL)
+	firstURL, err := url.Parse(first.URL)
 	if err != nil {
 		t.Fatalf("failed to parse first url")
 	}
@@ -962,7 +962,7 @@ func TestSwitchSelectsFirstMatchOnly(t *testing.T) {
 		_, _ = rw.Write([]byte(`{"predictions": "second"}`))
 	}))
 	defer second.Close()
-	secondURL, err := apis.ParseURL(second.URL)
+	secondURL, err := url.Parse(second.URL)
 	if err != nil {
 		t.Fatalf("failed to parse second url")
 	}
@@ -1006,7 +1006,7 @@ func TestSequenceMalformed422NoPanic(t *testing.T) {
 		_, _ = rw.Write([]byte(`{"detail": []}`))
 	}))
 	defer service.Close()
-	serviceURL, err := apis.ParseURL(service.URL)
+	serviceURL, err := url.Parse(service.URL)
 	if err != nil {
 		t.Fatalf("failed to parse service url")
 	}
@@ -1076,7 +1076,7 @@ func TestEnsembleCancelsSiblingsOnHardFailure(t *testing.T) {
 		_, _ = rw.Write([]byte(`{"detail": "boom"}`))
 	}))
 	defer failing.Close()
-	failingURL, err := apis.ParseURL(failing.URL)
+	failingURL, err := url.Parse(failing.URL)
 	if err != nil {
 		t.Fatalf("failed to parse failing url")
 	}
@@ -1093,7 +1093,7 @@ func TestEnsembleCancelsSiblingsOnHardFailure(t *testing.T) {
 		_, _ = rw.Write([]byte(`{"predictions": "late"}`))
 	}))
 	defer slow.Close()
-	slowURL, err := apis.ParseURL(slow.URL)
+	slowURL, err := url.Parse(slow.URL)
 	if err != nil {
 		t.Fatalf("failed to parse slow url")
 	}
@@ -1143,7 +1143,7 @@ func TestEnsemblePartialFailureReported(t *testing.T) {
 		_, _ = rw.Write([]byte(`{"predictions": "1"}`))
 	}))
 	defer ok.Close()
-	okURL, err := apis.ParseURL(ok.URL)
+	okURL, err := url.Parse(ok.URL)
 	if err != nil {
 		t.Fatalf("failed to parse ok url")
 	}
@@ -1152,7 +1152,7 @@ func TestEnsemblePartialFailureReported(t *testing.T) {
 		_, _ = rw.Write([]byte(`{"detail": "boom"}`))
 	}))
 	defer bad.Close()
-	badURL, err := apis.ParseURL(bad.URL)
+	badURL, err := url.Parse(bad.URL)
 	if err != nil {
 		t.Fatalf("failed to parse bad url")
 	}
@@ -1194,7 +1194,7 @@ func TestPerStepTimeout(t *testing.T) {
 		}
 	}))
 	defer slow.Close()
-	slowURL, err := apis.ParseURL(slow.URL)
+	slowURL, err := url.Parse(slow.URL)
 	if err != nil {
 		t.Fatalf("failed to parse slow url")
 	}
@@ -1228,7 +1228,7 @@ func TestMcGraphHandlerStreamsSSEWithSeparators(t *testing.T) {
 		_, _ = io.WriteString(rw, "data: one\n\ndata: two\n\ndata: [DONE]\n\n")
 	}))
 	defer upstream.Close()
-	upstreamURL, err := apis.ParseURL(upstream.URL)
+	upstreamURL, err := url.Parse(upstream.URL)
 	if err != nil {
 		t.Fatalf("failed to parse upstream url")
 	}
@@ -1290,7 +1290,7 @@ func TestMcGraphHandlerForwardsWholeJSONTrailer(t *testing.T) {
 		_, _ = io.WriteString(rw, "json: {\"reranked_docs\":[\n{\"text\":\"a\"}\n]}\n")
 	}))
 	defer upstream.Close()
-	upstreamURL, err := apis.ParseURL(upstream.URL)
+	upstreamURL, err := url.Parse(upstream.URL)
 	if err != nil {
 		t.Fatalf("failed to parse upstream url")
 	}
@@ -1336,7 +1336,7 @@ func TestMcGraphHandlerPassesLargeNonStreamingBody(t *testing.T) {
 		_, _ = io.WriteString(rw, large)
 	}))
 	defer upstream.Close()
-	upstreamURL, err := apis.ParseURL(upstream.URL)
+	upstreamURL, err := url.Parse(upstream.URL)
 	if err != nil {
 		t.Fatalf("failed to parse upstream url")
 	}
@@ -1380,7 +1380,7 @@ func TestEnsembleKeepsNonJSONHardStepResponse(t *testing.T) {
 		_, _ = io.WriteString(rw, "data: hello\n\n")
 	}))
 	defer upstream.Close()
-	upstreamURL, err := apis.ParseURL(upstream.URL)
+	upstreamURL, err := url.Parse(upstream.URL)
 	if err != nil {
 		t.Fatalf("failed to parse upstream url")
 	}
@@ -1436,7 +1436,7 @@ func TestEnsembleFanoutBudgetIsSharedPerRequest(t *testing.T) {
 		_, _ = io.WriteString(rw, `{"ok":true}`)
 	}))
 	defer upstream.Close()
-	upstreamURL, err := apis.ParseURL(upstream.URL)
+	upstreamURL, err := url.Parse(upstream.URL)
 	if err != nil {
 		t.Fatalf("failed to parse upstream url")
 	}
