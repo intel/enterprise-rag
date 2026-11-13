@@ -2,8 +2,7 @@
 # solution_version and default_image_tag live in version.yaml. Guarded, so the
 # copy the manifest role already loaded on the install path is not re-read.
 - name: "app_pre_install | Load version metadata"
-  ansible.builtin.include_vars:
-    file: "{{ deployment_dir }}/version.yaml"
+  ansible.builtin.include_tasks: load_version.yaml
   when: solution_version is not defined
 
 - name: "app_pre_install | Apply the default image tag when none is configured"

@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 - name: "deployment_manifest | Load version metadata"
-  ansible.builtin.include_vars:
-    file: "{{ deployment_dir }}/version.yaml"
+  ansible.builtin.include_role:
+    name: app_pre_install
+    tasks_from: load_version.yaml
   when: solution_version is not defined
 
 # Asked once, here, rather than read from a variable: the cluster version belongs

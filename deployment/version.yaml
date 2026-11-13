@@ -1,5 +1,16 @@
+schema: 1
+layer: erag
 solution_version: 3.0.0
-upgrade_base_version: ">=3.0.0"
+# Versions an existing deployment may be upgraded from, checked by
+# app_deployment_manifest. This first release accepts only its own line.
+upgrade_base_version: ">=3.0.0,<3.1.0"
+
+# Versions of the layers below and of the core installer this release runs on.
+# platform and installer are the core installer's VERSION.
+requires:
+  platform: ">=1.1.0,<1.2.0"
+  inference: ">=1.1.0,<1.2.0"
+  installer: ">=1.1.0,<2.0.0"
 
 # Container image tag used when the configuration does not set one. Kept equal
 # to solution_version.

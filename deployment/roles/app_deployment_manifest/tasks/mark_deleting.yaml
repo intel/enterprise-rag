@@ -3,8 +3,9 @@
 ---
 # solution_version is referenced below, and teardown does not otherwise load it.
 - name: "deployment_manifest | Load version metadata"
-  ansible.builtin.include_vars:
-    file: "{{ deployment_dir }}/version.yaml"
+  ansible.builtin.include_role:
+    name: app_pre_install
+    tasks_from: load_version.yaml
   when: solution_version is not defined
 
 - name: "deployment_manifest | Check for existing manifest"

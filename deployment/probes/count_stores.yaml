@@ -1,0 +1,40 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+---
+# Counts the vector store, chat history, data platform and identity stores
+# through app_data_consistency's snapshot, without writing a snapshot file.
+# shortcut: a failed count Job fails this probe, and the installer then records
+# all four stores as skipped; split into one probe per store once the snapshot
+# is no longer used elsewhere.
+
+# The identity count Job runs the init container image; before app_pre_install
+# has run, the tag may still be unset.
+# deployment_dir is not set when the installer runs the probe; _layer_dirs and
+# upgrade_record_layer are.
+- name: "erag probe | Resolve the image tag"
+  ansible.builtin.set_fact:
+    _erag_probe_tag: >-
+      {{ tag | default('', true) or (lookup('ansible.builtin.file', _layer_dirs[upgrade_record_layer] ~ '/version.yaml') | from_yaml).default_image_tag }}
+
+- name: "erag probe | Count the data stores"
+  ansible.builtin.include_role:
+    name: app_data_consistency
+    tasks_from: snapshot.yaml
+  vars:
+    rag_tmp_dir: "{{ data_consistency_tmp_dir }}"
+    tag: "{{ _erag_probe_tag }}"
+
+- name: "erag probe | Start the counts of this run"
+  ansible.builtin.set_fact:
+    data_consistency_counts: {}
+
+# A store the snapshot did not count carries its reason, never a count of 0.
+- name: "erag probe | Report the counts"
+  ansible.builtin.set_fact:
+    data_consistency_counts: >-
+      {{ data_consistency_counts | combine({item.key:
+           item.value.count if item.value.status == 'ok'
+           else {'skipped': item.value.reason}}) }}
+  loop: "{{ _data_snapshot | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"

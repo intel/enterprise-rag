@@ -10,8 +10,7 @@
 # in scope. It lives in version.yaml, which the installer does not pass as
 # extra-vars — load it here rather than letting the gate guess.
 - name: "app_pre_install | Upgrade — load the solution version"
-  ansible.builtin.include_vars:
-    file: "{{ deployment_dir }}/version.yaml"
+  ansible.builtin.include_tasks: load_version.yaml
   when:
     - backup_enabled | default(false) | bool
     - solution_version is not defined
