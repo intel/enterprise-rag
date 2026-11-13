@@ -20,9 +20,7 @@ DEFAULT_MODEL = Model(
     },
 )
 
-_malicious_labels = [
-    "MALWARE",
-]
+_MALICIOUS_LABEL = "MALWARE"
 
 
 class MaliciousURLs(Scanner):
@@ -78,7 +76,7 @@ class MaliciousURLs(Scanner):
         results = self._classifier(urls)
         for url, result in zip(urls, results):
             malicious_scores = [
-                item["score"] for item in result if item["label"] in _malicious_labels
+                item["score"] for item in result if item["label"] == _MALICIOUS_LABEL
             ]
             highest_malicious_score = max(malicious_scores)
             if highest_malicious_score > self._threshold:
