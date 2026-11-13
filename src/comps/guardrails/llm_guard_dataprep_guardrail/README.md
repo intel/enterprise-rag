@@ -68,7 +68,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                  | Type   | Default in LLM Guard  | Required / Optional |
 |----------------------------|--------------------------------------------------------------|--------|-----------------------|---------------------|
 | `BAN_TOPICS_ENABLED`       | Enables BanTopics scanner.                                   | bool   | false               | Required            |
-| `BAN_TOPICS_USE_ONNX`      | Enables usage of ONNX optimized model for BanTopics scanner. | bool   | false                | Required            |
 | `BAN_TOPICS_TOPICS`        | List of topics to be banned.                                 | string | "violence,attack,war" | Required            |
 | `BAN_TOPICS_THRESHOLD`     | Threshold for BanTopics scanner.                             | float  | 0.5                   | Optional            |
 | `BAN_TOPICS_MODEL`         | Model to be used for BanTopics scanner.                      | string | none            | Optional            |
@@ -78,7 +77,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                 | Type   | Default in LLM Guard  | Required / Optional |
 |----------------------------|-------------------------------------------------------------|--------|-----------------------|---------------------|
 | `CODE_ENABLED`             | Enables Code scanner.                                       | bool   | false               | Required            |
-| `CODE_USE_ONNX`            | Enables usage of ONNX optimized model for Code scanner.     | bool   | false                | Required            |
 | `CODE_LANGUAGES`           | List of programming languages to be detected.               | string | "Java,Python"         | Required            |
 | `CODE_MODEL`               | Model to be used for Code scanner.                          | string | none       | Optional            |
 | `CODE_IS_BLOCKED`          | Enables blocking of detected code.                          | bool   | false               | Optional            |
@@ -95,7 +93,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable          | Description                                                        | Type   | Default in LLM Guard  | Required / Optional |
 |-------------------------------|--------------------------------------------------------------------|--------|-----------------------|---------------------|
 | `PROMPT_INJECTION_ENABLED`    | Enables PromptInjection scanner.                                   | bool   | false               | Required            |
-| `PROMPT_INJECTION_USE_ONNX`   | Enables usage of ONNX optimized model for PromptInjection scanner. | bool   | false                | Required            |
 | `PROMPT_INJECTION_MODEL`      | Model to be used for PromptInjection scanner.                      | string | none            | Optional            |
 | `PROMPT_INJECTION_THRESHOLD`  | Threshold for PromptInjection scanner.                             | float  | 0.92                  | Optional            |
 | `PROMPT_INJECTION_MATCH_TYPE` | Match type for prompt injection detection.                         | string | "full"                | Optional            |
@@ -138,7 +135,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                                   | Type   | Default in LLM Guard  | Required / Optional |
 |----------------------------|-------------------------------------------------------------------------------|--------|-----------------------|---------------------|
 | `TOXICITY_ENABLED`         | Enables Toxicity scanner.                                                     | bool   | false               | Required            |
-| `TOXICITY_USE_ONNX`        | Enables usage of ONNX optimized model for Toxicity scanner.                   | bool   | false                | Required            |
 | `TOXICITY_MODEL`           | Model to be used for Toxicity scanner.                                        | string | none       | Optional            |
 | `TOXICITY_THRESHOLD`       | Threshold for Toxicity scanner.                                               | float  | 0.5                   | Optional            |
 | `TOXICITY_MATCH_TYPE`      | Match type for toxicity detection.                                            | string | "full"                | Optional            |

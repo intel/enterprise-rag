@@ -5,6 +5,7 @@
 set -e
 set -o pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/require_response.sh"
 
 # Function to handle errors
 error_handler() {
@@ -40,13 +41,4 @@ JSON_PAYLOAD='{
 echo "Connecting to the server through the pod $CLIENT_POD using URL $accessUrl..."
 
 kubectl exec "$CLIENT_POD" -n $NAMESPACE -- \
-    curl --no-buffer -s $accessUrl -X POST -d "$JSON_PAYLOAD" -H 'Content-Type: application/json'
-
-test_return_code=$?
-
-# !TODO returns 0 if curl succeed, but anwer was not proper
-if [ $test_return_code -eq 0 ]; then
-    echo "Test finished successfully"
-else
-    echo "Test failed with return code:$test_return_code"
-fi
+    curl --no-buffer -sf $accessUrl -X POST -d "$JSON_PAYLOAD" -H 'Content-Type: application/json' | require_response

@@ -22,7 +22,6 @@ class LanguageSame(Scanner):
         *,
         model: Model | None = None,
         threshold: float = 0.1,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes the LanguageSame scanner.
@@ -30,7 +29,6 @@ class LanguageSame(Scanner):
         Parameters:
             model (Model, optional): Model to be used for scanning. Default is None.
             threshold (float): Minimum confidence score
-            use_onnx (bool): Whether to use ONNX for inference. Default is False.
         """
 
         self._threshold = threshold
@@ -40,7 +38,6 @@ class LanguageSame(Scanner):
 
         tf_tokenizer, tf_model = get_tokenizer_and_model_for_classification(
             model=model,
-            use_onnx=use_onnx,
         )
 
         self._pipeline = pipeline(

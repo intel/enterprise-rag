@@ -16,9 +16,6 @@ class Model:
         path (str): Path to the model.
         subfolder (str): Subfolder in the model path.
         revision (str, optional): Revision of the model.
-        onnx_path (str, optional): Path to the ONNX model.
-        onnx_revision (str, optional): Revision of the ONNX model.
-        onnx_subfolder (str): Subfolder in the ONNX model path.
         kwargs (Dict, optional): Keyword arguments passed to the model (transformers).
         pipeline_kwargs (Dict, optional): Keyword arguments passed to the pipeline (transformers).
     """
@@ -26,10 +23,6 @@ class Model:
     path: str
     subfolder: str = ""
     revision: str | None = None
-    onnx_path: str | None = None
-    onnx_revision: str | None = None
-    onnx_subfolder: str = ""
-    onnx_filename: str = "model.onnx"
     kwargs: dict = dataclasses.field(default_factory=dict)
     pipeline_kwargs: dict = dataclasses.field(default_factory=dict)
     tokenizer_kwargs: dict = dataclasses.field(default_factory=dict)

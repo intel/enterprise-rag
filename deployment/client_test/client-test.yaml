@@ -1,0 +1,65 @@
+# Copyright (C) 2024-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    checkov.io/skip1: CKV_K8S_21=Namespace set by the caller
+    checkov.io/skip2: CKV2_K8S_6=Short-lived test client
+  labels:
+    app: client-test
+  name: client-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client-test
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: client-test
+    spec:
+      serviceAccountName: client-test
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - image: curlimages/curl:8.23.0@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
+        name: curl
+        command: ["/bin/sh", "-c"]
+        args: ["trap exit TERM; sleep 300 & wait"]
+        livenessProbe:
+          exec:
+            command: ["curl", "--version"]
+        readinessProbe:
+          exec:
+            command: ["curl", "--version"]
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "16Mi"
+          limits:
+            cpu: "100m"
+            memory: "64Mi"
+        securityContext:
+          capabilities:
+            drop:
+              - ALL
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: client-test
+  annotations:
+    checkov.io/skip1: CKV_K8S_21=Namespace set by the caller
+automountServiceAccountToken: false

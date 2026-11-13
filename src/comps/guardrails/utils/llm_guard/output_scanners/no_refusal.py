@@ -16,9 +16,6 @@ LOGGER = get_logger()
 DEFAULT_MODEL = Model(
     path="ProtectAI/distilroberta-base-rejection-v1",
     revision="65584967c3f22ff7723e5370c65e0e76791e6055",
-    onnx_path="ProtectAI/distilroberta-base-rejection-v1",
-    onnx_revision="65584967c3f22ff7723e5370c65e0e76791e6055",
-    onnx_subfolder="onnx",
     pipeline_kwargs={
         "return_token_type_ids": False,
         "max_length": 128,
@@ -51,7 +48,6 @@ class NoRefusal(Scanner):
         model: Model | None = None,
         threshold: float = 0.75,
         match_type: MatchType | str = MatchType.FULL,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes an instance of the NoRefusal class.
@@ -60,7 +56,6 @@ class NoRefusal(Scanner):
             model (Model, optional): The model to use for refusal detection.
             threshold (float): The similarity threshold to consider an output as refusal.
             match_type (MatchType): Whether to match the full text or individual sentences. Default is MatchType.FULL.
-            use_onnx (bool): Whether to use the ONNX version of the model. Defaults to False.
         """
 
         if isinstance(match_type, str):
@@ -74,7 +69,6 @@ class NoRefusal(Scanner):
 
         tf_tokenizer, tf_model = get_tokenizer_and_model_for_classification(
             model=model,
-            use_onnx=use_onnx,
         )
 
         self._pipeline = pipeline(

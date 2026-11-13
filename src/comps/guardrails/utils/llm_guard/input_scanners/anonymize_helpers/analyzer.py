@@ -100,7 +100,6 @@ def _get_nlp_engine(languages: list[str]) -> NlpEngine:
 def get_transformers_recognizer(
     *,
     recognizer_conf: NERConfig,
-    use_onnx: bool = False,
     supported_language: str = "en",
 ) -> EntityRecognizer:
     """
@@ -108,7 +107,6 @@ def get_transformers_recognizer(
 
     Args:
         recognizer_conf: Configuration to recognize PII data.
-        use_onnx: Whether to use the ONNX version of the model. Default is False.
         supported_language: The language to use for the recognizer. Default is "en".
     """
     model = recognizer_conf.get("DEFAULT_MODEL")
@@ -119,7 +117,6 @@ def get_transformers_recognizer(
         supported_language=supported_language,
     )
     transformers_recognizer.load_transformer(
-        use_onnx=use_onnx,
         **recognizer_conf,
     )
     return transformers_recognizer

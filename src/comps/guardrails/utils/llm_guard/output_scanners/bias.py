@@ -15,8 +15,6 @@ LOGGER = get_logger()
 DEFAULT_MODEL = Model(
     path="valurank/distilroberta-bias",
     revision="c1e4a2773522c3acc929a7b2c9af2b7e4137b96d",
-    onnx_path="ProtectAI/distilroberta-bias-onnx",
-    onnx_revision="3e64d057d20d7ef43fa4f831b992bad28d72640e",
     pipeline_kwargs={
         "return_token_type_ids": False,
         "max_length": 512,
@@ -47,7 +45,6 @@ class Bias(Scanner):
         model: Model | None = None,
         threshold: float = 0.7,
         match_type: MatchType | str = MatchType.FULL,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes the Bias scanner with a probability threshold for bias detection.
@@ -56,7 +53,6 @@ class Bias(Scanner):
            model (str): The model path to use for bias detection.
            threshold (float): The threshold above which a text is considered biased. Default is 0.7.
            match_type (MatchType): Whether to match the full text or individual sentences. Default is MatchType.FULL.
-           use_onnx (bool): Whether to use ONNX instead of PyTorch for inference.
         """
         if isinstance(match_type, str):
             match_type = MatchType(match_type)
@@ -69,7 +65,6 @@ class Bias(Scanner):
 
         tf_tokenizer, tf_model = get_tokenizer_and_model_for_classification(
             model=model,
-            use_onnx=use_onnx,
         )
 
         self._classifier = pipeline(

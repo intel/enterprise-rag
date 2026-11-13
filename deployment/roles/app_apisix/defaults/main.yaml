@@ -22,3 +22,13 @@ apisix_crds_field_manager: "erag-app-apisix"
 
 # --- OIDC integration ---
 apisix_oidc_client_id: "EnterpriseRAG-oidc-backend"
+
+# --- API route without the UI ---
+apisix_api_route_name: "apisix-api"
+apisix_api_paths:
+  - "/api/v1/{{ pipeline_type }}"
+  - "/v1/system_fingerprint"
+
+# --- Cross-role shared defaults ---
+pipeline_type: "chatqna"                                         # app_pipeline
+ui_domain_name: "{{ base_domain_name | default('solutions.ai') }}"  # app_ui

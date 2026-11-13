@@ -31,7 +31,6 @@ class FactualConsistency(Scanner):
         *,
         model: Model | None = None,
         minimum_score=0.75,
-        use_onnx=False,
     ) -> None:
         """
         Initializes an instance of the Refutation class.
@@ -39,7 +38,6 @@ class FactualConsistency(Scanner):
         Parameters:
             model (Model, optional): The model to use for entailment checking. Defaults to None.
             minimum_score (float): The minimum entailment score for the output to be considered valid. Defaults to 0.75.
-            use_onnx (bool): Whether to use the ONNX version of the model. Defaults to False.
         """
 
         self._minimum_score = minimum_score
@@ -49,11 +47,9 @@ class FactualConsistency(Scanner):
 
         self._tokenizer, self._model = get_tokenizer_and_model_for_classification(
             model=model,
-            use_onnx=use_onnx,
         )
         self._model = self._model.to(device())
-        if not use_onnx:
-            self._model.eval()
+        self._model.eval()
 
     def scan(self, prompt: str, output: str) -> tuple[str, bool, float]:
         if prompt.strip() == "":

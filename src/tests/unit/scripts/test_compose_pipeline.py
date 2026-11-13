@@ -123,6 +123,17 @@ def test_chatqna_base_flow_order_and_resource_keys():
     assert "query-rewrite-usvc" not in resources["services"]
 
 
+def test_translation_prompt_template_takes_no_injected_params():
+    """Injected ChatQnA prompt_template params would replace language detection's template."""
+    gmc, _ = composer.compose_pipeline(
+        _PIPELINES_DIR / "translation", [], _template_vars("translation")
+    )
+
+    steps = {s["name"]: s for s in gmc["spec"]["nodes"]["root"]["steps"]}
+    assert "paramsKind" not in steps["PromptTemplate"]["internalService"]["config"]
+    assert steps["Llm"]["internalService"]["config"]["paramsKind"] == "llm"
+
+
 def test_variant_is_inserted_at_its_anchor():
     """query-rewrite declares insert_before: embedding and brings its own resources."""
     template_vars = _template_vars("chatqna")

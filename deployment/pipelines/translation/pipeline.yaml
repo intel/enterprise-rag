@@ -18,6 +18,8 @@ base_flow:
 # LLM_MODEL_NAME, ...) is set in app_pipeline/templates/values.yaml.j2 and reaches
 # llm-usvc through its ConfigMap.
 endpoints:
+  prompt_template:
+    inject_params: false
   llm:
     disable_streaming: "False"
     # Recommended resources for the shared llm step (llm-usvc chart key)

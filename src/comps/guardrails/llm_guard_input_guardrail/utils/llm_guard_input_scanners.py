@@ -120,7 +120,7 @@ class InputScannersConfig(ScannersConfigBase):
             else:
                 raise ValueError("_create_anonymize_scanner was invoked without scanner_config but no self._anonymize_params were saved. Such action is not allowed.")
         vault = Vault()
-        anonymize_params = {'vault': vault, 'use_onnx': scanner_config.get('use_onnx', False)}
+        anonymize_params = {'vault': vault}
         hidden_names = scanner_config.get('hidden_names', None)
         allowed_names = scanner_config.get('allowed_names', None)
         entity_types = scanner_config.get('entity_types', None)
@@ -242,7 +242,7 @@ class InputScannersConfig(ScannersConfigBase):
             'MODEL_ROBERTA_LARGE_C_V2': BANTOPICS_MODEL_ROBERTA_LARGE_C_V2,
             'MODEL_ROBERTA_BASE_C_V2': BANTOPICS_MODEL_ROBERTA_BASE_C_V2
         }
-        ban_topics_params = {'use_onnx': scanner_config.get('use_onnx', False)}
+        ban_topics_params = {}
 
         topics = scanner_config.get('topics', None)
         threshold = scanner_config.get('threshold', None)
@@ -283,7 +283,7 @@ class InputScannersConfig(ScannersConfigBase):
 
     def _create_code_scanner(self, scanner_config):
         enabled_models = {'DEFAULT_MODEL': CODE_DEFAULT_MODEL}
-        code_params = {'use_onnx': scanner_config.get('use_onnx', False)}
+        code_params = {}
 
         languages = scanner_config.get('languages', None)
         model_name = scanner_config.get('model', None)
@@ -333,7 +333,7 @@ class InputScannersConfig(ScannersConfigBase):
             'V2_SMALL_MODEL': PROMPTINJECTION_V2_SMALL_MODEL
         }
         enabled_match_types = ['sentence', 'full', "truncate_token_head_tail", "truncate_head_tail", "chunks"]
-        prompt_injection_params = {'use_onnx': scanner_config.get('use_onnx', False)}
+        prompt_injection_params = {}
 
         model_name = scanner_config.get('model', None)
         threshold = scanner_config.get('threshold', None)
@@ -452,7 +452,7 @@ class InputScannersConfig(ScannersConfigBase):
     def _create_toxicity_scanner(self, scanner_config):
         enabled_models = {'DEFAULT_MODEL': TOXICITY_DEFAULT_MODEL}
         enabled_match_types = ['sentence', 'full']
-        toxicity_params = {'use_onnx': scanner_config.get('use_onnx', False)}
+        toxicity_params = {}
 
         model_name = scanner_config.get('model', None)
         threshold = scanner_config.get('threshold', None)

@@ -43,6 +43,25 @@ def device():
     return torch.device("cpu")
 
 
+@lru_cache(maxsize=None)  # Unbounded cache
+def model_dtype():
+    torch = cast("torch", lazy_load_dep("torch"))
+    try:
+        with open("/proc/cpuinfo") as cpuinfo:
+            has_amx_bf16 = any(
+                line.startswith("flags") and "amx_bf16" in line.split() for line in cpuinfo
+            )
+    except OSError:
+        has_amx_bf16 = False
+
+    if has_amx_bf16:
+        LOGGER.info("AMX detected, using bfloat16")
+        return torch.bfloat16
+
+    LOGGER.info("AMX not detected, using float32")
+    return torch.float32
+
+
 def lazy_load_dep(import_name: str, package_name: str | None = None):
     """Helper function to lazily load optional dependencies. If the dependency is not
     present, the function will raise an error _when used_.
