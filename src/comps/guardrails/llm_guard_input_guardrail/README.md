@@ -75,7 +75,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                     | Type   | Default in LLM Guard  | Required / Optional | Available in Chatqna's UI |
 |----------------------------|-----------------------------------------------------------------|--------|-----------------------|---------------------|---------------------|
 | `ANONYMIZE_ENABLED`        | Enables Anonymize scanner.                                      | bool   | false               | Required            | No |
-| `ANONYMIZE_USE_ONNX`       | Enables usage of ONNX optimized model for Anonymize scanner.    | bool   | false                | Required            | No |
 | `ANONYMIZE_HIDDEN_NAMES`   | List of names to be anonymized e.g. [REDACTED_CUSTOM_1].        | string | no value              | Optional            | No |
 | `ANONYMIZE_ALLOWED_NAMES`  | List of names allowed in the text without anonymizing.          | string | no value              | Optional            | No |
 | `ANONYMIZE_ENTITY_TYPES`   | List of entity types to be detected.                            | string | no value              | Optional            | No |
@@ -102,7 +101,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                  | Type   | Default in LLM Guard  | Required / Optional | Available in Chatqna's UI |
 |----------------------------|--------------------------------------------------------------|--------|-----------------------|---------------------|---------------------|
 | `BAN_TOPICS_ENABLED`       | Enables BanTopics scanner.                                   | bool   | false               | Required            | No |
-| `BAN_TOPICS_USE_ONNX`      | Enables usage of ONNX optimized model for BanTopics scanner. | bool   | false                | Required            | No |
 | `BAN_TOPICS_TOPICS`        | List of topics to be banned.                                 | string(list can be also in one string with elements separated with commas)/List[string] | "violence,attack,war" | Required            | No |
 | `BAN_TOPICS_THRESHOLD`     | Threshold for BanTopics scanner.                             | float  | 0.6                   | Optional            | No |
 | `BAN_TOPICS_MODEL`         | Model to be used for BanTopics scanner.                      | string | none            | Optional            | No |
@@ -112,7 +110,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                 | Type   | Default in LLM Guard  | Required / Optional | Available in Chatqna's UI |
 |----------------------------|-------------------------------------------------------------|--------|-----------------------|---------------------|---------------------|
 | `CODE_ENABLED`             | Enables Code scanner.                                       | bool   | false               | Required            | Yes |
-| `CODE_USE_ONNX`            | Enables usage of ONNX optimized model for Code scanner.     | bool   | false                | Required            | No |
 | `CODE_LANGUAGES`           | List of programming languages to be detected.               | string(list can be also in one string with elements separated with commas)/List[string] | "Java,Python"         | Required            | Yes |
 | `CODE_MODEL`               | Model to be used for Code scanner.                          | string | none       | Optional            | No |
 | `CODE_IS_BLOCKED`          | Enables blocking of detected code.                          | bool   | true               | Optional            | No |
@@ -129,7 +126,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable          | Description                                                        | Type   | Default in LLM Guard  | Required / Optional | Available in Chatqna's UI |
 |-------------------------------|--------------------------------------------------------------------|--------|-----------------------|---------------------|---------------------|
 | `PROMPT_INJECTION_ENABLED`    | Enables PromptInjection scanner.                                   | bool   | false               | Required            | Yes |
-| `PROMPT_INJECTION_USE_ONNX`   | Enables usage of ONNX optimized model for PromptInjection scanner. | bool   | false                | Required            | No |
 | `PROMPT_INJECTION_MODEL`      | Model to be used for PromptInjection scanner.                      | string | none            | Optional            | No |
 | `PROMPT_INJECTION_THRESHOLD`  | Threshold for PromptInjection scanner.                             | float  | 0.92                  | Optional            | Yes |
 | `PROMPT_INJECTION_MATCH_TYPE` | Match type for prompt injection detection.                         | string | "full"                | Optional            | Yes |
@@ -174,7 +170,6 @@ Detailed description of the scanner can be found in [LLM Guard documentation for
 | Environment Variable       | Description                                                                   | Type   | Default in LLM Guard  | Required / Optional | Available in Chatqna's UI |
 |----------------------------|-------------------------------------------------------------------------------|--------|-----------------------|---------------------|---------------------|
 | `TOXICITY_ENABLED`         | Enables Toxicity scanner.                                                     | bool   | false               | Required            | Yes |
-| `TOXICITY_USE_ONNX`        | Enables usage of ONNX optimized model for Toxicity scanner.                   | bool   | false                | Required            | No |
 | `TOXICITY_MODEL`           | Model to be used for Toxicity scanner.                                        | string | none       | Optional            | No |
 | `TOXICITY_THRESHOLD`       | Threshold for Toxicity scanner.                                               | float  | 0.5                   | Optional            | Yes |
 | `TOXICITY_MATCH_TYPE`      | Match type for toxicity detection.                                            | string | "full"                | Optional            | Yes |

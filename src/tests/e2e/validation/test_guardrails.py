@@ -179,8 +179,7 @@ def test_in_guard_prompt_injection(guard_helper):
     providing incorrect or harmful outputs.
     """
     guard_params = {
-       "enabled": True,
-       "use_onnx": True
+       "enabled": True
     }
     guard_helper.setup(GuardType.INPUT, "prompt_injection", guard_params)
     guard_helper.assert_blocked(questions.DAN)
@@ -425,13 +424,14 @@ def disabled_test_out_guard_json_scanner(guard_helper):
 
 
 @allure.testcase("IEASG-T98")
-def disabled_test_out_guard_malicious_urls(guard_helper):
-    """Check if malicious_urls output guard blocks answers that contain malicious urls"""
+def test_out_guard_malicious_urls(guard_helper):
+    """Check if malicious_urls output guard blocks answers that contain malicious urls and allows benign ones"""
     guard_params = {
         "enabled": True
     }
     guard_helper.setup(GuardType.OUTPUT, "malicious_urls", guard_params)
     guard_helper.assert_blocked(questions.URLS_IN_RESPONSE)
+    guard_helper.assert_allowed(questions.BENIGN_URLS_IN_RESPONSE)
 
 
 @allure.testcase("IEASG-T99")

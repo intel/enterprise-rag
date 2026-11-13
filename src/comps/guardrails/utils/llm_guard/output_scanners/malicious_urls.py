@@ -10,10 +10,8 @@ from .base import Scanner
 
 LOGGER = get_logger()
 DEFAULT_MODEL = Model(
-    path="DunnBC22/codebert-base-Malicious_URLs",
-    revision="1221284b2495a4182cdb521be9d755de56e66899",
-    onnx_path="ProtectAI/codebert-base-Malicious_URLs-onnx",
-    onnx_revision="7bc4fa926eeae5e752d0790cc42faa24eb32fa64",
+    path="kmack/malicious-url-detection",
+    revision="258499831602e1aea6c1f00e8483b820dd14b391",
     pipeline_kwargs={
         "top_k": None,
         "return_token_type_ids": False,
@@ -22,11 +20,7 @@ DEFAULT_MODEL = Model(
     },
 )
 
-_malicious_labels = [
-    "defacement",
-    "phishing",
-    "malware",
-]
+_MALICIOUS_LABEL = "MALWARE"
 
 
 class MaliciousURLs(Scanner):
@@ -34,7 +28,7 @@ class MaliciousURLs(Scanner):
     This scanner is used to scan and detect malicious URLs in the text.
 
     Large Language Models can occasionally produce malicious URLs in their outputs.
-    Using the "DunnBC22/codebert-base-Malicious_URLs" model from HuggingFace, this class classifies
+    Using the "kmack/malicious-url-detection" model from HuggingFace, this class classifies
     URLs as either malicious or benign to safeguard users from potential threats.
     """
 
@@ -43,7 +37,6 @@ class MaliciousURLs(Scanner):
         *,
         model: Model | None = None,
         threshold=0.5,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes an instance of the MaliciousURLs class.
@@ -51,7 +44,6 @@ class MaliciousURLs(Scanner):
         Parameters:
             model (Model, optional): The model to use for malicious URL detection.
             threshold (float): The threshold used to determine if the website is malicious. Defaults to 0.5.
-            use_onnx (bool): Whether to use the ONNX version of the model. Defaults to False.
         """
 
         self._threshold = threshold
@@ -61,7 +53,6 @@ class MaliciousURLs(Scanner):
 
         tf_tokenizer, tf_model = get_tokenizer_and_model_for_classification(
             model=model,
-            use_onnx=use_onnx,
         )
 
         self._classifier = pipeline(
@@ -85,7 +76,7 @@ class MaliciousURLs(Scanner):
         results = self._classifier(urls)
         for url, result in zip(urls, results):
             malicious_scores = [
-                item["score"] for item in result if item["label"] in _malicious_labels
+                item["score"] for item in result if item["label"] == _MALICIOUS_LABEL
             ]
             highest_malicious_score = max(malicious_scores)
             if highest_malicious_score > self._threshold:

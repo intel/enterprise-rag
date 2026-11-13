@@ -23,7 +23,6 @@ class Code(Scanner):
         model: Model | None = None,
         is_blocked: bool = True,
         threshold: float = 0.5,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes an instance of the Code class.
@@ -33,7 +32,6 @@ class Code(Scanner):
             languages: The list of programming languages to allow or deny.
             is_blocked: Whether the languages are blocked or allowed. Default is True.
             threshold: The threshold for the model output to be considered valid. Default is 0.5.
-            use_onnx: Whether to use ONNX for inference. Default is False.
 
         Raises:
             ValueError: If both 'allowed' and 'denied' lists are provided or if both are empty.
@@ -44,7 +42,6 @@ class Code(Scanner):
             model=model,
             is_blocked=is_blocked,
             threshold=threshold,
-            use_onnx=use_onnx,
         )
 
     def scan(self, prompt: str, output: str) -> tuple[str, bool, float]:

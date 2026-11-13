@@ -9,7 +9,6 @@ from pydantic import BaseModel, NonNegativeFloat, PositiveInt
 
 class AnonymizeModel(BaseModel):
     enabled: bool = False
-    use_onnx: bool = False
     hidden_names: Optional[List[str]] = None
     allowed_names: Optional[List[str]] = None
     entity_types: Optional[List[str]] = None
@@ -32,7 +31,6 @@ class BanSubstringsModel(BaseModel):
 
 class BanTopicsModel(BaseModel):
     enabled: bool = False
-    use_onnx: bool = False
     topics: List[str] = ["violence", "attack", "war"]
     threshold: Optional[float] = 0.6
     model: Optional[str] = None
@@ -40,7 +38,6 @@ class BanTopicsModel(BaseModel):
 
 class CodeModel(BaseModel):
     enabled: bool = False
-    use_onnx: bool = False
     languages: List[str] = ["Java", "Python"]
     model: Optional[str] = None
     is_blocked: Optional[bool] = True
@@ -53,7 +50,6 @@ class InvisibleText(BaseModel):
 
 class PromptInjectionModel(BaseModel):
     enabled: bool = False
-    use_onnx: bool = False
     model: Optional[str] = None
     threshold: Optional[float] = 0.92
     match_type: Optional[str] = "full"
@@ -87,7 +83,6 @@ class TokenLimitModel(BaseModel):
 
 class ToxicityModel(BaseModel):
     enabled: bool = False
-    use_onnx: bool = False
     model: Optional[str] = None
     threshold: Optional[float] = 0.5
     match_type: Optional[str] = "full"
@@ -95,7 +90,6 @@ class ToxicityModel(BaseModel):
 
 class BiasModel(BaseModel):
     enabled: bool = False
-    use_onnx: bool = False
     model: Optional[str] = None
     threshold: Optional[float] = None
     match_type: Optional[str] = None
@@ -114,14 +108,12 @@ class JSONModel(BaseModel):
 
 class MaliciousURLsModel(BaseModel):
     enabled: bool = False
-    use_onnx: bool = False
     model: Optional[str] = None
     threshold: Optional[float] = None
 
 
 class NoRefusalModel(BaseModel):
     enabled: bool = False
-    use_onnx: bool = False
     model: Optional[str] = None
     threshold: Optional[float] = None
     match_type: Optional[str] = None
@@ -139,21 +131,18 @@ class ReadingTimeModel(BaseModel):
 
 class FactualConsistencyModel(BaseModel):
     enabled: bool = False
-    use_onnx: bool = False
     model: Optional[str] = None
     minimum_score: Optional[float] = None
 
 
 class RelevanceModel(BaseModel):
     enabled: bool = False
-    use_onnx: bool = False
     model: Optional[str] = None
     threshold: Optional[float] = None
 
 
 class SensitiveModel(BaseModel):
     enabled: bool = False
-    use_onnx: bool = False
     entity_types: Optional[List[str]] = None
     regex_patterns: Optional[List[str]] = None
     redact: Optional[bool] = False

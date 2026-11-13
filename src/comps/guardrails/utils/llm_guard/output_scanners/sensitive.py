@@ -43,7 +43,6 @@ class Sensitive(Scanner):
         redact: bool = False,
         recognizer_conf: NERConfig | None = None,
         threshold: float = 0.5,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes an instance of the Sensitive class.
@@ -55,7 +54,6 @@ class Sensitive(Scanner):
            redact (bool): Redact found sensitive entities. Default to False.
            recognizer_conf (Optional[Dict]): Configuration to recognize PII data. Default is Ai4Privacy DeBERTa.
            threshold (float): Acceptance threshold. Default is 0.
-           use_onnx (bool): Use ONNX model for inference. Default is False.
         """
         if not entity_types:
             LOGGER.debug(
@@ -73,7 +71,6 @@ class Sensitive(Scanner):
 
         transformers_recognizer = get_transformers_recognizer(
             recognizer_conf=recognizer_conf,
-            use_onnx=use_onnx,
         )
         self._analyzer = get_analyzer(
             transformers_recognizer, get_regex_patterns(regex_patterns), [], ALL_SUPPORTED_LANGUAGES

@@ -26,9 +26,6 @@ BERT_BASE_NER_CONF: NERConfig = {
     "DEFAULT_MODEL": Model(
         path="dslim/bert-base-NER",
         revision="5271995b4b596a059d6efbce30031042aed67cb6",
-        onnx_path="dslim/bert-base-NER",
-        onnx_revision="5271995b4b596a059d6efbce30031042aed67cb6",
-        onnx_subfolder="onnx",
         pipeline_kwargs={
             "aggregation_strategy": "simple",
         },
@@ -57,9 +54,6 @@ BERT_LARGE_NER_CONF: NERConfig = {
     "DEFAULT_MODEL": Model(
         path="dslim/bert-large-NER",
         revision="13e784dccceca07aee7a7aab4ad487c605975423",
-        onnx_path="dslim/bert-large-NER",
-        onnx_revision="13e784dccceca07aee7a7aab4ad487c605975423",
-        onnx_subfolder="onnx",
         pipeline_kwargs={
             "aggregation_strategy": "simple",
         },
@@ -88,8 +82,6 @@ BERT_ZH_NER_CONF: NERConfig = {
     "DEFAULT_MODEL": Model(
         path="gyr66/bert-base-chinese-finetuned-ner",
         revision="42abc0872240300638223d0e46b9aacdcbcd2906",
-        onnx_path="ProtectAI/gyr66-bert-base-chinese-finetuned-ner-onnx",
-        onnx_revision="8393f245f01cd153eb2a39fe06a3d4bb37da56fa",
         pipeline_kwargs={
             "aggregation_strategy": "simple",
         },
@@ -126,9 +118,6 @@ DISTILBERT_AI4PRIVACY_v2_CONF: NERConfig = {
     "DEFAULT_MODEL": Model(
         path="Isotonic/distilbert_finetuned_ai4privacy_v2",
         revision="51d7b98bad735ff1af5bda6a6a9a7fbebd102ac9",
-        onnx_path="Isotonic/distilbert_finetuned_ai4privacy_v2",
-        onnx_revision="51d7b98bad735ff1af5bda6a6a9a7fbebd102ac9",
-        onnx_subfolder="onnx",
         pipeline_kwargs={
             "aggregation_strategy": "simple",
         },
@@ -189,9 +178,6 @@ DEBERTA_AI4PRIVACY_v2_CONF: NERConfig = {
     "DEFAULT_MODEL": Model(
         path="Isotonic/deberta-v3-base_finetuned_ai4privacy_v2",
         revision="9ea992753ab2686be4a8f64605ccc7be197ad794",
-        onnx_path="Isotonic/deberta-v3-base_finetuned_ai4privacy_v2",
-        onnx_revision="9ea992753ab2686be4a8f64605ccc7be197ad794",
-        onnx_subfolder="onnx",
         pipeline_kwargs={
             "aggregation_strategy": "simple",
         },
@@ -252,9 +238,6 @@ MDEBERTA_AI4PRIVACY_v2_CONF: NERConfig = {
     "DEFAULT_MODEL": Model(
         path="Isotonic/mdeberta-v3-base_finetuned_ai4privacy_v2",
         revision="316240516ad48a82ae1b13567670093901e41b5e",
-        onnx_path="Isotonic/mdeberta-v3-base_finetuned_ai4privacy_v2",
-        onnx_revision="316240516ad48a82ae1b13567670093901e41b5e",
-        onnx_subfolder="onnx",
         pipeline_kwargs={
             "aggregation_strategy": "simple",
         },
@@ -315,9 +298,6 @@ DEBERTA_LAKSHYAKH93_CONF: NERConfig = {
     "DEFAULT_MODEL": Model(
         path="lakshyakh93/deberta_finetuned_pii",
         revision="a038061af92047b0afbbd5ca07d7aa0521789379",
-        onnx_path="protectai/lakshyakh93-deberta_finetuned_pii-onnx",
-        onnx_revision="af5a07a0cb23bdf0164ef430cc0c965019c9ee24",
-        onnx_subfolder="",
         pipeline_kwargs={
             "aggregation_strategy": "simple",
         },

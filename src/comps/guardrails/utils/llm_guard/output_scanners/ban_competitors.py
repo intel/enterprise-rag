@@ -22,7 +22,6 @@ class BanCompetitors(Scanner):
         threshold: float = 0.5,
         redact: bool = True,
         model: Model | None = None,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initializes BanCompetitors object.
@@ -32,7 +31,6 @@ class BanCompetitors(Scanner):
             threshold: Threshold to determine if an organization is present in the output. Default is 0.5.
             redact: Whether to redact the organization name. Default is True.
             model: Model to use for named-entity recognition. Default is BASE model.
-            use_onnx: Whether to use ONNX instead of PyTorch for inference. Default is False.
 
         Raises:
             ValueError: If no competitors are provided.
@@ -42,7 +40,6 @@ class BanCompetitors(Scanner):
             threshold=threshold,
             redact=redact,
             model=model,
-            use_onnx=use_onnx,
         )
 
     def scan(self, prompt: str, output: str) -> tuple[str, bool, float]:

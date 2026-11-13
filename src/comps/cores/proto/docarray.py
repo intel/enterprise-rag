@@ -153,7 +153,6 @@ class PromptTemplateInput(BaseDoc):
 
 class AnonymizeModel(BaseDoc):
     enabled: bool = False
-    use_onnx: bool = False
     hidden_names: Optional[List[str]] = None
     allowed_names: Optional[List[str]] = None
     entity_types: Optional[List[str]] = None
@@ -174,14 +173,12 @@ class BanSubstringsModel(BaseDoc):
 
 class BanTopicsModel(BaseDoc):
     enabled: bool = False
-    use_onnx: bool = False
     topics: List[str] = ["violence","attack","war"]
     threshold: Optional[float] = 0.6
     model: Optional[str] = None
 
 class CodeModel(BaseDoc):
     enabled: bool = False
-    use_onnx: bool = False
     languages: List[str] = ["Java", "Python"]
     model: Optional[str] = None
     is_blocked: Optional[bool] = True
@@ -192,7 +189,6 @@ class InvisibleText(BaseDoc):
 
 class PromptInjectionModel(BaseDoc):
     enabled: bool = False
-    use_onnx: bool = False
     model: Optional[str] = None
     threshold: Optional[float] = 0.92
     match_type: Optional[str] = "full"
@@ -221,14 +217,12 @@ class TokenLimitModel(BaseDoc):
 
 class ToxicityModel(BaseDoc):
     enabled: bool = False
-    use_onnx: bool = False
     model: Optional[str] = None
     threshold: Optional[float] = 0.5
     match_type: Optional[str] = "full"
 
 class BiasModel(BaseDoc):
     enabled: bool = False
-    use_onnx: bool = False
     model: Optional[str] = None
     threshold: Optional[float] = None
     match_type: Optional[str] = None
@@ -244,13 +238,11 @@ class JSONModel(BaseDoc):
 
 class MaliciousURLsModel(BaseDoc):
     enabled: bool = False
-    use_onnx: bool = False
     model: Optional[str] = None
     threshold: Optional[float] = None
 
 class NoRefusalModel(BaseDoc):
     enabled: bool = False
-    use_onnx: bool = False
     model: Optional[str] = None
     threshold: Optional[float] = None
     match_type: Optional[str] = None
@@ -265,19 +257,16 @@ class ReadingTimeModel(BaseDoc):
 
 class FactualConsistencyModel(BaseDoc):
     enabled: bool = False
-    use_onnx: bool = False
     model: Optional[str] = None
     minimum_score: Optional[float] = None
 
 class RelevanceModel(BaseDoc):
     enabled: bool = False
-    use_onnx: bool = False
     model: Optional[str] = None
     threshold: Optional[float] = None
 
 class SensitiveModel(BaseDoc):
     enabled: bool = False
-    use_onnx: bool = False
     entity_types: Optional[List[str]] = None
     regex_patterns: Optional[List[str]] = None
     redact: Optional[bool] = False

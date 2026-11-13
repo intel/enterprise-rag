@@ -18,7 +18,6 @@ class BanCode(Scanner):
         *,
         model: Model | None = None,
         threshold: float = 0.9,
-        use_onnx: bool = False,
     ) -> None:
         """
         Initialize a new BanCode scanner.
@@ -26,13 +25,11 @@ class BanCode(Scanner):
         Parameters:
             model: The model to use for scanning.
             threshold: The threshold for the model output to consider a code snippet.
-            use_onnx: Whether to use the ONNX model for scanning.
         """
 
         self._scanner = InputBanCode(
             model=model,
             threshold=threshold,
-            use_onnx=use_onnx,
         )
 
     def scan(self, prompt: str, output: str) -> tuple[str, bool, float]:
