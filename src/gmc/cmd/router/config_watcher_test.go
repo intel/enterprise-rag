@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"knative.dev/pkg/apis"
+	"net/url"
 )
 
 // natsStateReader installs a manual-reader-backed config.nats.state gauge and
@@ -1092,7 +1092,7 @@ func TestSequencePipelineSkipsFingerprintAndInjects(t *testing.T) {
 		_, _ = rw.Write([]byte(`{}`))
 	}))
 	defer fingerprint.Close()
-	fingerprintURL, err := apis.ParseURL(fingerprint.URL)
+	fingerprintURL, err := url.Parse(fingerprint.URL)
 	if err != nil {
 		t.Fatalf("failed to parse fingerprint url")
 	}
@@ -1106,7 +1106,7 @@ func TestSequencePipelineSkipsFingerprintAndInjects(t *testing.T) {
 		_, _ = rw.Write([]byte(`{"text": "ok"}`))
 	}))
 	defer llm.Close()
-	llmURL, err := apis.ParseURL(llm.URL)
+	llmURL, err := url.Parse(llm.URL)
 	if err != nil {
 		t.Fatalf("failed to parse llm url")
 	}

@@ -3339,10 +3339,6 @@
     * Origin: pypi
     * License: mit
 
-* Component: knative.dev/pkg
-    * Origin: gopkg
-    * License: apache-2.0
-
 * Component: kolorist
     * Origin: npm
     * License: mit
