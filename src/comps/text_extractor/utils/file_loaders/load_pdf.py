@@ -51,7 +51,7 @@ from comps.cores.mega.logger import get_erag_logger
 from comps.text_extractor.utils.file_loaders.abstract_loader import AbstractLoader
 from comps.text_extractor.utils.file_loaders.load_image import LoadImage
 from comps.text_extractor.utils.nltk_data import ensure_nltk_data
-from comps.text_extractor.utils.process_pool import new_process_pool
+from comps.cores.utils.process_pool import new_process_pool
 
 
 logger = get_erag_logger(f"{__file__.split('comps/')[1].split('/', 1)[0]}_microservice")

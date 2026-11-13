@@ -5,7 +5,7 @@ import os
 import socket
 import stat
 
-from comps.text_extractor.utils.process_pool import new_process_pool
+from comps.cores.utils.process_pool import new_process_pool
 
 
 def _open_sockets():

@@ -24,7 +24,7 @@ from comps.cores.mega.logger import change_erag_logger_level, get_erag_logger
 from comps.cores.mega.micro_service import erag_microservices, register_microservice
 from comps.cores.proto.docarray import TextDoc, TextExtractorInput, TextSplitterInput
 from comps.text_extractor.utils.file_loaders.load_pdf import LoadPdf, _process_single_page_from_file
-from comps.text_extractor.utils.process_pool import new_process_pool
+from comps.cores.utils.process_pool import new_process_pool
 
 
 # Define the unique service name for the microservice

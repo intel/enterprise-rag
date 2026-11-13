@@ -176,7 +176,7 @@ class TestBrokenPool:
     @pytest.mark.asyncio
     async def test_a_dead_worker_gets_a_new_pool(self, monkeypatch):
         from concurrent.futures.process import BrokenProcessPool
-        from comps.text_extractor.utils.process_pool import new_process_pool
+        from comps.cores.utils.process_pool import new_process_pool
 
         monkeypatch.setattr(te_mod, "pool", new_process_pool(1))
         monkeypatch.setattr(te_mod, "_inflight", 0)
